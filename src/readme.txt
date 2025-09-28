@@ -49,11 +49,11 @@ D15	27
 
 
 SPI displays:
-RST	8
-DC	9
-CS	10
-MOSI	11
-SCK	13
+RST	34  // 8
+DC	35  // 9
+CS	38  // 10
+MOSI	26  // 11
+SCK	27  // 13
 BL	33
 
 
