@@ -49,12 +49,12 @@ D15	27
 
 
 SPI displays:
-RST	34  // 8
-DC	35  // 9
-CS	38  // 10
-MOSI	26  // 11
-SCK	27  // 13
-BL	33
+RST     34  // 8
+DC      35  // 9
+CS      38  // 10
+MOSI    26  // 11
+SCK     27  // 13
+BL      33
 
 
 Capacitive touch using FT5Xxx series with i2c for communication:
