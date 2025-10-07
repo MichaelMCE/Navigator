@@ -672,8 +672,12 @@ typedef struct {
 #define GNSS_CFGBLK_DISABLED	(0x00)
 #define GNSS_CFGBLK_ENABLED		(0x01)
 #define GNSS_CFGBLK_SIGENABLED	((0x01<<16)|(0x01 << 24))
+//#define GNSS_CFGBLK_SIGENABLED	(0xFF<<16)
 
 #define CFG_GNSS_SIZE(nBlks)	(sizeof(cfg_gnss_t)+((nBlks)*sizeof(cfg_cfgblk_t)))
+
+
+
 
 typedef struct {
 	uint8_t gnssId;					// GNSSID_
@@ -682,6 +686,7 @@ typedef struct {
 	uint8_t reserved1;
 	uint32_t flags;					// GNSS_CFGBLK_
 }__attribute__((packed))cfg_cfgblk_t;
+
 
 typedef struct {
 	uint8_t msgVer;
@@ -847,10 +852,12 @@ typedef struct {
 #define STATUS_FLAGS_TOWSET				(1 << 3)
 
 #define STATUS_FIXSTAT_DIFFCORR			(0b01 << 0)
+#define STATUS_FIXSTAT_CARRSOLNVALID	(0b01 << 1)
 #define STATUS_FIXSTAT_MAPMATCHING		(0b11 << 6)
 
 #define STATUS_FLAGS2_PSMSTATE			(0b11 << 0)
 #define STATUS_FLAGS2_SPOOFDETSTATE		(0b11 << 3)
+#define STATUS_FLAGS2_CARRSOLN			(0b11 << 6)
 
 typedef struct {
 	uint32_t iTow;
@@ -894,23 +901,53 @@ typedef struct {
 
 typedef struct {
 	uint32_t iTow;
-	int32_t fTow;
-	int16_t week;
-	int8_t gpsFix;
-	int8_t flags;
-	int32_t ecefX;
-	int32_t ecefY;
-	int32_t ecefZ;
+	 int32_t fTow;
+	 int16_t week;
+	  int8_t gpsFix;
+	  int8_t flags;
+	 int32_t ecefX;
+	 int32_t ecefY;
+	 int32_t ecefZ;
 	uint32_t pAcc;
-	int32_t ecefVX;
-	int32_t ecefVY;
-	int32_t ecefVZ;
+	 int32_t ecefVX;
+	 int32_t ecefVY;
+	 int32_t ecefVZ;
 	uint32_t sAcc;
 	uint16_t pDOP;
-	uint8_t reserved1;
-	uint8_t numSV;
-	uint8_t reserved2[4];
+	 uint8_t reserved1;
+	 uint8_t numSV;
+	 uint8_t reserved2[4];
 }__attribute__((packed))nav_sol_t;
+
+
+#define ODO_FLAGS_USEODO		(1 << 0)		// Odometer-enabled flag
+#define ODO_FLAGS_USECFG		(1 << 1)		// Low-speed COG filter enabled flag
+#define ODO_FLAGS_OUTLPVEL		(1 << 2)		// Output low-pass filtered velocity flag
+#define ODO_FLAGS_OUTLPCOG		(1 << 3)		// Output low-pass filtered heading (COG) flag
+
+
+#define ODO_PROFILE_MASK		(0b111 << 0)	// Profile type (0=running, 1=cycling, 2=swimming, 3=car, 4=custom)
+#define ODO_PROFILE_RUNNING		0
+#define ODO_PROFILE_CYCLING		1
+#define ODO_PROFILE_SWIMMING	2
+#define ODO_PROFILE_CAR			3
+#define ODO_PROFILE_CUSTOM		4
+
+typedef struct {
+	uint8_t version;
+	uint8_t reserved1[3];
+	
+	uint8_t flags;
+	uint8_t odoCfg;
+	uint8_t reserved2[6];
+	
+	uint8_t cogMaxSpeed;
+	uint8_t cogMaxPosAcc;
+	uint8_t reserved3[2];
+	uint8_t velLpGain;
+	uint8_t cogLpGain;
+	uint8_t reserved4[2];
+}__attribute__((packed))cfg_odo_t;
 
 typedef struct {
 	uint8_t version;
@@ -921,20 +958,39 @@ typedef struct {
 	uint32_t distanceStd;
 }__attribute__((packed))nav_odo_t;
 
-typedef struct {		// is a command, there's no payload
-}__attribute__((packed))nav_resetodo_t;
 
 typedef struct {
-	uint8_t version;
-	uint8_t reserved1[3];
 	uint32_t iTow;
-	int32_t ecefX;
-	int32_t ecefY;
-	int32_t ecefZ;
-	int8_t ecefXHp;
-	int8_t ecefYHp;
-	int8_t ecefZHp;
-	uint8_t reserved2;
+	 int32_t ecefVX;
+	 int32_t ecefVY;
+	 int32_t ecefVZ;
+	uint32_t sAcc;
+}__attribute__((packed))nav_velecef_t;
+
+typedef struct {
+	uint32_t iTow;				// milliseconds
+	 int32_t velN;				// cm/s North velocity component
+	 int32_t velE;				// cm/s East velocity component
+	 int32_t velD;				// cm/s Down velocity component
+	uint32_t speed;				// cm/s Speed (3D)
+	uint32_t gSpeed;			// cm/s Ground Speed (2D)
+	 int32_t heading;			// deg, 1e-5. heading 2-D
+	uint32_t sAcc;				// cm/s, speed acc estimate
+	uint32_t cAcc;				// deg, 1e-5, Course/heading acc  estimate
+}__attribute__((packed))nav_velned_t;
+
+
+typedef struct {
+	 uint8_t version;
+	 uint8_t reserved1[3];
+	uint32_t iTow;
+	 int32_t ecefX;
+	 int32_t ecefY;
+	 int32_t ecefZ;
+	  int8_t ecefXHp;
+	  int8_t ecefYHp;
+	  int8_t ecefZHp;
+	 uint8_t reserved2;
 	uint32_t pAcc;
 }__attribute__((packed))nav_hpposecef_t;
 
@@ -1034,26 +1090,6 @@ typedef struct {
 	int8_t sec;
 	uint8_t valid;
 }__attribute__((packed))nav_timeutc_t;
-
-typedef struct {
-	uint32_t iTow;
-	int32_t ecefVX;
-	int32_t ecefVY;
-	int32_t ecefVZ;
-	uint32_t sAcc;
-}__attribute__((packed))nav_velecef_t;
-
-typedef struct {
-	uint32_t iTow;
-	int32_t velN;
-	int32_t velE;
-	int32_t velD;
-	uint32_t speed;
-	uint32_t gSpeed;
-	int32_t heading;
-	uint32_t sAcc;
-	uint32_t cAcc;
-}__attribute__((packed))nav_velned_t;
 
 typedef struct {
 	uint8_t svid;
@@ -1272,17 +1308,58 @@ typedef struct {
 	uint8_t reserved1;
 	uint8_t freqId;
 	uint8_t numWords;
-	uint8_t chn;
+	uint8_t chn;			// was reserved2
 	uint8_t version;
-	uint8_t reserved2;
+	uint8_t reserved3;
 
 	uint32_t dwrd[];
 }__attribute__((packed))rxm_sfrbx_t;
 
 
 
-#define MAX_REGMSG				64
+typedef struct {
+    uint8_t type;
+    uint8_t version;
+    uint8_t svId;
+    uint8_t gnssId;
+    uint8_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t reserved1;
+    uint8_t data[64];
+    uint8_t reserved2[4];
+}__attribute__((packed))mga_ano_t;
 
+
+
+#define UPDSOS_CMD_CREATE			0		// create backup in flash. with updsos_cmd_t
+#define UPDSOS_CMD_CLEAR			1		// clear flash, with updsos_cmd_t
+#define UPDSOS_CMD_CREATE_ACK		2		// backup create, with updsos_ack_t
+#define UPDSOS_CMD_CREATE_RESTORE	3		// system restored from backup, with updsos_res_t
+
+typedef struct {
+    uint8_t cmd;					// UPDSOS_CMD_
+    uint8_t reserved1[3];
+}__attribute__((packed))updsos_cmd_t;
+
+typedef struct {
+    uint8_t cmd;					// UPDSOS_CMD_
+    uint8_t reserved1[3];
+    uint8_t response;				// 0 == not ack, 1 == ack
+    uint8_t reserved2[3];
+}__attribute__((packed))updsos_ack_t;
+
+typedef struct {
+    uint8_t cmd;					// UPDSOS_CMD_
+    uint8_t reserved1[3];
+    uint8_t response;				// 0 == unknown, 1 == failed restoring from backup, 2 restored from backup, 3 not restored (no backup)
+    uint8_t reserved2[3];
+}__attribute__((packed))updsos_res_t;
+
+
+
+
+#define MAX_REGMSG				64
 #define MSG_STATUS_DISABLED		0x00
 #define MSG_STATUS_ENABLED		0x01
 
@@ -1292,6 +1369,8 @@ typedef struct {
 }msgRetCb_t;
 
 typedef struct {
+	const char *name;
+
 	int (*func)(const uint8_t *payload, uint16_t msg_len, void *opaque);
 	uint8_t uClass;
 	uint8_t uId;
@@ -1299,7 +1378,7 @@ typedef struct {
 	uint8_t enabled:1;		// ready to dispatch. :0 == payload dispatching/handling disabled
 	uint8_t alert:4;
 	uint8_t padbits:3;
-	
+
 	uint8_t ct;
 }ubx_func_t;
 
@@ -1319,13 +1398,44 @@ typedef struct {
 }ubx_msg_t;
 
 
-
-
 typedef struct{
 	union{
 		int stub;
 	}u;
 }ubx_device_t;
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void ubx_printVersions (ubx_device_t *dev);
+void ubx_printStatus (ubx_device_t *dev);
+
+void ubx_coldStart (ubx_device_t *dev);
+void ubx_warmStart (ubx_device_t *dev);
+void ubx_hotStart (ubx_device_t *dev);
+
+void ubx_odo_reset (ubx_device_t *dev);
+void ubx_odo_start (ubx_device_t *dev);
+void ubx_odo_stop (ubx_device_t *dev);
+
+void ubx_sos_poll (ubx_device_t *dev);
+void ubx_sos_clear (ubx_device_t *dev);
+void ubx_sos_backup (ubx_device_t *dev);
+
+
+int ubx_msgPollName (ubx_device_t *dev, const char *name);
+void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID);
+
+
+int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize);
+
+void gps_requestUpdate ();
+
+#ifdef __cplusplus
+}
+#endif
 
 
 

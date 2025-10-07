@@ -13,7 +13,7 @@
 
 // Tabs at 4 spaces
 
-
+#include <Arduino.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +21,12 @@
 #include "ubx.h"
 #include "ubxcb.h"
 #include "../gps.h"
+
+
+#define ALERT_DISABLED		0
+#define ALERT_BEFORE		1
+#define ALERT_AFTER			2
+#define ALERT_SINGLE		4
 
 
 
@@ -48,20 +54,27 @@ static void payloadDumpCt ()
 #endif
 
 // less than once per second
-void msgPostLowCb (void *opaque, const intptr_t unused)
+FLASHMEM void msgPostLowCb (void *opaque, const intptr_t unused)
 {
 	//gpsdata_t *data = (gpsdata_t*)opaque;
 	//printf("msgPostLowCb\r\n");
 }
 
-// once per second
-void msgPostMedCb (void *opaque, const intptr_t unused)
+// once per second, is called through mon_io
+FLASHMEM void msgPostMedCb (void *opaque, const intptr_t unused)
 {
 	msgPostMed(opaque, unused);
 }
 
+FLASHMEM void gps_requestUpdate ()
+{
+	userData.rates.epochPerRead = userData.rates.epoch;
+	msgPostMed(&userData, 0);
+	userData.rates.epoch = 0;
+}
+
 // more than once per second
-void msgPostHighCb (void *opaque, const intptr_t unused)
+FLASHMEM void msgPostHighCb (void *opaque, const intptr_t unused)
 {
 	//printf("msgPostHighCb\r\n");
 
@@ -100,17 +113,19 @@ static ubx_func_t *payloadHandlerFuncGet (uint8_t msg_class, uint8_t msg_id)
 {
 	for (int i = 0; i < MAX_REGMSG; i++){
 		ubx_func_t *handler = &ubxRegTable.msg[i];
+		if (!handler) continue;
 		if (msg_class == handler->uClass && msg_id == handler->uId)
 			return handler;
 	}
 	return NULL;
 }
 
-static int payloadHandlerFuncSet (uint8_t msg_class, uint8_t msg_id, void *payloadFunc, const uint32_t status)
+static int payloadHandlerFuncSet (const char *name, uint8_t msg_class, uint8_t msg_id, void *payloadFunc, const uint32_t status)
 {
 	for (int i = 0; i < MAX_REGMSG; i++){
 		ubx_func_t *handler = &ubxRegTable.msg[i];
 		if (!handler->uClass && !handler->uId){
+			handler->name = name;
 			handler->uClass = msg_class;
 			handler->uId = msg_id;
 			handler->func = payloadFunc;
@@ -131,10 +146,10 @@ static void payloadPostCbSet (const uint8_t type, void *postCbFunc, const intptr
 	return;
 }
 
-static int payloadHandlerSet (uint8_t msg_class, uint8_t msg_id, void *payloadFunc, const uint32_t status)
+static int payloadHandlerSet (const char *name, uint8_t msg_class, uint8_t msg_id, void *payloadFunc, const uint32_t status)
 {
 	if (!payloadHandlerFuncGet(msg_class, msg_id))
-		return payloadHandlerFuncSet(msg_class, msg_id, payloadFunc, status);
+		return payloadHandlerFuncSet(name, msg_class, msg_id, payloadFunc, status);
 	//else
 	//	printf("payloadHandlerSet() failed: %X/%X\r\n", msg_class, msg_id);
 	return 0;
@@ -190,11 +205,6 @@ static int payloadHandlerFunc (ubx_func_t *handler, const uint8_t *payload, cons
 	//}
 	//return 0;
 }
-
-#define ALERT_DISABLED		0
-#define ALERT_BEFORE		1
-#define ALERT_AFTER			2
-#define ALERT_SINGLE		4
 
 static void ubxPayloadDispatch (uint8_t msg_class, uint8_t msg_id, uint16_t msg_len, const uint8_t *payload)
 {
@@ -261,6 +271,11 @@ static inline int writeBin (ubx_device_t *dev, uint8_t *buffer, const uint32_t b
 	return gps_serialWrite(buffer, bufferSize);
 }
 
+int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize)
+{
+	return writeBin(dev, buffer, bufferSize);
+}
+
 static int ubx_send (ubx_device_t *dev, const uint8_t *buffer, const uint16_t len)
 {
 	if (len < 3){
@@ -310,13 +325,13 @@ static int ubx_sendEx (ubx_device_t *dev, const uint16_t waitMs, const uint8_t c
 	return ret;
 }
 
-static void ubx_msgPoll (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
+FLASHMEM void ubx_msgPoll (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
 {
 	const uint8_t buffer[] = {clsId, msgId, 0x00, 0x00};
 	ubx_send(dev, buffer, sizeof(buffer));
 }
 
-static void ubx_msgEnableEx (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId, const uint8_t rate)
+FLASHMEM void ubx_msgEnableEx (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId, const uint8_t rate)
 {
 	const uint8_t buffer[] = {UBX_CFG, UBX_CFG_MSG, 0x03, 0x00, clsId, msgId, rate};
 	ubx_send(dev, buffer, sizeof(buffer));
@@ -333,7 +348,7 @@ static inline void ubx_msgDisable (ubx_device_t *dev, const uint8_t clsId, const
 	ubx_send(dev, buffer, sizeof(buffer));
 }
 
-static void ubx_msgDisableAll (ubx_device_t *dev)
+FLASHMEM void ubx_msgDisableAll (ubx_device_t *dev)
 {
 	const uint8_t buffer[] = {UBX_CFG, UBX_CFG_MSG, 0x03, 0x00, 0xFF, 0xFF, 0x00};
 	ubx_send(dev, buffer, sizeof(buffer));
@@ -508,26 +523,26 @@ static void configureGNSS (ubx_device_t *dev)
 
 	cfg_cfgblk_t *cfg = &gnss->cfgblk[0];
 	cfg->gnssId = GNSSID_GPS;
-	cfg->resTrkCh = 4;
-	cfg->maxTrkCh = 24;
+	cfg->resTrkCh = 6;
+	cfg->maxTrkCh = 20;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[1];
 	cfg->gnssId = GNSSID_GLONASS;
-	cfg->resTrkCh = 4;
-	cfg->maxTrkCh = 24;
+	cfg->resTrkCh = 6;
+	cfg->maxTrkCh = 20;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[2];
 	cfg->gnssId = GNSSID_GALILEO;
-	cfg->resTrkCh = 4;
+	cfg->resTrkCh = 6;
 	cfg->maxTrkCh = 10;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 
 	cfg = &gnss->cfgblk[3];
 	cfg->gnssId = GNSSID_BEIDOU;
-	cfg->resTrkCh = 4;
-	cfg->maxTrkCh = 16;
+	cfg->resTrkCh = 6;
+	cfg->maxTrkCh = 20;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[4];
@@ -538,8 +553,8 @@ static void configureGNSS (ubx_device_t *dev)
 	
 	cfg = &gnss->cfgblk[5];
 	cfg->gnssId = GNSSID_QZSS;
-	cfg->resTrkCh = 0;
-	cfg->maxTrkCh = 3;
+	cfg->resTrkCh = 1;
+	cfg->maxTrkCh = 8;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[6];
@@ -553,7 +568,7 @@ static void configureGNSS (ubx_device_t *dev)
 	gnss->numTrkChUse = 32;
 	gnss->numConfigBlocks = cfgBlks;
 
-	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
+	ubx_sendEx(dev, 600, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
 }
 
 static void configurePorts (ubx_device_t *dev)
@@ -569,7 +584,7 @@ static void configurePorts (ubx_device_t *dev)
 	prt.inProtoMask = CFG_PROTO_UBX;
 	prt.outProtoMask = CFG_PROTO_UBX;
 
-	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_PRT, &prt, sizeof(prt));
+	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_PRT, &prt, sizeof(prt));
 }
 
 void gps_configurePorts (ubx_device_t *dev)
@@ -581,23 +596,24 @@ static void configureRate (ubx_device_t *dev)
 {
 	cfg_rate_t rate = {0};
 	
-	rate.measRate = 56;		// ms. 53ms = ~18-19hz
+	rate.measRate = 55;		// ms. 53ms = ~18-19hz
 	rate.navRate = 1;		// 1 measurement per navigation
-	rate.timeRef = CFG_TIMEREF_UTC;
+	rate.timeRef = CFG_TIMEREF_GPS;
 	
-	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_RATE, &rate, sizeof(rate));
+	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_RATE, &rate, sizeof(rate));
 }
 
 static void configureNav5 (ubx_device_t *dev)
 {
-	cfg_nav5_t nav = {0};
+	cfg_nav5_t nav;
+	memset(&nav, 0, sizeof(nav));
 	
 	nav.mask  = NAV5_MASK_DYN | NAV5_MASK_MINEL | NAV5_MASK_POSFIXMODE | NAV5_MASK_DRLIM;
 	nav.mask |= NAV5_MASK_POSMASK | NAV5_MASK_TIMEMASK | NAV5_MASK_STATICHOLDMASK;
 	nav.mask |= NAV5_MASK_DGPSMASK | NAV5_MASK_CNOTHRESHOLD | NAV5_MASK_UTC;
 		
 		
-	nav.dynModel = NAV5_DYNMODEL_PEDESTRIAN;
+	nav.dynModel = NAV5_DYNMODEL_PEDESTRIAN;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 
@@ -608,41 +624,42 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.pAcc = 100;
 	nav.tAcc = 350;
 	nav.pAccADR = 0;						// also known as reserved1;
-	nav.staticHoldThresh = 0;
 	nav.dynssTimeout = 60;
 	nav.cnoThreshNumSVs = 0;
 	nav.cnoThresh = 0;
-	nav.staticHoldMaxDist = 0;
-	nav.utcStandard = NAV5_UTCSTD_AUTO;
+	nav.staticHoldThresh = 50;				// 50 cm/s 
+	nav.staticHoldMaxDist = 2;				// 2 meters
+	nav.utcStandard = NAV5_UTCSTD_GPS;
 	
-	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_NAV5, &nav, sizeof(nav));
+	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_NAV5, &nav, sizeof(nav));
 }
 
 static void configureNavX5 (ubx_device_t *dev)
 {
-	cfg_navx5_t nav = {0};
+	cfg_navx5_t nav;
+	memset(&nav, 0, sizeof(nav));
+	
 	nav.version = NAVX5_VERSION_PROTO18;
 	nav.mask1  = NAVX5_MASK1_MINMAX | NAVX5_MASK1_MINCNO | NAVX5_MASK1_INITIAL3DFIX;
 	nav.mask1 |= NAVX5_MASK1_WKNROLL | NAVX5_MASK1_ACKAID | NAVX5_MASK1_PPP | NAVX5_MASK1_AOP;
 	nav.mask2 = NAVX5_MASK2_ADR;
-	nav.minSVs = 3;
+	nav.minSVs = 6;
 	nav.maxSVs = 32;
 	nav.minCNO = 6;
-	nav.iniFix3D = 1;
+	nav.iniFix3D = 0;
 	nav.ackAiding = 0;
 	nav.wknRollover = 1867;						// 0 = firmware default.
 	nav.sigAttenCompMode = NAVX5_SACM_AUTO;		
-	nav.usePPP = 1;
+	nav.usePPP = 0;
 	nav.aopCfg = NAVX5_AOPCFG_USEAOP;
 	nav.aopOrbMaxErr = 100;
 	nav.useAdr = 0;
 	
-	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_NAVX5, &nav, sizeof(nav));
+	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_NAVX5, &nav, sizeof(nav));
 }
 
-static inline void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID)
+FLASHMEM void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID)
 {
-	
 	cfg_inf_poll_t inf = {0};
 	inf.protocolID = protocolID;
 	
@@ -651,7 +668,6 @@ static inline void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID)
 
 static inline void ubx_msgInfEnable (ubx_device_t *dev, const uint8_t portId, const uint8_t infmsg)
 {
-	
 	cfg_inf_t inf = {0};
 	inf.protocolID = portId;
 	inf.infMsgMask[CFG_PORTID_I2C] = 0;
@@ -666,7 +682,9 @@ static inline void ubx_msgInfEnable (ubx_device_t *dev, const uint8_t portId, co
 static inline void ubx_msgInfDisable (ubx_device_t *dev, const uint8_t portId)
 {
 	
-	cfg_inf_t inf = {0};
+	cfg_inf_t inf;
+	memset(&inf, 0, sizeof(inf));
+	
 	inf.protocolID = portId;
 	inf.infMsgMask[CFG_PORTID_I2C] = 0;
 	inf.infMsgMask[CFG_PORTID_UART1] = 0;
@@ -674,13 +692,15 @@ static inline void ubx_msgInfDisable (ubx_device_t *dev, const uint8_t portId)
 	inf.infMsgMask[CFG_PORTID_USB] = 0;
 	inf.infMsgMask[CFG_PORTID_SPI] = 0;
 	
-	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
 }
 
 static void ubx_msgInfDisableAll (ubx_device_t *dev)
 {
 	
-	cfg_inf_t inf = {0};
+	cfg_inf_t inf;
+	memset(&inf, 0, sizeof(inf));
+	
 	inf.infMsgMask[CFG_PORTID_I2C] = 0;
 	inf.infMsgMask[CFG_PORTID_UART1] = 0;
 	inf.infMsgMask[CFG_PORTID_UART2] = 0;
@@ -709,7 +729,7 @@ static void ubx_msgInfDisableAll (ubx_device_t *dev)
 	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
 	
 	inf.protocolID = INF_PROTO_USER3;
-	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
+	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
 	
 }
 
@@ -719,6 +739,51 @@ static void configureInf (ubx_device_t *dev)
 	//ubx_msgInfPoll(dev, INF_PROTO_NEMA);
 	ubx_msgInfDisableAll(dev);
 	//ubx_msgInfEnable(dev, INF_PROTO_UBX, INF_MSG_WARNING|INF_MSG_NOTICE|INF_MSG_DEBUG);
+}
+
+FLASHMEM void ubx_odo_reset (ubx_device_t *dev)
+{
+	const uint8_t buffer[] = {UBX_NAV, UBX_NAV_RESETODO, 0, 0};
+	ubx_send(dev, buffer, sizeof(buffer));
+	ms_delay(10);
+}
+
+FLASHMEM void ubx_odo_start (ubx_device_t *dev)
+{
+	cfg_odo_t odo = {0};
+	memset(&odo, 0, sizeof(odo));
+	
+	odo.version = 0;
+	odo.flags = ODO_FLAGS_USEODO;
+
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_ODO, &odo, sizeof(odo));
+}
+
+FLASHMEM void ubx_odo_stop (ubx_device_t *dev)
+{
+	cfg_odo_t odo = {0};
+	memset(&odo, 0, sizeof(odo));
+	
+	odo.version = 0;
+	odo.flags = 0;
+
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_ODO, &odo, sizeof(odo));
+}
+
+FLASHMEM static void configureOdo (ubx_device_t *dev)
+{
+	cfg_odo_t odo;
+	memset(&odo, 0, sizeof(odo));
+	
+	odo.version = 0;
+	odo.flags = ODO_FLAGS_USEODO|ODO_FLAGS_USECFG|ODO_FLAGS_OUTLPVEL; //|ODO_FLAGS_OUTLPCOG;
+	odo.odoCfg = ODO_PROFILE_RUNNING;
+	odo.cogMaxSpeed = 10 * 5.0f;
+	odo.cogMaxPosAcc = 15;
+	odo.velLpGain = 255 * 0.60f;
+	odo.cogLpGain = 255 * 0.70f;
+	
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_ODO, &odo, sizeof(odo));
 }
 
 static void configureGeofence (ubx_device_t *dev)
@@ -751,7 +816,7 @@ static void configureGeofence (ubx_device_t *dev)
 void setHNR (ubx_device_t *dev, uint8_t rate)
 {
 	cfg_hnr_t hnr = {0};
-	
+
 	hnr.highNavRate = rate;
 	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_HNR, &hnr, sizeof(hnr));
 }
@@ -761,46 +826,136 @@ static void configureHNR (ubx_device_t *dev)
 	setHNR(dev, 17);	// set rate to 17hz
 }
 
-void gps_configure (ubx_device_t *dev)
+FLASHMEM void ubx_printVersions (ubx_device_t *dev)
+{
+	ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_USB);
+}
+
+FLASHMEM void ubx_printStatus (ubx_device_t *dev)
+{
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
+
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_INF);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GEOFENCE);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAVX5);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
+	ubx_msgPoll(dev, UBX_NAV, UBX_NAV_GEOFENCE);
+	ubx_msgPoll(dev, UBX_NAV, UBX_NAV_STATUS);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GNSS);
+	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
+}
+
+FLASHMEM void ubx_hotStart (ubx_device_t *dev)
+{
+	ubx_rst_hotStart(dev);
+}
+
+FLASHMEM void ubx_warmStart (ubx_device_t *dev)
+{
+	ubx_rst_warmStart(dev);
+}
+
+FLASHMEM void ubx_coldStart (ubx_device_t *dev)
+{
+	ubx_rst_coldStart(dev);
+}
+
+static inline int ubxNameToClass (const char *name, uint8_t *uClass, uint8_t *uId)
+{
+	for (int i = 0; i < MAX_REGMSG; i++){
+		ubx_func_t *handler = &ubxRegTable.msg[i];
+		if (!handler || !handler->name) continue;
+		
+		if (!strcmp(handler->name, name)){
+			*uClass = handler->uClass;
+			*uId = handler->uId;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int ubx_msgPollName (ubx_device_t *dev, const char *name)
+{
+	uint8_t clsId;
+	uint8_t msgId;
+	
+	if (ubxNameToClass(name, &clsId, &msgId)){
+		ubx_msgPoll(dev, clsId, msgId);
+		return 1;
+	}
+	return 0;
+}
+
+FLASHMEM void ubx_sos_backup (ubx_device_t *dev)
+{
+	updsos_cmd_t upd;
+	upd.cmd = UPDSOS_CMD_CREATE;
+	
+	ubx_sendEx(dev, 10, UBX_UPD, UBX_UPD_SOS, &upd, sizeof(upd));
+}
+
+FLASHMEM void ubx_sos_poll (ubx_device_t *dev)
+{
+	ubx_msgPoll(dev, UBX_UPD, UBX_UPD_SOS);
+}
+
+FLASHMEM void ubx_sos_clear (ubx_device_t *dev)
+{
+	updsos_cmd_t upd;
+	upd.cmd = UPDSOS_CMD_CLEAR;
+	
+	ubx_sendEx(dev, 10, UBX_UPD, UBX_UPD_SOS, &upd, sizeof(upd));
+}
+
+FLASHMEM void gps_configure (ubx_device_t *dev)
 {
 	memset(&userData, 0, sizeof(userData));
+	memset(&ubxRegTable, 0, sizeof(ubxRegTable));
+	
 	payloadOpaqueSet(&userData);
 	
-	payloadPostCbSet(CBFREQ_LOW, msgPostLowCb, 0);
-	payloadPostCbSet(CBFREQ_MEDIUM, msgPostMedCb, 0);
-	payloadPostCbSet(CBFREQ_HIGH, msgPostHighCb, 0);
+	payloadPostCbSet(CBFREQ_LOW,      msgPostLowCb,  0);
+	payloadPostCbSet(CBFREQ_MEDIUM,   msgPostMedCb,  0);
+	payloadPostCbSet(CBFREQ_HIGH,     msgPostHighCb, 0);
 
-	payloadHandlerSet(UBX_ACK, UBX_ACK_NAK, ack_nak, 0);
-	payloadHandlerSet(UBX_ACK, UBX_ACK_ACK, ack_ack, 0);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_GEOFENCE, nav_geofence, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_POSECEF, nav_posecef, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_DOP, nav_dop, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_PVT, nav_pvt, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_SVINFO, nav_svinfo, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_STATUS, nav_status, MSG_STATUS_ENABLED);	
-	payloadHandlerSet(UBX_NAV, UBX_NAV_SAT, nav_sat, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_EOE, nav_eoe, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_POSLLH, nav_posllh, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_AID, UBX_AID_ALM, aid_alm, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_AID, UBX_AID_AOP, aid_aop, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_AID, UBX_AID_EPH, aid_eph, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_MON, UBX_MON_VER, mon_ver, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_MON, UBX_MON_IO, mon_io, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_RXM, UBX_RXM_SFRBX, rxm_sfrbx, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_INF, UBX_INF_ERROR, inf_debug, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_INF, UBX_INF_WARNING, inf_debug, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_INF, UBX_INF_NOTICE, inf_debug, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_INF, UBX_INF_TEST, inf_debug, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_INF, UBX_INF_DEBUG, inf_debug, MSG_STATUS_ENABLED);	
-	payloadHandlerSet(UBX_CFG, UBX_CFG_INF, cfg_inf, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_CFG, UBX_CFG_RATE, cfg_rate, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_CFG, UBX_CFG_NAV5, cfg_nav5, MSG_STATUS_ENABLED);	
-	payloadHandlerSet(UBX_CFG, UBX_CFG_NAVX5, cfg_navx5, MSG_STATUS_ENABLED);	
-	payloadHandlerSet(UBX_CFG, UBX_CFG_GNSS, cfg_gnss, MSG_STATUS_ENABLED);	
-	payloadHandlerSet(UBX_CFG, UBX_CFG_GEOFENCE, cfg_geofence, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_CFG, UBX_CFG_PRT, cfg_prt, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_CFG, UBX_CFG_USB, cfg_usb, MSG_STATUS_ENABLED);
-	payloadHandlerSet(UBX_NAV, UBX_NAV_TIMEBDS, nav_timebds, MSG_STATUS_ENABLED);
+	payloadHandlerSet("ack_nak",      UBX_ACK, UBX_ACK_NAK,      ack_nak,      MSG_STATUS_DISABLED);
+	payloadHandlerSet("ack_ack",      UBX_ACK, UBX_ACK_ACK,      ack_ack,      MSG_STATUS_DISABLED);
+	payloadHandlerSet("nav_geofence", UBX_NAV, UBX_NAV_GEOFENCE, nav_geofence, MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_posecef",  UBX_NAV, UBX_NAV_POSECEF,  nav_posecef,  MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_dop",      UBX_NAV, UBX_NAV_DOP,      nav_dop,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_pvt",      UBX_NAV, UBX_NAV_PVT,      nav_pvt,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_svinfo",   UBX_NAV, UBX_NAV_SVINFO,   nav_svinfo,   MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_status",   UBX_NAV, UBX_NAV_STATUS,   nav_status,   MSG_STATUS_ENABLED);	
+	payloadHandlerSet("nav_sat",      UBX_NAV, UBX_NAV_SAT,      nav_sat,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_eoe",      UBX_NAV, UBX_NAV_EOE,      nav_eoe,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_posllh",   UBX_NAV, UBX_NAV_POSLLH,   nav_posllh,   MSG_STATUS_ENABLED);
+	payloadHandlerSet("aid_alm",      UBX_AID, UBX_AID_ALM,      aid_alm,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("aid_aop",      UBX_AID, UBX_AID_AOP,      aid_aop,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("aid_eph",      UBX_AID, UBX_AID_EPH,      aid_eph,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("mon_ver",      UBX_MON, UBX_MON_VER,      mon_ver,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("mon_io",       UBX_MON, UBX_MON_IO,       mon_io,       MSG_STATUS_ENABLED);
+	payloadHandlerSet("rxm_sfrbx",    UBX_RXM, UBX_RXM_SFRBX,    rxm_sfrbx,    MSG_STATUS_ENABLED);
+	payloadHandlerSet("inf_error",    UBX_INF, UBX_INF_ERROR,    inf_debug,    MSG_STATUS_ENABLED);
+	payloadHandlerSet("inf_warning",  UBX_INF, UBX_INF_WARNING,  inf_debug,    MSG_STATUS_ENABLED);
+	payloadHandlerSet("inf_notice",   UBX_INF, UBX_INF_NOTICE,   inf_debug,    MSG_STATUS_ENABLED);
+	payloadHandlerSet("inf_test",     UBX_INF, UBX_INF_TEST,     inf_debug,    MSG_STATUS_ENABLED);
+	payloadHandlerSet("inf_debug",    UBX_INF, UBX_INF_DEBUG,    inf_debug,    MSG_STATUS_ENABLED);	
+	payloadHandlerSet("cfg_inf",      UBX_CFG, UBX_CFG_INF,      cfg_inf,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("cfg_rate",     UBX_CFG, UBX_CFG_RATE,     cfg_rate,     MSG_STATUS_ENABLED);
+	payloadHandlerSet("cfg_nav5",     UBX_CFG, UBX_CFG_NAV5,     cfg_nav5,     MSG_STATUS_ENABLED);	
+	payloadHandlerSet("cfg_navx5",    UBX_CFG, UBX_CFG_NAVX5,    cfg_navx5,    MSG_STATUS_ENABLED);	
+	payloadHandlerSet("cfg_gnss",     UBX_CFG, UBX_CFG_GNSS,     cfg_gnss,     MSG_STATUS_ENABLED);	
+	payloadHandlerSet("cfg_geofence", UBX_CFG, UBX_CFG_GEOFENCE, cfg_geofence, MSG_STATUS_ENABLED);
+	payloadHandlerSet("cfg_prt",      UBX_CFG, UBX_CFG_PRT,      cfg_prt,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("cfg_usb",      UBX_CFG, UBX_CFG_USB,      cfg_usb,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("cfg_odo",      UBX_CFG, UBX_CFG_ODO,      cfg_odo,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_odo",      UBX_NAV, UBX_NAV_ODO,      nav_odo,      MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_timebds",  UBX_NAV, UBX_NAV_TIMEBDS,  nav_timebds,  MSG_STATUS_ENABLED);
+	payloadHandlerSet("nav_sbas",     UBX_NAV, UBX_NAV_SBAS,     nav_sbas,     MSG_STATUS_ENABLED);	
+	payloadHandlerSet("upd_sos",      UBX_UPD, UBX_UPD_SOS,      upd_sos,      MSG_STATUS_ENABLED);	
+	payloadHandlerSet("nav_velned",   UBX_NAV, UBX_NAV_VELNED,   nav_velned,   MSG_STATUS_ENABLED);	
 	
 
 	if (1) configurePorts(dev);
@@ -809,21 +964,23 @@ void gps_configure (ubx_device_t *dev)
 	if (1) configureNav5(dev);
 	if (1) configureNavX5(dev);
 	if (1) configureHNR(dev);
-	if (1) configureGNSS(dev);		// will auto generate a warm-start
+	if (1) configureGNSS(dev);		// will auto generate a warmStart
+	if (1) configureOdo(dev);
 	if (0) configureGeofence(dev);
 
-	ms_delay(600);
-		
+
+	ubx_odo_reset(dev);
 	ubx_msgDisableAll(dev);
-	ubx_msgEnable(dev, UBX_MON, UBX_MON_IO);
+	//ubx_msgEnable(dev, UBX_MON, UBX_MON_IO);
 	ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_USB);
 	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
 		
-	//ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT, 1);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP, 14);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF, 14);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT, 3);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP, 18);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO, 10);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF, 18);
 	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT, 20);
 
 	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_EOE);
@@ -841,4 +998,7 @@ void gps_configure (ubx_device_t *dev)
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GNSS);
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
+	ubx_msgPoll(dev, UBX_CFG, UBX_NAV_SAT);
 }
+
+
