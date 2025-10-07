@@ -170,14 +170,14 @@ FASTRUN void ILI9806_t41_p::setAddrWindow (uint16_t x1, uint16_t y1, uint16_t x2
 FASTRUN void ILI9806_t41_p::pushPixels16bit (const uint16_t *pcolors, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
 
-	if (!((_lastx1 == x1) && (_lastx2 == x2) && (_lasty1 == y1) && (_lasty2 == y2))){
+	//if (!((_lastx1 == x1) && (_lastx2 == x2) && (_lasty1 == y1) && (_lasty2 == y2))){
 		//while (WR_IRQTransferDone == false){
     		//Wait for any DMA transfers to complete
 		//}
 
 		setAddrWindow(x1, y1, x2, y2);
-		_lastx1 = x1; _lastx2 = x2; _lasty1 = y1; _lasty2 = y2;
-	}
+	//	_lastx1 = x1; _lastx2 = x2; _lasty1 = y1; _lasty2 = y2;
+	//}
 	
 	uint32_t area = ((x2-x1)+1) * ((y2-y1)+1);  
 	SglBeatWR_nPrm_16(ILI9806_RAMWR, pcolors, area);
@@ -200,6 +200,7 @@ FASTRUN void ILI9806_t41_p::pushPixels16bitAsync (const uint16_t *pcolors, uint1
 
 FLASHMEM void ILI9806_t41_p::displayInit () 
 {
+	FlexIO_Config_SnglBeat();
 	setBacklight(TFT_INTENSITY);
 	init_display();
 	//setRotation(3);
@@ -562,7 +563,7 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_8 (uint32_t const cmd, const uint8_t 
         while(0 == (p->TIMSTAT & (1 << 0))){  
 		}
     }
-    
+
     microSecondDelay();
     CSHigh();
     
@@ -578,7 +579,7 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 		//Wait for any DMA transfers to complete
 	//}
 	
-    FlexIO_Config_SnglBeat();
+  //  FlexIO_Config_SnglBeat();
     
     /* Assert CS, RS pins */
     CSLow();
@@ -594,6 +595,19 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
     DCHigh();
     microSecondDelay();
 
+#if 1
+    if (length){
+    	delayNanoseconds(5);
+
+		for (uint32_t i = 0; i < length; i++){
+			//delayNanoseconds(1);
+			p->SHIFTBUF[0] = value[i];
+			delayNanoseconds(14);
+      		//while (0 == (p->SHIFTSTAT & (3 << 0))){
+    		//}
+		}
+	}
+#else
     if (length){
 		for(uint32_t i=0; i<length; i++){
 			p->SHIFTBUF[0] = *value++;
@@ -612,6 +626,7 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 		//}
 
 	}
+#endif
 
 	microSecondDelay();
 	CSHigh();
