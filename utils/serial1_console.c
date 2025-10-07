@@ -818,7 +818,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"reboot",   cmd_reboot,    "Reboot device"},
 	{"odo",      cmd_odo,       "start, stop, reset"},
 	{"uload",    cmd_uload,     "filename.ubx. import a .ubx file in to receiver"},
-	{"ufetch",   cmd_ufetch,    "Download latest offline AssistNow data from u-blox website and saves to .ubx file"},
+	{"ufetch",   cmd_ufetch,    "token:<yourtoken>. Downloads and saves locally .ubx file of latest offline AssistNow data from u-blox website"},
 	{"sos",      cmd_sos,       "create, clear, poll"},
 	
 	{"", NULL, ""}
@@ -826,6 +826,8 @@ static const cmdstr_t cmdstrs[] = {
 
 void cmd_help (const char *cmdStr)
 {
+	
+	
 	printf("Usage: serial_console.exe Auto/portNumber command subCmd:value\n");
 	printf("\n");
 	printf("Examples:\n");
@@ -834,12 +836,28 @@ void cmd_help (const char *cmdStr)
 	printf("\n");
 	printf("Commands available:\n");
 	
-	for (int i = 0; cmdstrs[i].func; i++){
-		if (cmdstrs[i].helpStr[0])
-			printf(" %s - %s\n", cmdstrs[i].cmd, cmdstrs[i].helpStr);
-	}
 	
-	//printf(" auto - Auto connect to first available port\n");
+	HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO con;
+	GetConsoleScreenBufferInfo(hStdout, &con);
+	uint16_t oldColour = con.wAttributes;
+
+	
+	for (int i = 0; cmdstrs[i].func; i++){
+		if (cmdstrs[i].helpStr[0]){
+			//printf(" %s - %s\n", cmdstrs[i].cmd, cmdstrs[i].helpStr);
+
+			SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+			printf(" %s", cmdstrs[i].cmd);
+			SetConsoleTextAttribute(hStdout, oldColour);
+			
+			GetConsoleScreenBufferInfo(hStdout, &con);
+			con.dwCursorPosition.X = 16;
+			SetConsoleCursorPosition(hStdout, con.dwCursorPosition);
+			
+			printf("%s\n", cmdstrs[i].helpStr);
+		}
+	}
 }
 
 int main (const int argc, const char *argv[])
