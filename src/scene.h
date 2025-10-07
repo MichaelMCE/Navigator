@@ -88,6 +88,35 @@ typedef struct {
 #include "poi.h"
 
 typedef struct {
+	struct {
+		int strings;
+		float map;
+		float trkpts;
+		float poi;
+		float display;
+	}rtime;
+
+	int trkptsTotal;
+	int trkptsToWrite;
+	
+	uint64_t nothingCount;
+	uint64_t nothingCountSecond;
+	
+	struct {
+		uint32_t poi:1;
+		uint32_t compass:1;
+		uint32_t satlevels:1;
+		uint32_t satAvailability:1;
+		uint32_t locgraphic:1;
+		uint32_t satWorld:1;
+		uint32_t console:1;
+		uint32_t trkPts:1;
+		uint32_t map:1;
+		uint32_t stub:23;
+	}rflags;		// render flags
+}runState_t;
+
+typedef struct {
 	vfont_t *vfont;
 	poi_t poi;
 	mp_coverage_t coverage;
@@ -108,6 +137,8 @@ typedef struct {
 	uint32_t renderFlags;
 	uint32_t cmdTaskRunMode;
 	uint32_t heartbeatPulse;
+	
+	runState_t rstats;
 }application_t;
 
 enum _course {

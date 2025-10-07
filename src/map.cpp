@@ -12,15 +12,13 @@
 
 
 
-extern runState_t rstats;
 application_t inst;
 
 
 FLASHMEM void map_init (vfont_t *vfont)
 {
 	memset(&inst, 0, sizeof(inst));
-	
-	//inst.vfont = vfont;
+
 	inst.vfont = vfont;
 	inst.colourScheme = 1;
 	inst.cmdTaskRunMode = 1;
@@ -91,17 +89,17 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 		}
 	}
 
-	if (rstats.rflags.map)
+	if (inst.rstats.rflags.map)
 		if (flags&MAP_RENDER_VIEWPORT)	  sceneRenderViewport(&inst);
-	if (rstats.rflags.trkPts)
+	if (inst.rstats.rflags.trkPts)
 		if (flags&MAP_RENDER_TRACKPOINTS) sceneRenderTrackPoints(&inst, trackRecord);
-	if (rstats.rflags.locgraphic)
+	if (inst.rstats.rflags.locgraphic)
 		if (flags&MAP_RENDER_LOCGRAPTHIC) sceneRenderLocGraphic(&inst);
-	//if (rstats.rflags.)
+	//if (inst.rstats.rflags.)
 	//	if (flags&MAP_RENDER_OVERLAY)	  sceneRenderOverlay(&inst);
-	if (rstats.rflags.compass)
+	if (inst.rstats.rflags.compass)
 		if (flags&MAP_RENDER_COMPASS)	  sceneRenderCompass(&inst);
-	if (rstats.rflags.poi)
+	if (inst.rstats.rflags.poi)
 		if (flags&MAP_RENDER_POI)		  sceneRenderPOI(&inst);
 }
 
@@ -110,23 +108,23 @@ void map_setDetail (const uint32_t detail, uint32_t state)
 	state &= 0x01;
 	
 	if (detail == MAP_RENDER_POI)
-		rstats.rflags.poi = state;
+		inst.rstats.rflags.poi = state;
 	else if (detail == MAP_RENDER_COMPASS)
-		rstats.rflags.compass = state;
+		inst.rstats.rflags.compass = state;
 	else if (detail == MAP_RENDER_TRACKPOINTS)
-		rstats.rflags.trkPts = state;
+		inst.rstats.rflags.trkPts = state;
 	else if (detail == MAP_RENDER_SLEVELS)
-		rstats.rflags.satlevels = state;
+		inst.rstats.rflags.satlevels = state;
 	else if (detail == MAP_RENDER_SAVAIL)
-		rstats.rflags.satAvailability = state;
+		inst.rstats.rflags.satAvailability = state;
 	else if (detail == MAP_RENDER_SWORLD)
-		rstats.rflags.satWorld = state;
+		inst.rstats.rflags.satWorld = state;
 	else if (detail == MAP_RENDER_CONSOLE)
-		rstats.rflags.console = state;
+		inst.rstats.rflags.console = state;
 	else if (detail == MAP_RENDER_VIEWPORT)
-		rstats.rflags.map = state;
+		inst.rstats.rflags.map = state;
 	else if (detail == MAP_RENDER_LOCGRAPTHIC)
-		rstats.rflags.locgraphic = state;
+		inst.rstats.rflags.locgraphic = state;
 }
 
 

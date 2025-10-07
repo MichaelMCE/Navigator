@@ -20,7 +20,7 @@
 #define MAP_RENDER_SWORLD		0x100
 #define MAP_RENDER_CONSOLE		0x200
 
-
+/*
 
 typedef struct {
 	struct {
@@ -51,7 +51,7 @@ typedef struct {
 	}rflags;		// render flags
 }runState_t;
 
-
+*/
 
 void map_init (vfont_t *vfont);
 void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const float heading, const uint32_t flags);
