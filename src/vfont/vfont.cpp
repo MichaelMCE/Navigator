@@ -401,8 +401,8 @@ static inline void drawVector (vfont_t *ctx, float x1, float y1, float x2, float
 	}
 	
 	if (ctx->renderOp&RENDEROP_SHEAR_Y){
-		y1 = (x1 * ctx->shear.sin + y1 * ctx->shear.cos) + 1.0;
-		y2 = (x2 * ctx->shear.sin + y2 * ctx->shear.cos) + 1.0;
+		y1 = (x1 * ctx->shear.sin + y1 * ctx->shear.cos) + 1.0f;
+		y2 = (x2 * ctx->shear.sin + y2 * ctx->shear.cos) + 1.0f;
 	}
 
 	if (ctx->renderOp&RENDEROP_ROTATE_GLYPHS){
@@ -448,13 +448,10 @@ static inline float drawGlyph (vfont_t *ctx, const hfont_t *font, const uint16_t
 
 	if (c >= font->glyphCount) return 0.0f;
 	
-	//const uint8_t *hc = (uint8_t*)font->glyphs[c].data;
 	const uint8_t *hc = (uint8_t*)font->glyphs[c];
 	const float lm = char2float(ctx, *hc++) * fabsf(ctx->scale.horizontal);
 	const float rm = char2float(ctx, *hc++) * fabsf(ctx->scale.horizontal);
-	
-	
-	//printf("c %c %c %c %c\n", c+32, *font->glyphs[c], *(font->glyphs[c]+1), *(font->glyphs[c]+2));
+
 	ctx->pos.x -= lm;
 
 	float x1 = 0.0f;
@@ -826,14 +823,14 @@ void setAspect (vfont_t *ctx, const float hori, const float vert)
 		ctx->scale.vertical = vert;
 }
 
-void vfont_init (vfont_t *ctx)
+FLASHMEM void vfont_init (vfont_t *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
 	setAspect(ctx, 1.0, 1.0);
 	setGlyphPadding(ctx, -1.0);
 	setGlyphScale(ctx, 1.0);
-	setBrush(ctx, BRUSH_DISK);
+	setBrush(ctx, BRUSH_POINT);
 	setBrushSize(ctx, 1.0);
 	setBrushStep(ctx, 1.0);
 	setBrushQuality(ctx, 2);
