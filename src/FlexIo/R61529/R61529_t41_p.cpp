@@ -140,6 +140,7 @@ FLASHMEM void R61529_t41_p::begin (const uint8_t baud_div)
 	digitalWriteFast(_rst, HIGH);
 
 	FlexIO_Init();
+	FlexIO_Config_SnglBeat();
 	displayInit();
 
 	_width  = R61529_TFTWIDTH;
@@ -241,14 +242,16 @@ FASTRUN void R61529_t41_p::DCHigh ()
 	digitalWriteFast(_dc, HIGH);     // Writing data to TFT
 }
 
-
 #pragma GCC push_options
 #pragma GCC optimize ("O0")   
 FASTRUN void R61529_t41_p::microSecondDelay ()
 {
 	//for (uint32_t volatile  i = 0; i < 5; i++)
 	//	__asm__ volatile ("nop\n\t");
-	delayMicroseconds(1);
+	//delayMicroseconds(1);
+	delayNanoseconds(25);
+	
+	//for (uint32_t i=0; i<99; i++) __asm__("nop\n\t");
 }
 #pragma GCC pop_options
 
@@ -544,14 +547,14 @@ FASTRUN void R61529_t41_p::FlexIO_Config_MultiBeat ()
     
 }
 
-FASTRUN void R61529_t41_p::SglBeatWR_nPrm_8(uint32_t const cmd, const uint8_t *value = NULL, uint32_t const length = 0)
+FASTRUN void R61529_t41_p::SglBeatWR_nPrm_8 (uint32_t const cmd, const uint8_t *value = NULL, uint32_t const length = 0)
 {
 	while (WR_IRQTransferDone == false){
    		//Wait for any DMA transfers to complete
 	}
   
 
-    FlexIO_Config_SnglBeat();
+    //FlexIO_Config_SnglBeat();
      uint32_t i;
     /* Assert CS, RS pins */
     
@@ -607,8 +610,9 @@ FASTRUN void R61529_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_t
    		//Wait for any DMA transfers to complete
 	}
 	
-	
-    FlexIO_Config_SnglBeat();
+    //FlexIO_Config_SnglBeat();
+
+	//__disable_irq();
     
     /* Assert CS, RS pins */
     CSLow();
@@ -690,6 +694,8 @@ FASTRUN void R61529_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_t
 	while (WR_IRQTransferDone == false){
    		//Wait for any DMA transfers to complete
 	}
+	
+	//__enable_irq();
 }
 
 FASTRUN uint8_t R61529_t41_p::readCommand (const uint16_t cmd)
@@ -751,7 +757,7 @@ FASTRUN void R61529_t41_p::MulBeatWR_nPrm_IRQ (uint32_t const cmd,  const void *
     FlexIO_Config_SnglBeat();
     CSLow();
     DCLow();
-__enable_irq();
+//__enable_irq();
     /* Write command index */
     p->SHIFTBUF[0] = cmd;
 
@@ -795,11 +801,11 @@ __enable_irq();
     p->TIMIEN |= (1 << TIMER_IRQ);
     p->SHIFTSIEN |= (1 << SHIFTER_IRQ);
     
-    __enable_irq();
+    //__enable_irq();
     
-   	while (WR_IRQTransferDone == false){
+   //	while (WR_IRQTransferDone == false){
    		//Wait for any DMA transfers to complete
-	}
+	//}
 }
 
 FASTRUN void R61529_t41_p::_onCompleteCB ()
@@ -846,19 +852,17 @@ FASTRUN void R61529_t41_p::flexIRQ_Callback ()
         }
     }
   }
-    //asm("dsb");
-  __enable_irq();  
-    while (WR_IRQTransferDone == false){
+    asm("dsb");
+ // __enable_irq();  
+ //   while (WR_IRQTransferDone == false){
    		//Wait for any DMA transfers to complete
-	}
-	__enable_irq();
+//	}
+//	__enable_irq();
 }
-
-
 
 FASTRUN void R61529_t41_p::ISR ()
 {
-	//asm("dsb");
+	asm("dsb");
 	IRQcallback->flexIRQ_Callback();
 }
 

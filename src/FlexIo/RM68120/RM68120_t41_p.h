@@ -51,7 +51,7 @@
 
 
 class RM68120_t41_p {
-  public:
+public:
     RM68120_t41_p (int8_t dc, int8_t cs = -1, int8_t rst = -1, int8_t bl = 33);
     void begin(uint8_t baud_div = 20);
     uint8_t getBusSpd();
@@ -86,18 +86,13 @@ class RM68120_t41_p {
     typedef void(*CBF)();
     CBF _callback;
     void onCompleteCB(CBF callback);
-
-
-  
     
-  private:
-
+private:
   	FlexIOHandler *pFlex;
   	IMXRT_FLEXIO_t *p;
   	const FlexIOHandler::FLEXIO_Hardware_t *hw;
    
     uint8_t _baud_div = 20; 
-
     uint8_t _bitDepth = 16;
     uint8_t _rotation = 0;
     const uint8_t MADCTL[4] = MADCTL_ARRAY;

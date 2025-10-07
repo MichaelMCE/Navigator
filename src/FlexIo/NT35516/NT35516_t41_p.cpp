@@ -487,8 +487,8 @@ FASTRUN void NT35516_t41_p::flexIO_Config_snglBeat ()
 #include <USBHost_t36.h>
 FASTRUN void NT35516_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, uint16_t *value, const uint32_t length)
 {
-	NVIC_DISABLE_IRQ(IRQ_USBHS);
-	NVIC_DISABLE_IRQ(IRQ_USBPHY0);
+	//NVIC_DISABLE_IRQ(IRQ_USBHS);
+	//NVIC_DISABLE_IRQ(IRQ_USBPHY0);
 	__disable_irq();
 	
 	//delayNanoseconds(20);
@@ -521,8 +521,8 @@ FASTRUN void NT35516_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, uint16_t *val
 	//delayNanoseconds(20);
 
 	__enable_irq();
-	NVIC_ENABLE_IRQ(IRQ_USBPHY0);
-	NVIC_ENABLE_IRQ(IRQ_USBHS);
+	//NVIC_ENABLE_IRQ(IRQ_USBPHY0);
+	//NVIC_ENABLE_IRQ(IRQ_USBHS);
 }
 
 #endif
