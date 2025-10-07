@@ -78,7 +78,7 @@ static fileio_t *polyfileOpen (const uint8_t *dir, const int32_t x_lon, const in
 	uint8_t filename[1024];
 	snprintf((char*)filename, sizeof(filename)-1, "%s/%03i_%03i.pk32", dir, y, x);
 
-	printf(CS("polyfileOpen: %i %i: %s"), y, x, filename);
+	//printf(CS("polyfileOpen: %i %i: %s"), y, x, filename);
 
 	fileio_t *file = fio_open(filename, FIO_READ);
 	if (!file){
@@ -286,7 +286,7 @@ static inline int tileUnload (const uint32_t renderPass, const int32_t y_lat, co
 					int rDiff = (renderPass - block->lastRendered);
 					if (rDiff > TILE_UNLOAD_DELTA){
 						
-						printf(CS("tileUnload, blockRelease: %i %i"), (int)x, (int)y);
+						//printf(CS("tileUnload, blockRelease: %i %i"), (int)x, (int)y);
 						
 						blockRelease(block);
 						l_free(block);
@@ -416,7 +416,7 @@ int loadPOI (poi_t *poi, const float xlon, const float ylat, int32_t x, int32_t 
 		return 1;
 	}
 
-	printf(CS("loadPOI: %i %i, %i"), (int)x, (int)y, (int)poi->string.end);
+	//printf(CS("loadPOI: %i %i, %i"), (int)x, (int)y, (int)poi->string.end);
 
 	uint8_t buffer[128];
 	snprintf((char*)buffer, sizeof(buffer)-1,  "%s/%03i_%03i.poi", POI_PATH, (int)y, (int)x);
@@ -573,7 +573,7 @@ void sceneLoadTiles (application_t *inst)
 	
 }
 
-void tilesInit ()
+FLASHMEM void tilesInit ()
 {
 	calcTileCoverage();
 	tiles8 = (tile8_t***)l_calloc((tilesTotalDown()/PACK_DOWN)+1, sizeof(tile8_t*));

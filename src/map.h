@@ -28,10 +28,14 @@ typedef struct {
 		float map;
 		float trkpts;
 		float poi;
+		float display;
 	}rtime;
 
 	int trkptsTotal;
 	int trkptsToWrite;
+	
+	uint64_t nothingCount;
+	uint64_t nothingCountSecond;
 	
 	struct {
 		uint32_t poi:1;

@@ -7,12 +7,11 @@
 #include "ubx/ubx.h"
 #include "ubx/ubxcb.h"
 #include "gps.h"
+#include "cmd.h"
 
 
-//#define GPS_PASSTHROUGH_ENABLED		(0)
 
-
-int GPS_PASSTHROUGH_ENABLED = 0;
+int gnssReceiver_PassthroughEnabled = 0;
 
 
 ubx_device_t dev = {0};
@@ -25,7 +24,76 @@ static int32_t bOffset = 0;
 static uint8_t serBuffer[8];
 
 
+void gps_pollInf (const uint8_t protocolID)
+{
+	ubx_msgInfPoll(&dev, protocolID);
+}
 
+int gps_pollMsg (const char *name)
+{
+	return ubx_msgPollName(&dev, name);
+}
+
+void gps_sosPoll ()
+{
+	ubx_sos_poll(&dev);
+}
+
+void gps_sosClearFlash ()
+{
+	ubx_sos_clear(&dev);
+}
+
+void gps_sosCreateBackup ()
+{
+	ubx_sos_backup(&dev);
+}
+
+void gps_printVersions ()
+{
+	ubx_printVersions(&dev);
+}
+
+void gps_printStatus ()
+{
+	ubx_printStatus(&dev);
+}
+
+void gps_coldStart ()
+{
+	ubx_coldStart(&dev);
+}
+
+void gps_warmStart ()
+{
+	ubx_warmStart(&dev);
+}
+
+void gps_hotStart ()
+{
+	ubx_hotStart(&dev);
+}
+
+void gps_resetOdo ()
+{
+	ubx_odo_reset(&dev);
+}
+
+void gps_startOdo ()
+{
+	ubx_odo_start(&dev);
+}
+
+void gps_stopOdo ()
+{
+	ubx_odo_stop(&dev);
+}
+
+int gps_writeUbx (void *buffer, const uint32_t bufferSize)
+{
+	//return ubx_write(&dev, (uint8_t*)buffer, bufferSize);
+	return Serial1.write((uint8_t*)buffer, bufferSize);
+}
 
 void ms_delay (const uint32_t timeMs)
 {
@@ -37,7 +105,7 @@ int gps_serialWrite (uint8_t *buffer, uint32_t bufferSize)
 	return Serial1.write(buffer, bufferSize);
 }
 
-static inline void reciever_baudReset (ubx_device_t *dev)
+FLASHMEM static void reciever_baudReset (ubx_device_t *dev)
 {
 	for (int i = 0; baudRates[i]; i++){
 		Serial1.begin(baudRates[i]);
@@ -53,7 +121,7 @@ static inline void reciever_baudReset (ubx_device_t *dev)
 	}
 }
 
-static void gps_setup (ubx_device_t *dev)
+FLASHMEM static void gps_setup (ubx_device_t *dev)
 {
 	Serial1.addMemoryForRead(bufferReadX, sizeof(bufferReadX));
 	Serial1.addMemoryForWrite(bufferWriteX, sizeof(bufferWriteX));
@@ -66,17 +134,29 @@ static void gps_setup (ubx_device_t *dev)
 	gps_configure(dev);
 }
 
+void gps_loadOfflineAssist (const int printInfo)
+{
+	if (cmdLoadUbx(ASSISTNOW_FILENAME)){
+		if (printInfo)
+			addDebugLine((const uint8_t*)("AssistNow Offline: " ASSISTNOW_FILENAME " imported"));
+	}else{
+		if (printInfo)
+			addDebugLine((const uint8_t*)("AssistNow Offline: " ASSISTNOW_FILENAME " import failed"));
+	}
+}
+
 void gps_init ()
 {
 	memset(&dev, 0, sizeof(dev));
 	gps_setup(&dev);
+	gps_loadOfflineAssist(1);
 }
 
 void serialEvent1 ()
 {
 	static uint8_t len = 0;
 
-	if (GPS_PASSTHROUGH_ENABLED)
+	if (gnssReceiver_PassthroughEnabled)
 		return;
 	
     while (Serial1.available()) {
@@ -96,7 +176,7 @@ void serialEvent1 ()
 
 void gps_task ()
 {
-	if (!GPS_PASSTHROUGH_ENABLED)
+	if (!gnssReceiver_PassthroughEnabled)
 		return;
 
 	if (Serial.available())     		// If anything comes in Serial (USB),
@@ -105,3 +185,4 @@ void gps_task ()
 	if (Serial1.available())
 		Serial.write(Serial1.read());   // read it and send it out Serial (USB)
 }
+

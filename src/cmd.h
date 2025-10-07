@@ -15,16 +15,21 @@
 #define CMD_REBOOT			"<cmd:reboot>"
 #define CMD_LOGCFG			"<cmd:logcfg>"
 #define CMD_ZOOM			"<cmd:viewport>"
-#define CMD_RDETAIL			"<cmd:renderdetail>"
+#define CMD_DETAIL			"<cmd:renderdetail>"
 #define CMD_BRIGHTNESS		"<cmd:backlight>"
 #define CMD_LOAD			"<cmd:load>"
-#define CMD_TRKPT			"<cmd:trkpt>"
+#define CMD_FDATA			"<cmd:fdata>"
 #define CMD_MAPSCHEME		"<cmd:scheme>"
+#define CMD_DEBUG			"<cmd:debug>"
+#define CMD_RECEIVER		"<cmd:receiver>"
+#define CMD_ODO				"<cmd:odo>"
+#define CMD_ULOAD			"<cmd:uload>"
+#define CMD_SOS			    "<cmd:sos>"
+
 
 #define CL "<response:msg>"
 #define CR "<response:end>\n"
 #define CS(a)	CL a CR
-
 
 
 
@@ -45,6 +50,17 @@ int cmd_task (const int pulse);
 
 void cmdSendError (const char *err);
 void cmdSendResponse (const char *msg);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int cmdLoadUbx (const char *filename);
+#ifdef __cplusplus
+}
+#endif
+
+
 
 #endif
 

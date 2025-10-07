@@ -103,8 +103,11 @@ typedef struct {
 		float heading;
 	}viewport;
 
-	int colourScheme;
+	uint32_t colourScheme;
 	uint32_t renderPassCt;
+	uint32_t renderFlags;
+	uint32_t cmdTaskRunMode;
+	uint32_t heartbeatPulse;
 }application_t;
 
 enum _course {

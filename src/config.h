@@ -14,7 +14,7 @@
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define ENABLE_EXTRAM_CACHE		0		// enable PSRAM precache if using USE_EXTMEM_BUFFER. Is experimental.
 #define ENABLE_OP_PRIMATIVES	0		// enable drawing api - 32bit HOST only. Not yet compatible with 64bit client build. Requires extmem/PSRAM
-
+#define ENABLE_MTP				0		// Enable MTP drive. Consumes ~110k RAM1. Compile with USB TYPE: "Serial + MTP Disk .."
 #define ENABLE_ENCODERS			1
 
 #define TFT_INTENSITY			55		// PWM value from 0 to 255
@@ -22,9 +22,11 @@
 // there can only be one
 #define USE_FLEXTFT_ILI9486		0
 #define USE_FLEXTFT_S6D04D1		0
-#define USE_FLEXTFT_ILI9806		0
-#define USE_FLEXTFT_RM68120		1
+
+#define USE_FLEXTFT_ILI9806		1
+#define USE_FLEXTFT_RM68120		0
 #define USE_FLEXTFT_R61529		0
+
 #define USE_FLEXTFT_R61408		0
 #define USE_FLEXTFT_LG4572B		0
 #define USE_FLEXTFT_NT35510		0
@@ -75,7 +77,7 @@
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 RM68120 TFT Display"
-#define TFT_SPEED				40
+#define TFT_SPEED				80
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
 #elif USE_FLEXTFT_R61408
 #define TFT_WIDTH				800
@@ -99,7 +101,7 @@
 #define TFT_WIDTH				854
 #define TFT_HEIGHT				480
 #define CFG_STRING				"854x480*2 ILI9806 IPS Display"
-#define TFT_SPEED				24
+#define TFT_SPEED				48
 #define TOUCH_ROTATION			TOUCH_DIR_RLBT
 #elif USE_FLEXTFT_NT35516
 #define TFT_WIDTH				960

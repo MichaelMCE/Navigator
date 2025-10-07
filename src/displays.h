@@ -47,7 +47,8 @@ uint8_t *tft_getBuffer ();
 void tft_update_array (uint16_t *pixels, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
 // adjust backlight PWN level. range is 0 to 127
-void tft_backlight (const uint8_t level);
+void tft_setBacklight (const uint8_t level);
+uint8_t tft_getBacklight ();
 
 // set active layer
 int tft_setWriteLayer (const int layerIdx);

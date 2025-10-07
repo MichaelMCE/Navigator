@@ -16,14 +16,15 @@ extern runState_t rstats;
 application_t inst;
 
 
-
-
-void map_init (vfont_t *vfont)
+FLASHMEM void map_init (vfont_t *vfont)
 {
 	memset(&inst, 0, sizeof(inst));
 	
-	inst.colourScheme = 1;
+	//inst.vfont = vfont;
 	inst.vfont = vfont;
+	inst.colourScheme = 1;
+	inst.cmdTaskRunMode = 1;
+	
 	sceneSetZoom(&inst, SCENEZOOM);
 	
 	poi_t *poi = &inst.poi;
@@ -42,7 +43,7 @@ void map_init (vfont_t *vfont)
 	map_setDetail(MAP_RENDER_SLEVELS, 1);
 	map_setDetail(MAP_RENDER_SAVAIL, 1);
 	map_setDetail(MAP_RENDER_SWORLD, 1);
-	map_setDetail(MAP_RENDER_CONSOLE, 1);
+	map_setDetail(MAP_RENDER_CONSOLE, 0);
 }
 
 static inline float calcDistance (const float x1, const float y1, const float x2, const float y2)

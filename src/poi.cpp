@@ -57,7 +57,7 @@ void poiCleanBlocks (poi_t *poi)
 		poi->string.offsets[i] = 0xFFFF;
 }
 
-void poiInit (poi_t *poi)
+FLASHMEM void poiInit (poi_t *poi)
 {
 	//memset(poi, 0, sizeof(*poi));
 	poiCleanBlocks(poi);

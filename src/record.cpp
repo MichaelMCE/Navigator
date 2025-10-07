@@ -10,7 +10,7 @@
 
 
 
-int fpRecord_init (trackRecord_t *trackRecord)
+FLASHMEM int fpRecord_init (trackRecord_t *trackRecord)
 {
 	memset(trackRecord, 0, sizeof(*trackRecord));
 	

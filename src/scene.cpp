@@ -1090,7 +1090,7 @@ void sceneClose ()
 	tilesClose();
 }
 
-void sceneInit ()
+FLASHMEM void sceneInit ()
 {
 	tilesInit();
 }

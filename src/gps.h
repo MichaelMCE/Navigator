@@ -8,8 +8,7 @@
 #include "ubx/ubxcb.h"
 
 
-
-#define SERIAL_RATE				(115200)
+#define SERIAL_RATE				(230400)
 #define DEBUG_LINES				(24)
 #define DEBUG_LINE_LEN			(42)
 
@@ -23,11 +22,12 @@
 #define COM_BAUD_460800			6
 #define COM_BAUD_921600			7
 
-#define COM_BAUD				COM_BAUD_115200
+#define COM_BAUD				COM_BAUD_230400
 #define COM_BAUD_FWDEFAULT		COM_BAUD_9600
 #define COM_BAUD_LASTSAVED		COM_BAUD_115200
 #define BAUDRATE(n)				(baudRates[(n)])
 
+#define ASSISTNOW_FILENAME		"auto.ubx"
 
 
 
@@ -85,7 +85,8 @@ typedef struct {
 	
 	struct{
 		float speed;		//		km/h   kilometer per hour
-		float heading; 
+		float heading;
+		uint32_t distance;
 	}misc;
 	
 	uint32_t iTow;
@@ -100,6 +101,9 @@ typedef struct {
 		uint32_t msgCt;	
 		uint32_t rx;
 		uint32_t tx;
+		
+		int16_t epoch;
+		int16_t epochPerRead;
 	}rates;
 }gpsdata_t;
 
@@ -144,6 +148,26 @@ void gps_configurePorts (ubx_device_t *dev);
 void gps_configure (ubx_device_t *dev);
 uint32_t gps_ubxMsgRun (ubx_device_t *dev, uint8_t *inBuffer, uint32_t bufferSize, int32_t *writePos, uint8_t *serBuffer, uint8_t serLen);
 
+void gps_printVersions ();
+void gps_printStatus ();
+void gps_coldStart ();
+void gps_warmStart ();
+void gps_hotStart ();
+
+void gps_resetOdo ();
+void gps_startOdo ();
+void gps_stopOdo ();
+
+void gps_sosCreateBackup ();
+void gps_sosClearFlash ();
+void gps_sosPoll ();
+
+void gps_loadOfflineAssist (const int printInfo);
+
+int gps_writeUbx (void *buffer, const uint32_t bufferSize);
+
+int gps_pollMsg (const char *name);
+void gps_pollInf (const uint8_t protocolID);
 
 sat_stats_t *getSats ();
 const char *getFixName (const uint8_t type);
