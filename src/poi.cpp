@@ -23,18 +23,8 @@
 //	Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 
-#include <Arduino.h>
-#include "config.h"
-#include "displays.h"
-#include "vfont/vfont.h"
-#include "gps.h"
-#include "fileio.h"
-#include "polyfile.h"
-#include "scene.h"
-#include "map.h"
-#include "poi.h"
-#include "tiles.h"
 
+#include "commonGlue.h"
 
 
 

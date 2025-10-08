@@ -1,7 +1,7 @@
 
 
-
-
+#include "commonGlue.h"
+/*
 #include <Arduino.h>
 #include "config.h"
 #include "displays.h"
@@ -14,8 +14,7 @@
 #include "map.h"
 #include "tiles.h"
 #include "cmd.h"
-
-
+*/
 
 
 
