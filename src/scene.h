@@ -139,6 +139,14 @@ typedef struct {
 	uint32_t heartbeatPulse;
 	
 	runState_t rstats;
+	
+	struct {
+		uint32_t enabled:1;
+		uint32_t pause:1;
+		uint32_t step:4;
+		uint32_t idx:24;
+		uint32_t stub:2;
+	}runLog;
 }application_t;
 
 enum _course {
