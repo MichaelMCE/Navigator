@@ -95,7 +95,9 @@ typedef struct {
 
 	uint32_t timeAdjusted:1;
 	uint32_t firstFix:1;
-	uint32_t stub:30;
+	uint32_t dateConfirmed:1;
+	uint32_t timeConfirmed:1;
+	uint32_t stub:28;
 	
 	struct{
 		uint32_t msgCt;	
