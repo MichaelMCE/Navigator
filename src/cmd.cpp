@@ -1,20 +1,9 @@
 
 
 
-#include <Arduino.h>
-#include <unistd.h>
-#include <SD.h>
-#include "fileio.h"
-#include "config.h"
-#include "vfont/vfont.h"
-#include "gps.h"
-#include "scene.h"
-#include "map.h"
-#include "cmd.h"
-#include "Teensy.h"
-#include "record.h"
 
 
+#include "commonGlue.h"
 
 
 typedef struct {
@@ -532,6 +521,30 @@ FLASHMEM static void cmd_sos (char *msg, const int cmdlen)
 	}
 }
 
+FLASHMEM static void cmd_runLog (char *msg, const int cmdlen)
+{
+	if (!strncmp(msg, "stop", 4)){
+		log_runStop();
+		
+	}else if (!strncmp(msg, "start", 5)){
+		log_runStart();
+
+	}else if (!strncmp(msg, "reset", 5)){
+		log_runReset();
+
+	}else if (!strncmp(msg, "pause", 5)){
+		log_runPause();
+	
+	}else if (!strncmp(msg, "step:", 5)){
+		uint8_t step = atoi(&msg[5])&0xFF;
+		log_runStep(step);
+	
+	}else if (!strncmp(msg, "tkpt:", 5)){
+		uint32_t position = atoi(&msg[5]);
+		log_runSet(position);
+	}
+}
+
 FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
 {
 	if (buffer[0] != '<') return 1;
@@ -544,7 +557,11 @@ FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
 	if (!strncmp(buffer, CMD_ULOAD, strlen(CMD_ULOAD))){
 		char *filename = &buffer[strlen(CMD_ULOAD)];
 		cmd_uload(filename, cmdlen);
-		
+
+	}else if (!strncmp(buffer, CMD_RUNLOG, strlen(CMD_RUNLOG))){
+		char *msg = &buffer[strlen(CMD_RUNLOG)];
+		cmd_runLog(msg, cmdlen);
+				
 	}else if (!strncmp(buffer, CMD_SOS, strlen(CMD_SOS))){
 		char *msg = &buffer[strlen(CMD_SOS)];
 		cmd_sos(msg, cmdlen);
