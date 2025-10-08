@@ -1,13 +1,7 @@
 
 
-#include <Arduino.h>
-#include "config.h"
-#include "vfont/vfont.h"
-#include "gps.h"
-#include "scene.h"
-#include "map.h"
-#include "tiles.h"
-#include "poi.h"
+
+#include "commonGlue.h"
 
 
 
@@ -18,11 +12,13 @@ application_t inst;
 FLASHMEM void map_init (vfont_t *vfont)
 {
 	memset(&inst, 0, sizeof(inst));
-
+	
+	//inst.vfont = vfont;
 	inst.vfont = vfont;
 	inst.colourScheme = 1;
 	inst.cmdTaskRunMode = 1;
-	
+	inst.runLog.step = 4;
+	log_runReset();	
 	sceneSetZoom(&inst, SCENEZOOM);
 	
 	poi_t *poi = &inst.poi;
