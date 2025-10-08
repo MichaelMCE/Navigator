@@ -506,6 +506,66 @@ static inline int isTrackPointInRegion (const trackPoint_t *tp, const vectorPt4_
 			(tp->location.longitude >= win->v1.lon && tp->location.longitude <= win->v2.lon);
 }
 
+static inline float fixed_atan2 (float y, float x)
+{
+
+  const float pi = M_PI;
+  const float pi_2 = M_PI_2;  
+
+  int swap = fabs(x) < fabs(y);
+  float atan_input = (swap ? x : y) / (swap ? y : x);
+
+  // Approximate atan
+  const float a1  =  0.99997726f;
+  const float a3  = -0.33262347f;
+  const float a5  =  0.19354346f;
+  const float a7  = -0.11643287f;
+  const float a9  =  0.05265332f;
+  const float a11 = -0.01172120f;
+  float z_sq = atan_input * atan_input;
+  //float res = atan_input * (a1 + z_sq * (a3 + z_sq * (a5 + z_sq * (a7 + z_sq * (a9 + z_sq * a11)))));
+  float res = atan_input * fmaf(z_sq, fmaf(z_sq, fmaf(z_sq, fmaf(z_sq, fmaf(z_sq, a11, a9), a7), a5), a3), a1);
+
+  res = swap ? (pi_2 - res) : res;
+  res = (x < 0.0) ? (pi - res) : res;
+
+  //res = copysignf(res, y);
+  union { float flVal; uint32_t nVal; } tempRes = { res };
+  union { float flVal; uint32_t nVal; } tempY = { y };
+  tempRes.nVal = (tempRes.nVal & 0x7fffffffu) | (tempY.nVal & 0x80000000u);
+
+  // Store result
+  return tempRes.flVal; // res
+
+}
+
+static inline float calcDistMf (float lat1, float lon1, float lat2, float lon2)
+{
+	const float R = 6378137.0;		// Earths radius
+	const float pi80 = M_PI / 180.0f;
+	
+	lat1 *= pi80;
+	lon1 *= pi80;
+	lat2 *= pi80;
+	lon2 *= pi80;
+	float dlat = fabsf(lat2 - lat1);
+	float dlon = fabsf(lon2 - lon1);
+	float a = sinf(dlat / 2.0f) * sinf(dlat / 2.0f) + cosf(lat1) * cosf(lat2) * sinf(dlon /2.0f) * sinf(dlon / 2.0f);
+	float c = 2.0f * fixed_atan2(sqrtf(a), sqrtf(1.0f - a));
+	float d = R * c;
+	return d;
+}
+
+static inline float calcDistMetersTrkPt (const trackPoint_t *pt1, const trackPoint_t *pt2)
+{
+	const float lat1 = pt1->location.latitude;
+	const float lon1 = pt1->location.longitude;
+	const float lat2 = pt2->location.latitude;
+	const float lon2 = pt2->location.longitude;
+
+	return calcDistMf(lat1, lon1, lat2, lon2);
+}
+
 static inline void drawTrackPath (application_t *inst, trackPoint_t *points, const uint32_t total, const float lineThickness, const uint16_t colour)
 {
 	if (total < 5) return;
@@ -515,7 +575,7 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 	const float dh = viewportGetHeight(inst);
 	vectorPt4_t region;
 
-	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst)/**COVERAGE_OVERSCAN*/, &region);
+	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst), &region);
 
 	trackPoint_t *tp = &points[0];
 	float preX = (tp->location.longitude - window->v1.lon) / dw;
@@ -526,16 +586,17 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 	col[0] = colour;
 	col[1] = COLOUR_PAL_GOLD;
 
-	for (uint32_t j = 1; j < total-1; j += 4){
+	for (uint32_t j = 1; j < total-1; j += 3){
 		trackPoint_t *tp = &points[j];
-				
+
 		float x = (tp->location.longitude - window->v1.lon) / dw;
 		float y = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
 
 		if (isTrackPointInRegion(tp, &region)){
 			if (!((y >= VHEIGHT && preY >= VHEIGHT) || (y < 0 && preY < 0))){
 				if (!((x >= VWIDTH && preX >= VWIDTH) || (x < 0 && preX < 0))){
-					drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
+					if (calcDistMetersTrkPt(tp, &points[j-1]) <= 11.0f)
+						drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
 				}
 			}
 		}
@@ -582,7 +643,7 @@ static inline void drawTrackSpot (application_t *inst, trackPoint_t *points, con
 	const float dh = viewportGetHeight(inst);
 	vectorPt4_t region;
 
-	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst), &region);
+	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst)*COVERAGE_OVERSCAN, &region);
 
 	int altCol = 0;
 	uint8_t col[2];
@@ -620,7 +681,7 @@ static inline void drawTrackPath_Line (application_t *inst, trackPoint_t *points
 	float preX = (tp->location.longitude - window->v1.lon) / dw;
 	float preY = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
 
-	for (uint32_t j = 3; j < total-1; j += 2){
+	for (uint32_t j = 3; j < total-1; j += 1){
 		trackPoint_t *tp = &points[j];
 
 		float x = (tp->location.longitude - window->v1.lon) / dw;
@@ -1070,8 +1131,8 @@ void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord)
 	//const int total = trackRecord->marker;
 	
 	//drawTrackPath(inst, &trackRecord->trackPoints[trackRecord->marker - total], total, 6, COLOUR_PAL_AQUA);
-	drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, 6, COLOUR_PAL_AQUA);
-	//drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, 3, COLOUR_PAL_AQUA);
+	//drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, 6, COLOUR_PAL_AQUA);
+	drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, 3, COLOUR_PAL_AQUA);
 	//drawTrackPath_Line(inst, trackRecord->trackPoints, trackRecord->marker, COLOUR_PAL_DARKGREY);
 }
 
