@@ -25,6 +25,7 @@
 #define CMD_ODO				"<cmd:odo>"
 #define CMD_ULOAD			"<cmd:uload>"
 #define CMD_SOS			    "<cmd:sos>"
+#define CMD_RUNLOG		    "<cmd:runlog>"
 
 
 #define CL "<response:msg>"
