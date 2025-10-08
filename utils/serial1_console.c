@@ -22,6 +22,7 @@
 #include <windows.h>
 #include <conio.h>
 #include <wininet.h>
+#include <math.h>
 #include "serial1_console.h"
 
 
@@ -797,6 +798,15 @@ void cmd_ufetch (const char *cmdStr)
 	}
 }
 
+void cmd_runlog (const char *cmdStr)
+{
+	if (strlen(cmdStr) < 4) return;
+		
+	//if (!strncmp("start", cmdStr, 5)){
+		serialSendCmd(hSerial, CMD_RUNLOG, cmdStr);	
+	//}
+}
+
 static const cmdstr_t cmdstrs[] = {
 	{"hello",    cmd_hello,     ""},
 	{"help",     cmd_help,      ""},
@@ -820,6 +830,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"uload",    cmd_uload,     "filename.ubx. import a .ubx file in to receiver"},
 	{"ufetch",   cmd_ufetch,    "token:<yourtoken>. Downloads and saves locally .ubx file of latest offline AssistNow data from u-blox website"},
 	{"sos",      cmd_sos,       "create, clear, poll"},
+	{"runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
 	
 	{"", NULL, ""}
 };
@@ -862,6 +873,7 @@ void cmd_help (const char *cmdStr)
 
 int main (const int argc, const char *argv[])
 {   
+
 	if (argc < 3){
 		if (argc == 2){
 			if ((*argv[1] == 'h') || (*argv[1] == 'H')){
