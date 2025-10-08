@@ -803,7 +803,7 @@ typedef struct {
 #define PVT_FLAGS_HEADVEHVALID			(0b001 << 5)	// 1 = heading of vehicle is valid
 #define PVT_FLAGS_CARRSONL				(0b011 << 6)	// Carrier phase range solution status: 0: no carrier phase range solution, 1: float solution, 2: fixed solution
 
-#define PVT_FLAGS2_CONFIRMEDAVAI		(0b001 << 5)	// 1 = information about UTC Date and Time of Day validity confirmation is available
+#define PVT_FLAGS2_CONFIRMEDAVAI		(0b001 << 5)	// 1 = information about UTC Date and Time of Day validity confirmation is available. proto 19+
 #define PVT_FLAGS2_CONFIRMEDDATE		(0b001 << 6)	// 1 = UTC Date validity could be confirmed
 #define PVT_FLAGS2_CONFIRMEDTIME		(0b001 << 7)	// 1 = UTC Time of Day could be confirmed
 

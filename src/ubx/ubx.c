@@ -596,7 +596,7 @@ static void configureRate (ubx_device_t *dev)
 {
 	cfg_rate_t rate = {0};
 	
-	rate.measRate = 55;		// ms. 53ms = ~18-19hz
+	rate.measRate = 56;		// ms. 53ms = ~18-19hz
 	rate.navRate = 1;		// 1 measurement per navigation
 	rate.timeRef = CFG_TIMEREF_GPS;
 	
