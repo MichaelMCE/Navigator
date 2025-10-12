@@ -14,6 +14,7 @@
 #define VFONT_RENDER_QUALITY	1		// 1=higher performance. 0=lower performing but higher quality rendering
 
 #include "vfont.h"
+#include "../commonGlue.h"
 
 
 
@@ -40,42 +41,116 @@ static inline void drawBrushBitmap (vfont_t *ctx, const int x, const int y, cons
 	drawBitmap(&ctx->brush.image, x, y, colour);
 }
 
+static v16_t circlePixels_r1[6];
+static int circlePixels_r1_ct = 0;
+
+static v16_t circlePixels_r2[22];
+static int circlePixels_r2_ct = 0;
+
+static v16_t circlePixels_r5[98];
+static int circlePixels_r5_ct = 0;
+
 static inline void drawCircleFilled3 (const int x0, const int y0, const int radius, const uint8_t colour)
 {
 	if ((x0 - radius < 0) || (x0 + radius >= VWIDTH)) return;
 	if ((y0 - radius < 0) || (y0 + radius >= VHEIGHT)) return;
-	
-#if 1	// better looking
-	const int radiusMul = radius*radius + radius;
-	
-	for (int y = -radius; y <= radius; y++){
-		int yy = y*y;
-		int y0y = y0+y;
-	    for (int x = -radius; x <= radius; x++)
-        	if (x*x+yy < radiusMul)
-	            drawPixel(x0+x, y0y, colour);
+
+	if (radius == 1){
+		if (circlePixels_r1_ct){
+			for (int i = 0; i < circlePixels_r1_ct; i++)
+				drawPixel(x0+circlePixels_r1[i].x, y0+circlePixels_r1[i].y, colour);
+			return;
+		}
+
+		const int radiusMul = radius*radius + radius;
+
+		for (int y = -radius; y <= radius; y++){
+			int yy = y*y;
+			int y0y = y0+y;
+		
+	    	for (int x = -radius; x <= radius; x++){
+        		if (x*x+yy < radiusMul){
+	            	circlePixels_r1[circlePixels_r1_ct].x = x;
+		            circlePixels_r1[circlePixels_r1_ct].y = y;
+		            circlePixels_r1_ct++;
+		            	
+		            drawPixel(x0+x, y0y, colour);
+				}
+			}
+		}
+	}else if (radius == 2){
+		if (circlePixels_r2_ct){
+			for (int i = 0; i < circlePixels_r2_ct; i++)
+				drawPixel(x0+circlePixels_r2[i].x, y0+circlePixels_r2[i].y, colour);
+			return;
+		}
+
+		const int radiusMul = radius*radius + radius;
+
+		for (int y = -radius; y <= radius; y++){
+			int yy = y*y;
+			int y0y = y0+y;
+		
+	    	for (int x = -radius; x <= radius; x++){
+        		if (x*x+yy < radiusMul){
+	            	circlePixels_r2[circlePixels_r2_ct].x = x;
+		            circlePixels_r2[circlePixels_r2_ct].y = y;
+		            circlePixels_r2_ct++;
+		            	
+		            drawPixel(x0+x, y0y, colour);
+				}
+			}
+		}
+	}else if (radius == 5){
+		if (circlePixels_r5_ct){
+			for (int i = 0; i < circlePixels_r5_ct; i++)
+				drawPixel(x0+circlePixels_r5[i].x, y0+circlePixels_r5[i].y, colour);
+			return;
+		}
+
+		const int radiusMul = radius*radius + radius;
+
+		for (int y = -radius; y <= radius; y++){
+			int yy = y*y;
+			int y0y = y0+y;
+		
+	    	for (int x = -radius; x <= radius; x++){
+        		if (x*x+yy < radiusMul){
+	            	circlePixels_r5[circlePixels_r5_ct].x = x;
+		            circlePixels_r5[circlePixels_r5_ct].y = y;
+		            circlePixels_r5_ct++;
+		            	
+		            drawPixel(x0+x, y0y, colour);
+				}
+			}
+		}
+	}else{
+		const int radiusMul = radius*radius + radius;
+		int ct = 0;
+		for (int y = -radius; y <= radius; y++){
+			int yy = y*y;
+			int y0y = y0+y;
+		
+	    	for (int x = -radius; x <= radius; x++){
+        		if (x*x+yy < radiusMul){
+		            drawPixel(x0+x, y0y, colour);
+		            ct++;
+				}
+			}
+		}
 	}
-#else
-	const int radiusMul = radius*radius + radius;
-	
-	for (int x = -radius; x < radius ; x++)
-	{
-	    int height = (int)sqrtf(radiusMul - x * x);
-	
-		int X0 = x + x0;
-    	for (int y = -height; y < height; y++)
-        	drawPixel(X0, y + y0, colour);
-	}
-#endif
+
 }
 
-static inline void drawBrush (vfont_t *ctx, float xc, float yc, const float radius, const uint16_t colour)
+//static inline void drawBrush (vfont_t *ctx, float xc, float yc, const float radius, const uint16_t colour)
+static inline void drawBrush (vfont_t *ctx, int xc, int yc, const float radius, const uint16_t colour)
 {
 	
 	if (ctx->brush.type == BRUSH_DISK){
-		if (ctx->brush.size < 2.0f)
+		if (ctx->brush.size < 2.0f){
 			drawCircleFilled(xc, yc, radius, colour);
-		else
+			//drawPixel(xc, yc, colour);
+		}else
 			drawCircleFilled3(xc, yc, radius, colour);
 
 	}else if (ctx->brush.type == BRUSH_SQUARE_FILLED){
@@ -335,10 +410,18 @@ static inline void drawBrushVector (vfont_t *ctx, const float x1, const float y1
 			const float bsize = ctx->brush.size / 2.0f;
 			const float bmul = ctx->brush.advanceMult;
 
+			int preX = -99;
+			int preY = -99;
+
 			for (float i = 1.0f; i <= d; i += bmul){
 				float x = (x1 + i * bmulX);
 				float y = (y1 + i * bmulY);
-				drawBrush(ctx, x, y, bsize, colour);
+				
+				if ((int)x != preX || (int)y != preY){
+					drawBrush(ctx, x, y, bsize, colour);
+					preX = x;
+					preY = y;
+				}
 			}
 		}else if (ctx->brush.qMode == 2){
 			float i = 0.0f;
@@ -350,13 +433,21 @@ static inline void drawBrushVector (vfont_t *ctx, const float x1, const float y1
 			const float bmul = ctx->brush.advanceMult;
 			const float bmulX = bmul * dx / d;
 			const float bmulY = bmul * dy / d;
+			const float bsize = ctx->brush.size / 2.0f;
 		
+			int preX = -99;
+			int preY = -99;
+	
 			while (distance(x, y, x2, y2) > bmul && isBetween(x1, y1, x, y, x2, y2)){
 				i += 1.0f;
 				x = (x1 + i * bmulX);
 				y = (y1 + i * bmulY);
       
-				drawBrush(ctx, x, y, ctx->brush.size / 2.0f, colour);
+      			if ((int)x != preX || (int)y != preY){
+					drawBrush(ctx, x, y, bsize, colour);
+					preX = x;
+					preY = y;
+				}
 			}
 		}
 	}else{
@@ -443,6 +534,7 @@ static inline float char2float (vfont_t *ctx, const uint8_t c)
 	return ctx->scale.glyph * (float)(c - 'R');
 }
 
+#if 0
 static inline float drawGlyph (vfont_t *ctx, const hfont_t *font, const uint16_t c)
 {
 
@@ -473,8 +565,8 @@ static inline float drawGlyph (vfont_t *ctx, const hfont_t *font, const uint16_t
 			const float y = char2float(ctx, *hc++) * ctx->scale.vertical;
 
 			if (newPath){
-				ct = 0;
 				newPath = 0;
+				ct = 0;
 				start.x = x1 = ctx->pos.x + x;
 				start.y = y1 = ctx->pos.y + y;
 
@@ -512,9 +604,11 @@ static inline float drawGlyph (vfont_t *ctx, const hfont_t *font, const uint16_t
 	ctx->pos.x += rm + ctx->xpad;
 	return (rm - lm) + ctx->xpad;
 }
-#if 0
+
+#else
+
 // returns horizontal glyph advance
-static inline float drawGlyph_old (vfont_t *ctx, const hfont_t *font, const uint16_t c)
+static inline float drawGlyph (vfont_t *ctx, const hfont_t *font, const uint16_t c)
 {
 
 	if (c >= font->glyphCount) return 0.0;
@@ -551,7 +645,7 @@ static inline float drawGlyph_old (vfont_t *ctx, const hfont_t *font, const uint
 				x2 = ctx->pos.x + x;
 				y2 = ctx->pos.y + y;
 				
-				drawVector(ctx, x1, y1, x2, y2);
+				drawVector(ctx, x1, y1, x2, y2, 0, 0);
 				x1 = x2;
 				y1 = y2;
 				//if (*hc == ' ' || !*hc) drawCircleFilled(x1, y1, 3, COLOUR_BLUE); // path end
