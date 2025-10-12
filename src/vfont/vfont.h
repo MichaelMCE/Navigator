@@ -298,7 +298,7 @@ void setGlyphScale (vfont_t *ctx, const float scale);
 float getGlyphScale (vfont_t *ctx);
 void setGlyphPadding (vfont_t *ctx, const float pad);
 float getGlyphPadding (vfont_t *ctx);
-uint16_t setBrushColour (vfont_t *ctx, const uint16_t colour);
+uint8_t setBrushColour (vfont_t *ctx, const uint8_t colour);
 void setRenderFilter (vfont_t *ctx, const uint32_t op);
 uint32_t getRenderFilter (vfont_t *ctx);
 
@@ -316,18 +316,18 @@ void drawString (vfont_t *ctx, const char *text, const int x, const int y);
 
 
 // primitives, one should never be compelled to use these
-void drawBitmap (image_t *img, int x, int y, const uint16_t colour);
-void drawRectangle (int x1, int y1, int x2, int y2, const uint16_t colour);
-void drawRectangleFilled (int x1, int y1, int x2, int y2, const uint16_t colour);
-void drawTriangle (const int x1, const int y1, const int x2, const int y2, const int x3, const int y3, const uint16_t colour);
-void drawTriangleFilled (int x0, int y0, int x1, int y1, int x2, int y2, const uint16_t colour);
-void drawCircle (const int xc, const int yc, const float radius, const uint16_t colour);
-void drawCircleFilled (int x0, const int y0, const float radius, const uint16_t colour);
-void drawLine (const int x1, const int y1, const int x2, const int y2, const uint16_t colour);
-void drawFillArc (const uint16_t x, const uint16_t y, const float radius, const float thickness, const float start, const float end, const uint16_t colour);
-void drawTriangleFilled3 (int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, const uint16_t colour);
-void drawLineV (int32_t x, int32_t y1, int32_t y2, const uint16_t colour);
-void drawLineH (int32_t y, int32_t x1, int32_t x2, const uint16_t colour);
+void drawBitmap (image_t *img, int x, int y, const uint8_t colour);
+void drawRectangle (int x1, int y1, int x2, int y2, const uint8_t colour);
+void drawRectangleFilled (int x1, int y1, int x2, int y2, const uint8_t colour);
+void drawTriangle (const int x1, const int y1, const int x2, const int y2, const int x3, const int y3, const uint8_t colour);
+void drawTriangleFilled (int x0, int y0, int x1, int y1, int x2, int y2, const uint8_t colour);
+void drawCircle (const int xc, const int yc, const float radius, const uint8_t colour);
+void drawCircleFilled (int x0, const int y0, const float radius, const uint8_t colour);
+void drawLine (const int x1, const int y1, const int x2, const int y2, const uint8_t colour);
+void drawFillArc (const uint16_t x, const uint16_t y, const float radius, const float thickness, const float start, const float end, const uint8_t colour);
+void drawTriangleFilled3 (int32_t x1, int32_t y1, int32_t x2, int32_t y2, int32_t x3, int32_t y3, const uint8_t colour);
+void drawLineV (int32_t x, int32_t y1, int32_t y2, const uint8_t colour);
+void drawLineH (int32_t y, int32_t x1, int32_t x2, const uint8_t colour);
 
 
 typedef struct {
@@ -341,11 +341,11 @@ typedef struct {
 }v16_t;
 
 
-void drawPolygon (v16_t *verts, const int32_t total, const uint16_t colour);
-void drawPolyline (const float x1, const float y1, const float x2, const float y2, const uint16_t colour);
-void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint16_t colour);
-void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint16_t colour);
-void drawPolylineSolid (const float x1, const float y1, const float x2, const float y2, const float thickness, const uint16_t colour);
+void drawPolygon (v16_t *verts, const int32_t total, const uint8_t colour);
+void drawPolyline (const float x1, const float y1, const float x2, const float y2, const uint8_t colour);
+void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour);
+void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour);
+void drawPolylineSolid (const float x1, const float y1, const float x2, const float y2, const float thickness, const uint8_t colour);
 
 const inline float cosDegrees (const float angle)
 {
@@ -357,7 +357,7 @@ const inline float sinDegrees (const float angle)
 	return sinf(angle * DEG_TO_RAD);
 }
 
-const void drawPixel (const int x, const int y, const uint16_t colourIdx);
+//const void drawPixel (const int x, const int y, const uint16_t colourIdx);
 
 
 

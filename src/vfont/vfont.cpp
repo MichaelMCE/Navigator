@@ -10,9 +10,7 @@
 #include <ctype.h>
 #include <math.h>
 
-
 #define VFONT_RENDER_QUALITY	1		// 1=higher performance. 0=lower performing but higher quality rendering
-
 #include "vfont.h"
 #include "../commonGlue.h"
 
@@ -22,128 +20,37 @@ extern uint8_t renderBuffer[VWIDTH*VHEIGHT];	// our render distination. defined 
 
 
 
-const inline void drawPixel (const int x, const int y, const uint16_t colourIdx)
+static inline void drawPixel (const int x, const int y, const uint8_t colourIdx)
 {
 	uint8_t *pixels = (uint8_t*)renderBuffer;	
 	pixels[(y*VWIDTH)+x] = colourIdx;
 }
 
-#if 0
-static inline void drawPixel16 (const int x, const int y, const uint16_t colour)
-{
-	uint16_t *pixels = (uint16_t*)renderBuffer;	
-	pixels[(y*VWIDTH) + x] = colour;
-}
-#endif
-
-static inline void drawBrushBitmap (vfont_t *ctx, const int x, const int y, const uint16_t colour)
+static inline void drawBrushBitmap (vfont_t *ctx, const int x, const int y, const uint8_t colour)
 {
 	drawBitmap(&ctx->brush.image, x, y, colour);
 }
-
-static v16_t circlePixels_r1[6];
-static int circlePixels_r1_ct = 0;
-
-static v16_t circlePixels_r2[22];
-static int circlePixels_r2_ct = 0;
-
-static v16_t circlePixels_r5[98];
-static int circlePixels_r5_ct = 0;
 
 static inline void drawCircleFilled3 (const int x0, const int y0, const int radius, const uint8_t colour)
 {
 	if ((x0 - radius < 0) || (x0 + radius >= VWIDTH)) return;
 	if ((y0 - radius < 0) || (y0 + radius >= VHEIGHT)) return;
+	
 
-	if (radius == 1){
-		if (circlePixels_r1_ct){
-			for (int i = 0; i < circlePixels_r1_ct; i++)
-				drawPixel(x0+circlePixels_r1[i].x, y0+circlePixels_r1[i].y, colour);
-			return;
-		}
+	const int radiusMul = radius*radius + radius;
 
-		const int radiusMul = radius*radius + radius;
-
-		for (int y = -radius; y <= radius; y++){
-			int yy = y*y;
-			int y0y = y0+y;
+	for (int y = -radius; y <= radius; y++){
+		int yy = y*y;
+		int y0y = y0+y;
 		
-	    	for (int x = -radius; x <= radius; x++){
-        		if (x*x+yy < radiusMul){
-	            	circlePixels_r1[circlePixels_r1_ct].x = x;
-		            circlePixels_r1[circlePixels_r1_ct].y = y;
-		            circlePixels_r1_ct++;
-		            	
-		            drawPixel(x0+x, y0y, colour);
-				}
-			}
-		}
-	}else if (radius == 2){
-		if (circlePixels_r2_ct){
-			for (int i = 0; i < circlePixels_r2_ct; i++)
-				drawPixel(x0+circlePixels_r2[i].x, y0+circlePixels_r2[i].y, colour);
-			return;
-		}
-
-		const int radiusMul = radius*radius + radius;
-
-		for (int y = -radius; y <= radius; y++){
-			int yy = y*y;
-			int y0y = y0+y;
-		
-	    	for (int x = -radius; x <= radius; x++){
-        		if (x*x+yy < radiusMul){
-	            	circlePixels_r2[circlePixels_r2_ct].x = x;
-		            circlePixels_r2[circlePixels_r2_ct].y = y;
-		            circlePixels_r2_ct++;
-		            	
-		            drawPixel(x0+x, y0y, colour);
-				}
-			}
-		}
-	}else if (radius == 5){
-		if (circlePixels_r5_ct){
-			for (int i = 0; i < circlePixels_r5_ct; i++)
-				drawPixel(x0+circlePixels_r5[i].x, y0+circlePixels_r5[i].y, colour);
-			return;
-		}
-
-		const int radiusMul = radius*radius + radius;
-
-		for (int y = -radius; y <= radius; y++){
-			int yy = y*y;
-			int y0y = y0+y;
-		
-	    	for (int x = -radius; x <= radius; x++){
-        		if (x*x+yy < radiusMul){
-	            	circlePixels_r5[circlePixels_r5_ct].x = x;
-		            circlePixels_r5[circlePixels_r5_ct].y = y;
-		            circlePixels_r5_ct++;
-		            	
-		            drawPixel(x0+x, y0y, colour);
-				}
-			}
-		}
-	}else{
-		const int radiusMul = radius*radius + radius;
-		int ct = 0;
-		for (int y = -radius; y <= radius; y++){
-			int yy = y*y;
-			int y0y = y0+y;
-		
-	    	for (int x = -radius; x <= radius; x++){
-        		if (x*x+yy < radiusMul){
-		            drawPixel(x0+x, y0y, colour);
-		            ct++;
-				}
-			}
+    	for (int x = -radius; x <= radius; x++){
+       		if (x*x+yy < radiusMul)
+	            drawPixel(x0+x, y0y, colour);
 		}
 	}
-
 }
 
-//static inline void drawBrush (vfont_t *ctx, float xc, float yc, const float radius, const uint16_t colour)
-static inline void drawBrush (vfont_t *ctx, int xc, int yc, const float radius, const uint16_t colour)
+static inline void drawBrush (vfont_t *ctx, int xc, int yc, const float radius, const uint8_t colour)
 {
 	
 	if (ctx->brush.type == BRUSH_DISK){
@@ -170,7 +77,7 @@ static inline void drawBrush (vfont_t *ctx, int xc, int yc, const float radius, 
 		drawTriangle(xc-d, yc+d, xc, yc-d, xc+d, yc+d, colour);
 
 	}else if (ctx->brush.type == BRUSH_CIRCLE){
-		drawCircle(xc, yc, radius, colour);
+		drawCircle(xc, yc, radius, (uint8_t)colour);
 	
 	}else if (ctx->brush.type == BRUSH_STROKE_1){
 		int d = (int)radius>>1;
@@ -283,7 +190,7 @@ static inline void rotate (float angle, const float x, const float y, float *xr,
 	*yr = x * sinf(angle) + y * cosf(angle);
 }
 
-void drawPoly (const float x1, const float y1, const float x2, const float y2, const float thickness, float angle, const uint16_t colour)
+void drawPoly (const float x1, const float y1, const float x2, const float y2, const float thickness, float angle, const uint8_t colour)
 {
 	//if (!clipLinef(x1, y1, x2, y2, &x1, &y1, &x2, &y2))
 		//return;
@@ -330,7 +237,7 @@ void drawPoly (const float x1, const float y1, const float x2, const float y2, c
 	}
 }
 
-static inline void drawPolyFilled (float x1, float y1, float x2, float y2, const float thickness, float angle, const uint16_t colour)
+static inline void drawPolyFilled (float x1, float y1, float x2, float y2, const float thickness, float angle, const uint8_t colour)
 {
 	//if (!clipLinef(x1, y1, x2, y2, &x1, &y1, &x2, &y2))
 	//	return;
@@ -377,7 +284,7 @@ static inline void drawPolyFilled (float x1, float y1, float x2, float y2, const
 	}
 }
 
-void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint16_t colour)
+void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour)
 {
 	
 	float x1 = (v1->y * 1.0f) - (1.0f * v2->y);
@@ -389,7 +296,7 @@ void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thi
 	drawPoly(v1->x, v1->y, v2->x, v2->y, thickness, a, colour);
 }
 
-void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint16_t colour)
+void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour)
 {
 	float x1 = (v1->y * 1.0f) - (1.0f * v2->y);
 	float y1 = (1.0f * v2->x) - (v1->x * 1.0f);
@@ -400,7 +307,7 @@ void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16
 	drawPolyFilled(v1->x, v1->y, v2->x, v2->y, thickness, a, colour);
 }
 
-static inline void drawBrushVector (vfont_t *ctx, const float x1, const float y1, const float x2, const float y2, const float x3, const float y3, const uint16_t colour)
+static inline void drawBrushVector (vfont_t *ctx, const float x1, const float y1, const float x2, const float y2, const float x3, const float y3, const uint8_t colour)
 {
 	if (ctx->brush.size > 1.0f){
 		if (ctx->brush.qMode == 1){
@@ -856,14 +763,14 @@ float getGlyphPadding (vfont_t *ctx)
 	return ctx->xpad;
 }
 
-uint16_t setBrushColour (vfont_t *ctx, const uint16_t colour)
+uint8_t setBrushColour (vfont_t *ctx, const uint8_t colour)
 {
-	uint16_t old = ctx->brush.colour;
+	uint8_t old = ctx->brush.colour;
 	ctx->brush.colour = colour;
 	return old;
 }
 
-uint16_t getBrushColour (vfont_t *ctx)
+uint8_t getBrushColour (vfont_t *ctx)
 {
 	return ctx->brush.colour;
 }
@@ -928,7 +835,7 @@ FLASHMEM void vfont_init (vfont_t *ctx)
 	setBrushSize(ctx, 1.0);
 	setBrushStep(ctx, 1.0);
 	setBrushQuality(ctx, 2);
-	setBrushColour(ctx, COLOUR_RED);
+	setBrushColour(ctx, COLOUR_PAL_RED);
 	setRenderFilter(ctx, RENDEROP_NONE);
 
 }
