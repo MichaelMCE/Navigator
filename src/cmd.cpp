@@ -206,6 +206,11 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 		if (!gps_pollMsg(pollMsg))
 			printf(CS("ubx message '%s' not available"), pollMsg);
 
+	}else if (!strncmp(msg, "setpos:", 7)){
+		//char *pollMsg = &msg[5];
+		gps_setIntialPosition(54.609333767992936, -5.929224426174398, 30.0f, 200);
+		cmdSendResponse("Position set");
+
 	}else if (!strncmp(msg, "status", 6)){
 		gps_printStatus();
 	}else if (!strncmp(msg, "version", 7)){
@@ -240,7 +245,8 @@ FLASHMEM static void cmd_zoom (char *msg, const int cmdlen)
 
 		sceneSetZoom(&inst, zoomlevel);
 		sceneResetViewport(&inst);
-		//sceneLoadTiles(&inst);
+		sceneLoadTiles(&inst);
+		render_signalUpdate();
 	}
 }
 		
@@ -251,10 +257,16 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "map:", 4)){	
 		map_setDetail(MAP_RENDER_VIEWPORT, atoi(&msg[4])&0x01);
+
+	}else if (!strncmp(msg, "path:", 5)){
+		inst.scheme.pathThickness = atoi(&msg[5])&0xFF;
+
+	}else if (!strncmp(msg, "spot:", 5)){
+		inst.scheme.spotRadius = atoi(&msg[5])&0xFF;
 			
 	}else if (!strncmp(msg, "world:", 6)){
 		map_setDetail(MAP_RENDER_SWORLD, atoi(&msg[6])&0x01);
-			
+	
 	}else if (!strncmp(msg, "route:", 6)){
 		map_setDetail(MAP_RENDER_TRACKPOINTS, atoi(&msg[6])&0x01);
 			
@@ -269,10 +281,12 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "locgraphic:", 11)){	
 		map_setDetail(MAP_RENDER_LOCGRAPTHIC, atoi(&msg[11])&0x01);
-						
+
 	}else if (!strncmp(msg, "savailability:", 14)){
 		map_setDetail(MAP_RENDER_SAVAIL, atoi(&msg[14])&0x01);
 	}
+
+	render_signalUpdate();
 }
 
 FLASHMEM static void cmd_log (char *msg, const int cmdlen)
@@ -540,8 +554,21 @@ FLASHMEM static void cmd_runLog (char *msg, const int cmdlen)
 		log_runStep(step);
 	
 	}else if (!strncmp(msg, "tkpt:", 5)){
-		uint32_t position = atoi(&msg[5]);
-		log_runSet(position);
+		uint32_t trkPt = atoi(&msg[5]);
+		log_runSet(trkPt);
+	}
+	render_signalUpdate();
+}
+
+FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
+{
+	if (!strncmp(msg, "freq:", 5)){
+		const uint32_t freq = atoi(&msg[5]);
+		if (freq >= 24 && freq <= 960){
+			mpu_setClockFreq(freq);
+			delay(1);
+		}
+		printf(CS("Clock frequency: %u"), (unsigned int)F_CPU_ACTUAL);
 	}
 }
 
@@ -557,6 +584,10 @@ FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
 	if (!strncmp(buffer, CMD_ULOAD, strlen(CMD_ULOAD))){
 		char *filename = &buffer[strlen(CMD_ULOAD)];
 		cmd_uload(filename, cmdlen);
+
+	}else if (!strncmp(buffer, CMD_MPU, strlen(CMD_MPU))){
+		char *msg = &buffer[strlen(CMD_MPU)];
+		cmd_mpu(msg, cmdlen);
 
 	}else if (!strncmp(buffer, CMD_RUNLOG, strlen(CMD_RUNLOG))){
 		char *msg = &buffer[strlen(CMD_RUNLOG)];
