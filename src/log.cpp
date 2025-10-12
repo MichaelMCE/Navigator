@@ -16,6 +16,7 @@ void log_runReset ()
 {
 	inst.runLog.idx = 0;
 	inst.runLog.step = 4;
+	inst.runLog.pause = 0;
 }
 
 void log_runStart ()
@@ -24,20 +25,35 @@ void log_runStart ()
 	inst.runLog.pause = 0;
 }
 
-void log_runSet (const uint32_t position)
-{
-	if (position < trackRecord.marker)
-		inst.runLog.idx = position&0x00FFFFFF;
-}
-
 void log_runStop ()
 {
 	inst.runLog.enabled = 0;
+	inst.loadTiles = 1;
+	render_signalUpdate();
 }
 
 void log_runPause ()
 {
 	inst.runLog.pause = (inst.runLog.pause+1)&0x01;
+}
+
+void log_runAdvance (const int32_t advanceBy)
+{
+	int32_t newTrk = ((int32_t)inst.runLog.idx + advanceBy);
+	if (newTrk < 0){
+		newTrk = (trackRecord.marker-1) - abs(newTrk);
+		if (newTrk < 0) newTrk = 0;
+	}else if (newTrk >= (int32_t)trackRecord.marker){
+		newTrk = 0;
+	}
+	
+	inst.runLog.idx = newTrk&0x00FFFFFF;
+}
+
+void log_runSet (const uint32_t position)
+{
+	if (position < trackRecord.marker)
+		inst.runLog.idx = position&0x00FFFFFF;
 }
 
 void log_runStep (const uint8_t step)
@@ -49,6 +65,8 @@ int log_load (const char *filename)
 {
 	log_runStop();
 	log_runReset();
+
+	inst.loadTiles = 1;
 
 	return fpRecord_import(&trackRecord, filename);
 }

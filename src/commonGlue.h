@@ -55,6 +55,17 @@ void log_runSet (const uint32_t position);
 void log_runStart ();
 void log_runReset ();
 void log_runPause ();
+void log_runAdvance (const int32_t advanceBy);
+
+void mpu_setClockFreq (const uint32_t freqMhz);
+
+void render_signalUpdate ();
+
+
+#if defined(__IMXRT1062__)
+extern "C" uint32_t set_arm_clock (uint32_t frequency);
+#endif
+
 
 #endif
 
