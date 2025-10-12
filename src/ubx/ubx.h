@@ -80,6 +80,8 @@ UBX
 //#define UBX_LOG_BATCH				
 #define UBX_LOG_RETRIEVEBATCH	0x10
 
+#define UBX_MGA_INI_POSLLH		0x40
+
 #define UBX_INF_ERROR			0x00
 #define UBX_INF_WARNING			0x01
 #define UBX_INF_NOTICE			0x02
@@ -921,7 +923,7 @@ typedef struct {
 
 
 #define ODO_FLAGS_USEODO		(1 << 0)		// Odometer-enabled flag
-#define ODO_FLAGS_USECFG		(1 << 1)		// Low-speed COG filter enabled flag
+#define ODO_FLAGS_USECOG		(1 << 1)		// Low-speed COG filter enabled flag
 #define ODO_FLAGS_OUTLPVEL		(1 << 2)		// Output low-pass filtered velocity flag
 #define ODO_FLAGS_OUTLPCOG		(1 << 3)		// Output low-pass filtered heading (COG) flag
 
@@ -1330,6 +1332,16 @@ typedef struct {
     uint8_t reserved2[4];
 }__attribute__((packed))mga_ano_t;
 
+typedef struct {
+    uint8_t  type;				// Message type (0x01 for this type)
+    uint8_t  version;			// Message version (0x00 for this version)
+    uint8_t  reserved1[2];
+    
+    int32_t  latitude;			// lat/log/alt deg WGS84 Latitude
+    int32_t  longitude;
+    int32_t  altitude;
+    uint32_t posAcc;			// posAcc cm Position accuracy (stddev)
+}__attribute__((packed))mga_ini_posllh_t;
 
 
 #define UPDSOS_CMD_CREATE			0		// create backup in flash. with updsos_cmd_t
@@ -1423,6 +1435,8 @@ void ubx_odo_stop (ubx_device_t *dev);
 void ubx_sos_poll (ubx_device_t *dev);
 void ubx_sos_clear (ubx_device_t *dev);
 void ubx_sos_backup (ubx_device_t *dev);
+
+void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 
 
 int ubx_msgPollName (ubx_device_t *dev, const char *name);

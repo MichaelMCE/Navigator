@@ -523,14 +523,14 @@ static void configureGNSS (ubx_device_t *dev)
 
 	cfg_cfgblk_t *cfg = &gnss->cfgblk[0];
 	cfg->gnssId = GNSSID_GPS;
-	cfg->resTrkCh = 6;
-	cfg->maxTrkCh = 20;
+	cfg->resTrkCh = 8;
+	cfg->maxTrkCh = 24;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[1];
 	cfg->gnssId = GNSSID_GLONASS;
-	cfg->resTrkCh = 6;
-	cfg->maxTrkCh = 20;
+	cfg->resTrkCh = 8;
+	cfg->maxTrkCh = 24;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[2];
@@ -568,7 +568,7 @@ static void configureGNSS (ubx_device_t *dev)
 	gnss->numTrkChUse = 32;
 	gnss->numConfigBlocks = cfgBlks;
 
-	ubx_sendEx(dev, 600, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
+	ubx_sendEx(dev, 100, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
 }
 
 static void configurePorts (ubx_device_t *dev)
@@ -584,7 +584,7 @@ static void configurePorts (ubx_device_t *dev)
 	prt.inProtoMask = CFG_PROTO_UBX;
 	prt.outProtoMask = CFG_PROTO_UBX;
 
-	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_PRT, &prt, sizeof(prt));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_PRT, &prt, sizeof(prt));
 }
 
 void gps_configurePorts (ubx_device_t *dev)
@@ -596,11 +596,11 @@ static void configureRate (ubx_device_t *dev)
 {
 	cfg_rate_t rate = {0};
 	
-	rate.measRate = 56;		// ms. 53ms = ~18-19hz
+	rate.measRate = 57;		// ms. 53ms = ~18-19hz
 	rate.navRate = 1;		// 1 measurement per navigation
-	rate.timeRef = CFG_TIMEREF_GPS;
+	rate.timeRef = CFG_TIMEREF_UTC;
 	
-	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_RATE, &rate, sizeof(rate));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_RATE, &rate, sizeof(rate));
 }
 
 static void configureNav5 (ubx_device_t *dev)
@@ -613,11 +613,11 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.mask |= NAV5_MASK_DGPSMASK | NAV5_MASK_CNOTHRESHOLD | NAV5_MASK_UTC;
 		
 		
-	nav.dynModel = NAV5_DYNMODEL_PEDESTRIAN;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
+	nav.dynModel = NAV5_DYNMODEL_WRIST;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 
-	nav.minElv = 1;
+	nav.minElv = 5;
 	nav.drLimit = 0;
 	nav.pDop = 25.0f * 10;
 	nav.tDop = 25.0f * 10;
@@ -629,9 +629,9 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.cnoThresh = 0;
 	nav.staticHoldThresh = 50;				// 50 cm/s 
 	nav.staticHoldMaxDist = 2;				// 2 meters
-	nav.utcStandard = NAV5_UTCSTD_GPS;
+	nav.utcStandard = NAV5_UTCSTD_AUTO;
 	
-	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_NAV5, &nav, sizeof(nav));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_NAV5, &nav, sizeof(nav));
 }
 
 static void configureNavX5 (ubx_device_t *dev)
@@ -655,7 +655,7 @@ static void configureNavX5 (ubx_device_t *dev)
 	nav.aopOrbMaxErr = 100;
 	nav.useAdr = 0;
 	
-	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_NAVX5, &nav, sizeof(nav));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_NAVX5, &nav, sizeof(nav));
 }
 
 FLASHMEM void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID)
@@ -729,7 +729,7 @@ static void ubx_msgInfDisableAll (ubx_device_t *dev)
 	ubx_sendEx(dev, 1, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
 	
 	inf.protocolID = INF_PROTO_USER3;
-	ubx_sendEx(dev, 20, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
+	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_INF, &inf, sizeof(inf));
 	
 }
 
@@ -776,7 +776,7 @@ FLASHMEM static void configureOdo (ubx_device_t *dev)
 	memset(&odo, 0, sizeof(odo));
 	
 	odo.version = 0;
-	odo.flags = ODO_FLAGS_USEODO|ODO_FLAGS_USECFG|ODO_FLAGS_OUTLPVEL; //|ODO_FLAGS_OUTLPCOG;
+	odo.flags = ODO_FLAGS_USEODO|ODO_FLAGS_OUTLPVEL; //|ODO_FLAGS_USECOG|ODO_FLAGS_OUTLPCOG;
 	odo.odoCfg = ODO_PROFILE_RUNNING;
 	odo.cogMaxSpeed = 10 * 5.0f;
 	odo.cogMaxPosAcc = 15;
@@ -909,6 +909,21 @@ FLASHMEM void ubx_sos_clear (ubx_device_t *dev)
 	ubx_sendEx(dev, 10, UBX_UPD, UBX_UPD_SOS, &upd, sizeof(upd));
 }
 
+FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
+{
+	mga_ini_posllh_t posllh;
+	memset(&posllh, 0, sizeof(posllh));
+	
+	posllh.type = 0x01;
+	posllh.version = 0x00;
+	posllh.latitude = lat * 10000000.0;
+	posllh.longitude = lon * 10000000.0;
+	posllh.altitude = alt_meters * 100.0f;
+	posllh.posAcc = posAcc_cm;
+	
+	ubx_sendEx(dev, 10, UBX_MGA, UBX_MGA_INI_POSLLH, &posllh, sizeof(posllh));
+}
+
 FLASHMEM void gps_configure (ubx_device_t *dev)
 {
 	memset(&userData, 0, sizeof(userData));
@@ -961,10 +976,10 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	if (1) configurePorts(dev);
 	if (1) configureInf(dev);
 	if (1) configureRate(dev);
+	if (1) configureGNSS(dev);		// will auto generate a warmStart
 	if (1) configureNav5(dev);
 	if (1) configureNavX5(dev);
 	if (1) configureHNR(dev);
-	if (1) configureGNSS(dev);		// will auto generate a warmStart
 	if (1) configureOdo(dev);
 	if (0) configureGeofence(dev);
 
