@@ -136,6 +136,8 @@ FLASHMEM static void gps_setup (ubx_device_t *dev)
 
 void gps_loadOfflineAssist (const int printInfo)
 {
+	gps_setIntialPosition(54.609333767992936, -5.929224426174398, 30.0f, 200);
+	
 	if (cmdLoadUbx(ASSISTNOW_FILENAME)){
 		if (printInfo)
 			addDebugLine((const uint8_t*)("AssistNow Offline: " ASSISTNOW_FILENAME " imported"));
@@ -143,6 +145,11 @@ void gps_loadOfflineAssist (const int printInfo)
 		if (printInfo)
 			addDebugLine((const uint8_t*)("AssistNow Offline: " ASSISTNOW_FILENAME " import failed"));
 	}
+}
+
+void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
+{
+	ubx_mga_ini_posllh(&dev, lat, lon, alt_meters, posAcc_cm);
 }
 
 void gps_init ()

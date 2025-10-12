@@ -164,6 +164,7 @@ void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
 
+void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 void gps_loadOfflineAssist (const int printInfo);
 
 int gps_writeUbx (void *buffer, const uint32_t bufferSize);
