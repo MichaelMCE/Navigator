@@ -566,7 +566,7 @@ void cmd_detail (const char *cmdStr)
 {
 	if (strlen(cmdStr) < 5) return;
 	
-	if (strchr(cmdStr, ':') && (strchr(cmdStr, '0') || strchr(cmdStr, '1'))){
+	if (strchr(cmdStr, ':') /*&& (strchr(cmdStr, '0') || strchr(cmdStr, '1'))*/){
 		printf("Setting %s\n", cmdStr);
 		serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
 	}
@@ -696,6 +696,9 @@ void cmd_receiver (const char *cmdStr)
 		
 	}else if (!strncmp("status", cmdStr, 6)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
+	}else if (!strncmp("setpos:", cmdStr, 7)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 				
 	}else if (!strncmp("version", cmdStr, 7)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
@@ -807,6 +810,15 @@ void cmd_runlog (const char *cmdStr)
 	//}
 }
 
+void cmd_mpu (const char *cmdStr)
+{
+	if (strlen(cmdStr) < 6) return;
+		
+	if (!strncmp("freq:", cmdStr, 5)){
+		serialSendCmd(hSerial, CMD_MPU, cmdStr);	
+	}
+}
+
 static const cmdstr_t cmdstrs[] = {
 	{"hello",    cmd_hello,     ""},
 	{"help",     cmd_help,      ""},
@@ -831,6 +843,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"ufetch",   cmd_ufetch,    "token:<yourtoken>. Downloads and saves locally .ubx file of latest offline AssistNow data from u-blox website"},
 	{"sos",      cmd_sos,       "create, clear, poll"},
 	{"runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
+	{"mpu",      cmd_mpu,       "freq:Mhz. Set microcontroller frequency"},
 	
 	{"", NULL, ""}
 };
