@@ -5,6 +5,14 @@
 #if ENABLE_TOUCH_FT5216
 
 
+
+
+#define TOUCH_REPORTS_HALT		0
+#define TOUCH_REPORTS_OFF		1
+#define TOUCH_REPORTS_ON		2
+
+
+
 enum _touchdir {		// touch rotate direction
 	TOUCH_DIR_NONE = 1, // don't rotate
 	TOUCH_DIR_DEFAULT,	// use compiled in rotation
@@ -21,7 +29,7 @@ enum _touchdir {		// touch rotate direction
 	TOUCH_DIR_SWAP_A_INVERT_H,	// swap axis then invert horizontal axis
 };
 
-typedef struct _touch {
+typedef struct {
 	uint8_t idx;		// points to which multi point register we wish to read
 	uint8_t flags;		// RAWHID_OP_TOUCH_xxx
 	uint8_t tPoints;	// number of points (fingers) measured on panel this scan
@@ -43,10 +51,23 @@ typedef struct _touch {
 	uint8_t yl;
 }touch_t;
 
+typedef struct {
+	uint8_t enabled;	// send reports. does not reflect current FT5216 comm state
+	uint8_t pressed;	// is being pressed
+	uint8_t rotate;		// touch rotation direction
+	uint8_t tready;
+	
+	elapsedMillis t0;
+}touchCtx_t;
 
+
+void touch_init ();
 void touch_start (const int intPin);
 int touch_isPressed ();
 int touch_process (touch_t *touch, const uint32_t rotateDirection);
+void touch_task (touchCtx_t *ctx);
+void touch_startTimer ();
+
 
 
 #endif
