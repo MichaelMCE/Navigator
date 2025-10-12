@@ -142,7 +142,7 @@ FLASHMEM int cfg_odo (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	printf(CS(" flags:         0x%X"), (unsigned int)odo->flags);
 	if (odo->flags&ODO_FLAGS_USEODO)
 		printf(CS("   %s"), odoFlags[0]);
-	if (odo->flags&ODO_FLAGS_USECFG)
+	if (odo->flags&ODO_FLAGS_USECOG)
 		printf(CS("   %s"), odoFlags[1]);
 	if (odo->flags&ODO_FLAGS_OUTLPVEL)
 		printf(CS("   %s"), odoFlags[2]);
@@ -337,20 +337,27 @@ static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 	posRecLLH[recPos].latitude  = pos->latitude;
 	posRecLLH[recPos].altitude  = pos->altitude;
 	if (++recPos >= 32) recPos = 0;
+
 	
 	double lat = 0.0;
 	double lon = 0.0;
 	float alt = 0.0f;
 	
-	for (int i = 0; i < 32; i++){
+	/*for (int i = 0; i < 32; i++){
 		lon = (lon + posRecLLH[i].longitude) / 2.0;
 		lat = (lat + posRecLLH[i].latitude) / 2.0;
 		alt = (alt + posRecLLH[i].altitude) / 2.0f;
+	}*/
+	
+	for (int i = 0; i < 32; i++){
+		lon += posRecLLH[i].longitude;
+		lat += posRecLLH[i].latitude;
+		alt += posRecLLH[i].altitude;
 	}
 	
-	gps->navAvg.longitude = lon;
-	gps->navAvg.latitude  = lat;
-	gps->navAvg.altitude  = alt;
+	gps->navAvg.longitude = lon / 32.0;
+	gps->navAvg.latitude  = lat / 32.0;
+	gps->navAvg.altitude  = alt / 32.0f;
 
 	gps->rates.epoch++;
 }
