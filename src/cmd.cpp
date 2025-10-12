@@ -208,7 +208,7 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "setpos:", 7)){
 		//char *pollMsg = &msg[5];
-		//gps_setIntialPosition(0.0, 0.0, 30.0f, 200);
+		gps_setIntialPosition(54.609333767992936, -5.929224426174398, 30.0f, 200);
 		cmdSendResponse("Position set");
 
 	}else if (!strncmp(msg, "status", 6)){
@@ -708,4 +708,3 @@ int cmd_task (const int pulse)
 	}
 	return 1;
 }
-
