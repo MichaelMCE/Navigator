@@ -1420,7 +1420,7 @@ FASTRUN void RM68120_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 		for (uint32_t i = 0; i < length; i++){
 			delayNanoseconds(7);
 			p->SHIFTBUF[0] = value[i];
-			delayNanoseconds(5);
+			delayNanoseconds(6);
       		//while (0 == (p->SHIFTSTAT & (3 << 0))){
     		//}
 		}
