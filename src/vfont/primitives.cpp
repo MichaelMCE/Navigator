@@ -18,13 +18,18 @@
 extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
 
 
+static inline void drawPixel8 (const int x, const int y, const uint8_t colourIdx)
+{
+	uint8_t *pixels = (uint8_t*)renderBuffer;	
+	pixels[(y*VWIDTH)+x] = colourIdx;
+}
 
 static inline int getPixel1 (const uint8_t *pixels, const int pitch, const int x, const int y)
 {
 	return *(pixels+((y * pitch)+(x>>3))) >>(x&7)&0x01;
 }
 
-void drawBitmap (image_t *img, int x, int y, const uint16_t colour)
+void drawBitmap (image_t *img, int x, int y, const uint8_t colour)
 {
 	const int srcPitch = CALC_PITCH_1(img->width);
 		
@@ -36,7 +41,7 @@ void drawBitmap (image_t *img, int x, int y, const uint16_t colour)
 		int _x = x;
 		for (int x1 = 0; x1 < img->width; x1++, _x++){
 			if (getPixel1(img->pixels, srcPitch, x1, y1))
-				drawPixel(_x, y, colour);
+				drawPixel8(_x, y, colour);
 		}
 	}
 }
@@ -77,7 +82,7 @@ static inline void drawHLine (const int y, int x1, int x2, const uint8_t colour)
 
 #if 0
 	for (int x = x1; x <= x2; x++)
-		drawPixel(x, y, colour);
+		drawPixel8(x, y, colour);
 #else
 	uint8_t *pixel = &renderBuffer[(y*VWIDTH)+x1];
 	for (int x = x1; x <= x2; x++){
@@ -162,7 +167,7 @@ static inline int clipLine (int x1, int y1, int x2, int y2, int *x3, int *y3, in
 
 
 #ifdef LINE_FAST
-static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
+static inline void drawLineFast (int x, int y, int x2, int y2, const uint8_t colour)
 {
 	if (!clipLine(x, y, x2, y2, &x, &y, &x2, &y2))
 		return;
@@ -188,7 +193,7 @@ static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
 			longLen += y;
 			
 			for (int j = 0x8000+(x<<16); y <= longLen; ++y){
-				drawPixel(j>>16, y, colour);
+				drawPixel8(j>>16, y, colour);
 				j+=decInc;
 			}
 			return;
@@ -196,7 +201,7 @@ static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
 		longLen += y;
 		
 		for (int j = 0x8000+(x<<16); y >= longLen; --y){
-			drawPixel(j>>16, y, colour);
+			drawPixel8(j>>16, y, colour);
 			j-=decInc;
 		}
 		return;
@@ -206,7 +211,7 @@ static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
 		longLen += x;
 		
 		for (int j = 0x8000+(y<<16); x <= longLen; ++x){
-			drawPixel(x, j>>16, colour);
+			drawPixel8(x, j>>16, colour);
 			j+=decInc;
 		}
 		return;
@@ -215,7 +220,7 @@ static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
 	longLen += x;
 	
 	for (int j = 0x8000+(y<<16); x >= longLen; --x){
-		drawPixel(x, j>>16, colour);
+		drawPixel8(x, j>>16, colour);
 		j-=decInc;
 	}
 
@@ -223,7 +228,7 @@ static inline void drawLineFast (int x, int y, int x2, int y2, const int colour)
 #endif
 
 #ifdef LINE_STD
-static inline void drawLineStd (int x1, int y1, int x2, int y2, const uint16_t colour)
+static inline void drawLineStd (int x1, int y1, int x2, int y2, const uint8_t colour)
 {
 	if (!clipLine(x1, y1, x2, y2, &x1, &y1, &x2, &y2))
 		return;
@@ -239,12 +244,12 @@ static inline void drawLineStd (int x1, int y1, int x2, int y2, const uint16_t c
             
             if (dx > 0){
                 for (int xx = x1; xx<=x2; xx++){
-                    drawPixel(xx, (int)y, colour);
+                    drawPixel8(xx, (int)y, colour);
                     y += dly;
                 }
             }else{
                 for (int xx = x1; xx>=x2; xx--){
-                    drawPixel(xx, (int)y, colour);
+                    drawPixel8(xx, (int)y, colour);
                     y -= dly;
                 }
 			}
@@ -254,18 +259,18 @@ static inline void drawLineStd (int x1, int y1, int x2, int y2, const uint16_t c
 
             if (dy > 0){
    	            for (int yy = y1; yy<=y2; yy++){
-       	            drawPixel((int)x, yy, colour);
+       	            drawPixel8((int)x, yy, colour);
            	        x += dlx;
                	}
 			}else{
                 for (int yy = y1; yy >= y2; yy--){
-   	                drawPixel((int)x, yy, colour);
+   	                drawPixel8((int)x, yy, colour);
        	            x -= dlx;
            	    }
 			}
         }
     }else if (!(dx&dy)){
-    	drawPixel(x1, y1, colour);
+    	drawPixel8(x1, y1, colour);
     }
 
 }
@@ -333,7 +338,7 @@ static inline void drawLine8 (int x0, int y0, int x1, int y1, const uint8_t colo
 #endif
 
 #ifdef LINE_FASTEST16
-static inline void drawLine16 (int x0, int y0, int x1, int y1, const uint16_t colour)
+static inline void drawLine16 (int x0, int y0, int x1, int y1, const uint8_t colour)
 {
 	if (!clipLine(x0, y0, x1, y1, &x0, &y0, &x1, &y1))
 		return;
@@ -393,7 +398,7 @@ static inline void drawLine16 (int x0, int y0, int x1, int y1, const uint16_t co
 }
 #endif
 
-void drawLine (const int x1, const int y1, const int x2, const int y2, const uint16_t colour)
+void drawLine (const int x1, const int y1, const int x2, const int y2, const uint8_t colour)
 {
 #if LINE_STD
 	// slowest: standard Bresenham algorithm
@@ -423,10 +428,10 @@ static inline void drawVLine (const int x, int y1, const int h, const uint8_t co
 	if (y2 >= VHEIGHT) y2 = VHEIGHT - 1;
 
 	for (int32_t y = y1; y < y2; y++)
-		drawPixel(x, y, colour);
+		drawPixel8(x, y, colour);
 }
 
-void drawCircleFilled (const int x0, const int y0, const float radius, const uint16_t colour)
+void drawCircleFilled (const int x0, const int y0, const float radius, const uint8_t colour)
 {
 
 	if ((x0 - radius < 0.0f) || (x0 + radius >= (float)VWIDTH)) return;
@@ -463,19 +468,19 @@ void drawCircleFilled (const int x0, const int y0, const float radius, const uin
 	drawVLine(x0, y0 - radius, 2 * radius + 1, colour);
 }
 
-static inline void drawCirclePts (const int xc, const int yc, const int x, const int y, const uint16_t colour)
+static inline void drawCirclePts (const int xc, const int yc, const int x, const int y, const uint8_t colour)
 {
-	drawPixel(xc+y, yc-x, colour);
-	drawPixel(xc-y, yc-x, colour);
-	drawPixel(xc+y, yc+x, colour);
-	drawPixel(xc-y, yc+x, colour);
-	drawPixel(xc+x, yc+y, colour);
-	drawPixel(xc-x, yc+y, colour);
-	drawPixel(xc+x, yc-y, colour);
-	drawPixel(xc-x, yc-y, colour);
+	drawPixel8(xc+y, yc-x, colour);
+	drawPixel8(xc-y, yc-x, colour);
+	drawPixel8(xc+y, yc+x, colour);
+	drawPixel8(xc-y, yc+x, colour);
+	drawPixel8(xc+x, yc+y, colour);
+	drawPixel8(xc-x, yc+y, colour);
+	drawPixel8(xc+x, yc-y, colour);
+	drawPixel8(xc-x, yc-y, colour);
 }
 
-void drawCircle (const int xc, const int yc, const float radius, const uint16_t colour)
+void drawCircle (const int xc, const int yc, const float radius, const uint8_t colour)
 {
 	if ((xc - radius < 0) || (xc + radius >= VWIDTH)) return;
 	if ((yc - radius < 0) || (yc + radius >= VHEIGHT)) return;
@@ -518,17 +523,17 @@ static inline void clipRect (int *x1, int *y1, int *x2, int *y2)
 		*y2 = VHEIGHT-1;
 }
 
-void drawRectangleFilled (int x1, int y1, int x2, int y2, const uint16_t colour)
+void drawRectangleFilled (int x1, int y1, int x2, int y2, const uint8_t colour)
 {
 	clipRect(&x1, &y1, &x2, &y2);
 	
 	for (int y = y1; y <= y2; y++){
 		for (int x = x1; x <= x2; x++)
-			drawPixel(x, y, colour);
+			drawPixel8(x, y, colour);
 	}
 }
 
-void drawRectangle (int x1, int y1, int x2, int y2, const uint16_t colour)
+void drawRectangle (int x1, int y1, int x2, int y2, const uint8_t colour)
 {
 	clipRect(&x1, &y1, &x2, &y2);
 	
@@ -538,7 +543,7 @@ void drawRectangle (int x1, int y1, int x2, int y2, const uint16_t colour)
 	drawLine(x2, y1+1, x2, y2-1, colour);	// right
 }
 
-void drawTriangle (const int x1, const int y1, const int x2, const int y2, const int x3, const int y3, const uint16_t colour)
+void drawTriangle (const int x1, const int y1, const int x2, const int y2, const int x3, const int y3, const uint8_t colour)
 {
 	drawLine(x1, y1, x2, y2, colour);
 	drawLine(x2, y2, x3, y3, colour);
@@ -548,7 +553,7 @@ void drawTriangle (const int x1, const int y1, const int x2, const int y2, const
 
 // Fill a triangle - Bresenham method
 // Original from http://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
-void drawTriangleFilled (int x1, int y1, int x2, int y2, int x3, int y3, const uint16_t colour)
+void drawTriangleFilled (int x1, int y1, int x2, int y2, int x3, int y3, const uint8_t colour)
 {
 	#define SWAP(x,y)  swap32i(&(x),&(y))
 	
@@ -703,7 +708,7 @@ void drawTriangleFilled (int x1, int y1, int x2, int y2, int x3, int y3, const u
 	}
 }
 	
-static void fillArcOffsetted (uint16_t cx, uint16_t cy, float radius, float thickness, float start, float end, uint16_t colour)
+static void fillArcOffsetted (uint16_t cx, uint16_t cy, float radius, float thickness, float start, float end, uint8_t colour)
 {
 	float xmin = 65535.0, xmax = -32767.0, ymin = 32767.0, ymax = -32767.0;
 	float cosStart, sinStart, cosEnd, sinEnd;
@@ -861,7 +866,7 @@ static void fillArcOffsetted (uint16_t cx, uint16_t cy, float radius, float thic
 	}
 }
 
-void drawFillArc (const uint16_t x, const uint16_t y, const float radius, const float thickness, const float start, const float end, const uint16_t colour)
+void drawFillArc (const uint16_t x, const uint16_t y, const float radius, const float thickness, const float start, const float end, const uint8_t colour)
 {
 	if (start == 0 && end == ARCMAXANGLE)
 		fillArcOffsetted(x, y, radius, thickness, 0, ARCMAXANGLE, colour);
@@ -869,12 +874,12 @@ void drawFillArc (const uint16_t x, const uint16_t y, const float radius, const 
 		fillArcOffsetted(x, y, radius, thickness, start + (-90.0 / 360.0)*ARCMAXANGLE, end + (-90.0 / 360.0)*ARCMAXANGLE, colour);
 }
 
-void drawLineH (int32_t y, int32_t x1, int32_t x2, const uint16_t colour)
+void drawLineH (int32_t y, int32_t x1, int32_t x2, const uint8_t colour)
 {
 	drawHLine(y, x1, x2, colour);
 }
 
-void drawLineV (int32_t x, int32_t y1, int32_t y2, const uint16_t colour)
+void drawLineV (int32_t x, int32_t y1, int32_t y2, const uint8_t colour)
 {
 	drawVLine(x, y1, y2, colour);
 }
@@ -920,7 +925,7 @@ static inline int fill_poly_v2i_y_sort (const void *a_p, const void *b_p)
 	return 0;
 }
 
-static inline void fill_poly_v2i_n (v16_t *verts, const int32_t total, const int32_t xmin, const int32_t ymin, const int32_t xmax, const int32_t ymax, const uint16_t colour)
+static inline void fill_poly_v2i_n (v16_t *verts, const int32_t total, const int32_t xmin, const int32_t ymin, const int32_t xmax, const int32_t ymax, const uint8_t colour)
 {
 	/* Originally by Darel Rex Finley, 2007.
 	 * Optimized by Campbell Barton, 2016 to keep sorted intersections. */
@@ -1054,17 +1059,17 @@ static inline void fill_poly_v2i_n (v16_t *verts, const int32_t total, const int
 	}
 }
 
-void drawPolygon (v16_t *verts, const int32_t total, const uint16_t colour)
+void drawPolygon (v16_t *verts, const int32_t total, const uint8_t colour)
 {
 	fill_poly_v2i_n(verts, total, 0, 0, VWIDTH-1, VHEIGHT-1, colour);
 }
 
-void drawPolyline (const float x1, const float y1, const float x2, const float y2, const uint16_t colour)
+void drawPolyline (const float x1, const float y1, const float x2, const float y2, const uint8_t colour)
 {
  	drawLine(x1, y1, x2, y2, colour);
 }
 
-void drawPolylineSolid (const float x1, const float y1, const float x2, const float y2, const float thickness, const uint16_t colour)
+void drawPolylineSolid (const float x1, const float y1, const float x2, const float y2, const float thickness, const uint8_t colour)
 {
 	//if (!clipLinef(x1, y1, x2, y2, &x1, &y1, &x2, &y2))
 	//	return;
