@@ -7,34 +7,32 @@
 #define USE_DMAMEM_BUFFER		0		// set this to 1 to use DMAMEM for the tft buffer
 #define USE_EXTMEM_BUFFER		0		// set this to 1 to use PSRAM for the tft buffer
 #define USE_STRIP_RENDERER		1		// enable/disables updates to display by STRIP_RENDERER_HEIGHT rows per iterations per frame
-#define STRIP_RENDERER_HEIGHT	32		// as above. Intended for use with the larger panels
 #define USE_STARTUP_IMAGE		0		// display a power on image at start up
 #define USE_BUFFER_LAYERS		0		// enable muliple backbuffer lateys. Is valid with USE_EXTMEM_BUFFER/PSRAM only. Can not use with USE_STRIP_RENDERER
 #define BUFFER_LAYERS_TOTAL		8		// make room for n backbuffer layers. Each layer size is = (WIDTH * HEIGHT * 2)
-#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define ENABLE_EXTRAM_CACHE		0		// enable PSRAM precache if using USE_EXTMEM_BUFFER. Is experimental.
 #define ENABLE_OP_PRIMATIVES	0		// enable drawing api - 32bit HOST only. Not yet compatible with 64bit client build. Requires extmem/PSRAM
-#define ENABLE_MTP				0		// Enable MTP drive. Consumes ~110k RAM1. Compile with USB TYPE: "Serial + MTP Disk .."
-#define ENABLE_ENCODERS			1
+#define ENABLE_MTP				0		// enable MTP drive. Consumes ~110k RAM1. Compile with USB TYPE: "Serial + MTP Disk .."
 
-#define TFT_INTENSITY			55		// PWM value from 0 to 255
 
-// there can only be one
+// Fully configured profiles:
+#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_RM68120		0		// Mk3
+#define USE_FLEXTFT_R61529		0		// Mk2
+#define USE_FLEXTFT_R61408		1		// test bed
+
+#define USE_ARDUINO_DUE			0		// Mk1  - in memorium
+
+// Not fully configured:
 #define USE_FLEXTFT_ILI9486		0
 #define USE_FLEXTFT_S6D04D1		0
-
-#define USE_FLEXTFT_ILI9806		1
-#define USE_FLEXTFT_RM68120		0
-#define USE_FLEXTFT_R61529		0
-
-#define USE_FLEXTFT_R61408		0
 #define USE_FLEXTFT_LG4572B		0
 #define USE_FLEXTFT_NT35510		0
 #define USE_FLEXTFT_NT35516		0
 #define USE_SPI_GC9A01A			0
 #define USE_SPI_ST7735			0
 
-#define USE_SPI_GC9A01A2		0	//temp. to be removed
+#define USE_SPI_GC9A01A2		0	//for testing only
 
 
 #if USE_SPI_ST7735
@@ -43,66 +41,97 @@
 #define CFG_STRING				"160x128*2 ST7735 TFT Display"
 #define TFT_SPEED				52			// Mhz
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_SPI_GC9A01A
 #define TFT_WIDTH				240
 #define TFT_HEIGHT				240
 #define CFG_STRING				"240x240*2 GC9A01A IPS Display"
 #define TFT_SPEED				100			// Mhz
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_SPI_GC9A01A2
 #define TFT_WIDTH				240
 #define TFT_HEIGHT				240
 #define CFG_STRING				"240x240*2 GC9A01A IPS Display"
 #define TFT_SPEED				100			// Mhz
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_FLEXTFT_S6D04D1
 #define TFT_WIDTH				432
 #define TFT_HEIGHT				240
 #define CFG_STRING				"432x240*2 S6D04D1 IPS Display"
 #define TFT_SPEED				20			// Mhz
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_FLEXTFT_R61529
 #define TFT_WIDTH				480
 #define TFT_HEIGHT				320
 #define CFG_STRING				"480x320*2 R61529 IPS Display"
 #define TFT_SPEED				40
+#define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define STRIP_RENDERER_HEIGHT	8		// as above. Intended for use with the larger panels
+#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_V
+#define MPU_CLOCK_FREQ			600
+#define ENABLE_ENCODERS			1
+
 #elif USE_FLEXTFT_ILI9486
 #define TFT_WIDTH				480
 #define TFT_HEIGHT				320
 #define CFG_STRING				"480x320*2 ILI9486 TFT Display"
 #define TFT_SPEED				40
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_FLEXTFT_RM68120
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 RM68120 TFT Display"
 #define TFT_SPEED				80
+#define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define STRIP_RENDERER_HEIGHT	8		// as above. Intended for use with the larger panels
+#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
+#define MPU_CLOCK_FREQ			720
+#define ENABLE_ENCODERS			1
+
 #elif USE_FLEXTFT_R61408
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 R61408 IPS Display"
 #define TFT_SPEED				24
+#define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define STRIP_RENDERER_HEIGHT	8		// as above. Intended for use with the larger panels
+#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+#define ENABLE_ENCODERS			0
+#define MPU_CLOCK_FREQ			720
+
 #elif USE_FLEXTFT_LG4572B
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 LG4572B IPS Display"
 #define TFT_SPEED				22
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
+
 #elif USE_FLEXTFT_NT35510
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 NT35510 IPS Display"
 #define TFT_SPEED				16
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+
 #elif USE_FLEXTFT_ILI9806
 #define TFT_WIDTH				854
 #define TFT_HEIGHT				480
 #define CFG_STRING				"854x480*2 ILI9806 IPS Display"
 #define TFT_SPEED				48
+#define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
+#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_RLBT
+#define MPU_CLOCK_FREQ			816
+#define ENABLE_ENCODERS			1
+
 #elif USE_FLEXTFT_NT35516
 #define TFT_WIDTH				960
 #define TFT_HEIGHT				540
