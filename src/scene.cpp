@@ -370,32 +370,32 @@ void blockDrawFills (application_t *inst, block_t *block, const vectorPt2_t *cen
 		
 #if 1
 		if (pass == 1){
-			if (type != 0x0C && type != 0x07)
+			if (type != 0x0C && type != 0x07 && type != 0x0A)
 				continue;
 		}else if (pass == 2){
 			if (type != 0x05 && type != 0x06)
 				continue;
 		}else if (pass == 3){
-			if (type != 0x16 && type != 0x1A && type != 0x0A && type != 0x03 && type != 0x04 && type != 0x08)
+			if (type != 0x16 && type != 0x03 && type != 0x04 && type != 0x17 && type != 0x1E)
 				continue;
 		}else if (pass == 4){
-			if (type != 0x17 && type != 0x19 && type != 0x1E)
+			if (type != 0x19 && type != 0x1A)
 				continue;
 		}else if (pass == 5){
-			if (type != 0x0B && type != 0x18 && type != 0x26)
+			if (type != 0x0B && type != 0x18 && type != 0x26 && type != 0x34)
 				continue;
 		}else if (pass == 6){
 			if (type != 0x13)
 				continue;
 		}else if (pass == 7){
-			if (!(type >= 0x32 && type <= 0x49))	// water, sea, lakes
+			if (type != 0x1F && type != 0x50 && type != 0x15 && type != 0x52)	// state parks, sometimes over/around water
 				continue;
 		}else if (pass == 8){
-			if (type != 0x1F && type != 0x50 && type != 0x15 && type != 0x52)	// state parks, sometimes over/around water
+			if (!(type >= 0x35 && type <= 0x49) && type != 0x51 && type != 0x32 && type != 0x33 && type != 0x08)	// water, sea, lakes
 				continue;
 		}else{
 			if (type == 0x17 || type == 0x0C || type == 0x07 || (type >= 0x32 && type <= 0x49)
-			 || type == 0x0B || type == 0x18 || type == 0x50 || type == 0x16 || type == 0x1f
+			 || type == 0x0B || type == 0x18 || type == 0x50 || type == 0x16 || type == 0x1f 
 			 || type == 0x1A || type == 0x0A || type == 0x08 || type == 0x13 || type == 0x03 || type == 0x15 || type == 0x52 || type == 0x1E
 			 || type == 0x04 || type == 0x19 || type == 0x05 || type == 0x06 || type == 0x26
 			){
@@ -566,6 +566,17 @@ static inline float calcDistMetersTrkPt (const trackPoint_t *pt1, const trackPoi
 	return calcDistMf(lat1, lon1, lat2, lon2);
 }
 
+float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2)
+{
+	const float lat1 = pt1->lat;
+	const float lon1 = pt1->lon;
+	const float lat2 = pt2->lat;
+	const float lon2 = pt2->lon;
+
+	return calcDistMf(lat1, lon1, lat2, lon2);
+}
+
+
 static inline void drawTrackPath (application_t *inst, trackPoint_t *points, const uint32_t total, const float lineThickness, const uint16_t colour)
 {
 	if (total < 5) return;
@@ -595,8 +606,14 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 		if (isTrackPointInRegion(tp, &region)){
 			if (!((y >= VHEIGHT && preY >= VHEIGHT) || (y < 0 && preY < 0))){
 				if (!((x >= VWIDTH && preX >= VWIDTH) || (x < 0 && preX < 0))){
-					if (calcDistMetersTrkPt(tp, &points[j-1]) <= 11.0f)
-						drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
+					const float distance = calcDistMetersTrkPt(tp, &points[j-1]);
+					if (distance >= 0.20f){
+						if (distance < 11.0f)
+							drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
+					}else{
+						x = preX;
+						y = preY;
+					}
 				}
 			}
 		}
@@ -1131,8 +1148,8 @@ void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord)
 	//const int total = trackRecord->marker;
 	
 	//drawTrackPath(inst, &trackRecord->trackPoints[trackRecord->marker - total], total, 6, COLOUR_PAL_AQUA);
-	//drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, 6, COLOUR_PAL_AQUA);
-	drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, 3, COLOUR_PAL_AQUA);
+	//drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.spotRadius, COLOUR_PAL_AQUA);
+	drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.pathThickness, COLOUR_PAL_AQUA);
 	//drawTrackPath_Line(inst, trackRecord->trackPoints, trackRecord->marker, COLOUR_PAL_DARKGREY);
 }
 

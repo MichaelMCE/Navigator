@@ -8,6 +8,11 @@
 #include "record.h"
 
 
+#define SCENE_ZOOM_MIN		15.0f
+#define SCENE_ZOOM_MAX		1800.0f
+#define SCENE_ZOOM_STEP		25.0f
+
+
 #define MEMORY_DEBUGGING	(0)
 #define MEMORYPROFILE		(1)			// 1: if memory is expensive. slower to repeat load under larger viewports
 										// 0: where memory is cheap. faster tile reloads 
@@ -82,7 +87,7 @@ typedef struct {
 }plv_t;
 
 typedef struct {
-	block_t ***block;				// space for [PACK_ACROSS * PACK_DOWN];
+	block_t ***block;		// space for [PACK_ACROSS * PACK_DOWN];
 }tile8_t;
 
 #include "poi.h"
@@ -132,7 +137,17 @@ typedef struct {
 		float heading;
 	}viewport;
 
-	uint32_t colourScheme;
+	struct {
+		uint8_t pathThickness;
+		uint8_t spotRadius;
+		uint8_t stun[2];
+	}scheme;
+	
+	uint8_t colourScheme;
+	uint8_t loadTiles;
+	uint8_t freeTiles;
+	uint8_t stun[1];
+	
 	uint32_t renderPassCt;
 	uint32_t renderFlags;
 	uint32_t cmdTaskRunMode;
@@ -221,6 +236,8 @@ void sceneRenderLocGraphic (application_t *inst);
 void sceneRenderPOI (application_t *inst);
 
 void sceneSetColourScheme (const int colourScheme);
+
+float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
 
 #endif
 
