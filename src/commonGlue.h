@@ -23,6 +23,10 @@
 #include "tiles.h"
 #include "poi.h"
 
+#if ENABLE_MTP
+#include "mtp.h"
+#endif
+
 
 
 #if ENABLE_TOUCH_FT5216
