@@ -55,6 +55,12 @@ FLASHMEM void cmdSendError (const char *err)
 	serialFlush();
 }
 
+FLASHMEM void cmdSendMsg (const char *msg)
+{
+	printf("<response:msg>%s<response:end>\n", msg);
+	serialFlush();
+}
+
 FLASHMEM void cmdSendResponse (const char *msg)
 {
 	printf("<response:msg>%s<response:end>\n", msg);
@@ -289,20 +295,6 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 	render_signalUpdate();
 }
 
-FLASHMEM static void cmd_log (char *msg, const int cmdlen)
-{
-	if (!strncmp(msg, "reset", 5)){
-		log_reset();
-		cmdSendResponse("Log reset");
-			
-	}else if (!strncmp(msg, "state:", 6)){
-		int state = (atoi(&msg[6]))&0x03;
-		log_setAcquisitionState(state&0x01);
-		log_setRecordState(state&0x02);
-		cmdSendResponse("");
-	}
-}
-
 FLASHMEM static void cmd_list (char *msg, const int cmdlen)
 {
 	cmdSendResponse("heartbeat");
@@ -312,7 +304,7 @@ FLASHMEM static void cmd_list (char *msg, const int cmdlen)
 	cmdSendResponse(" Contents of " TRACKPTS_DIR);
 
 	int ct = cmdListDir(TRACKPTS_DIR);
-	printf("<response:msg> %i files<response:end>\n", ct);
+	printf(CS(" %i files"), ct);
 	serialFlush();
 }
 
@@ -322,15 +314,33 @@ FLASHMEM static void cmd_load (char *filename, const int cmdlen)
 		cmdSendError("Invalid filename");
 	}else{
 			
-		printf("<response:msg>Loading: %s<response:end>\n", filename);
+		printf(CS("Loading: %s"), filename);
 		serialFlush();
 			
 		fio_setDir(TRACKPTS_DIR);
 		int ct = log_load(filename);
 		if (ct)
-			printf("<response:msg>%i trackPoints imported from %s<response:end>", ct, filename);
+			printf(CS("%i trackPoints imported from %s"), ct, filename);
 
 		fio_setDir("/");
+	}
+}
+
+FLASHMEM static void cmd_log (char *msg, const int cmdlen)
+{
+	if (!strncmp(msg, "reset", 5)){
+		log_reset();
+		cmdSendResponse("Log reset");
+	
+	}else if (!strncmp(msg, "load:", 5)){
+		char *filename = &msg[5];
+		cmd_load(filename, cmdlen);
+
+	}else if (!strncmp(msg, "state:", 6)){
+		int state = (atoi(&msg[6]))&0x03;
+		log_setAcquisitionState(state&0x01);
+		log_setRecordState(state&0x02);
+		cmdSendResponse("");
 	}
 }
 
@@ -373,7 +383,7 @@ FLASHMEM static void cmd_delete (char *filename, const int cmdlen)
 FLASHMEM static void cmd_touch (char *filename, const int cmdlen)
 {
 	if (validateFilename(filename)){
-		printf("<response:msg>Touching: %s ...<response:end>\n", filename);
+		printf(CS("Touching: %s ..."), filename);
 		serialFlush();
 			
 		dategps_t gdate; timegps_t gtime;
@@ -399,7 +409,7 @@ FLASHMEM static void cmd_rename (char *msg, const int cmdlen)
 		to++;
 			
 		if (validateFilename(from) && validateFilename(to)){
-			printf("<response:msg>Renaming: %s -> %s ...<response:end>\n", from, to);
+			printf(CS("Renaming: %s -> %s ..."), from, to);
 			serialFlush();
 				
 			fio_setDir(TRACKPTS_DIR);
@@ -454,19 +464,35 @@ FLASHMEM static void cmd_getfile (char *filename, const int cmdlen)
 	fio_setDir("/");
 }
 
-FLASHMEM static void cmd_getfileLen (char *filename, const int cmdlen)
+FLASHMEM static void cmd_getfileMeta (char *filename, const int cmdlen)
 {
 	if (!validateFilename(filename)){
 		cmdSendError("Invalid filename");
 		return;
 	}
 
+	fio_setDir(TRACKPTS_DIR);
 	File file = file_open(filename);
 	if (file){
+		DateTimeFields create;
+		DateTimeFields modify;
+		int createDateValid = file.getCreateTime(create);
+		int modifyDateValid = file.getModifyTime(modify);
 		uint32_t length = file.size();
 		file.close();
+		
 
-		printf("<response:filename:length>%s:%u<response:end>\n", filename, (int)length);
+		cmdSendMsg(filename);
+		printf(CS(" Len: %i"), (int)length);
+		if (createDateValid){
+			printf(CS(" Create date: %.2i %.2i %.4i"), create.mday, create.mon+1, create.year+1900);
+			printf(CS("        time: %.2i:%.2i:%.2i"), create.hour, create.min, create.sec);
+		}
+		if (modifyDateValid){
+			printf(CS(" Modify date: %.2i %.2i %.4i"), modify.mday, modify.mon+1, modify.year+1900);
+			printf(CS("        time: %.2i:%.2i:%.2i"), modify.hour, modify.min, modify.sec);
+		}
+
 	}else{
 		cmdSendError("File open failed");
 	}
@@ -668,7 +694,7 @@ FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
 
 	}else if (!strncmp(buffer, CMD_GETFILELEN, strlen(CMD_GETFILELEN))){
 		char *filename = &buffer[strlen(CMD_GETFILELEN)];
-		cmd_getfileLen(filename, cmdlen);
+		cmd_getfileMeta(filename, cmdlen);
 	}
 	serialFlush();
 	

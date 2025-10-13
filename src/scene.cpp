@@ -597,7 +597,7 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 	col[0] = colour;
 	col[1] = COLOUR_PAL_GOLD;
 
-	for (uint32_t j = 1; j < total-1; j += 3){
+	for (uint32_t j = 2; j < total-1; j += 2){
 		trackPoint_t *tp = &points[j];
 
 		float x = (tp->location.longitude - window->v1.lon) / dw;
