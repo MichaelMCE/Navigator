@@ -554,9 +554,9 @@ void cmd_hello (const char *cmdStr)
 	setReadResponseState(hSerial, 0, 1);
 }
 
-void cmd_logcfg (const char *cmdStr)
+void cmd_log (const char *cmdStr)
 {
-	if (!strncmp("reset", cmdStr, 5) || !strncmp("state:", cmdStr, 6)){
+	if (!strncmp("reset", cmdStr, 5) || !strncmp("load:", cmdStr, 5) || !strncmp("state:", cmdStr, 6)){
 		serialSendCmd(hSerial, CMD_LOGCFG, cmdStr);
 		setReadResponseState(hSerial, 0, 1);
 	}
@@ -644,7 +644,7 @@ void cmd_frename (const char *cmdStr)
 	}
 }
 
-void cmd_flength (const char *cmdStr)
+void cmd_fmeta (const char *cmdStr)
 {
 	if (strlen(cmdStr) >= 1 && !strchr(cmdStr, '*')){
 		serialSendCmd(hSerial, CMD_GETFILELEN, cmdStr);
@@ -661,13 +661,6 @@ void cmd_list (const char *cmdStr)
 void cmd_disable (const char *cmdStr)
 {
 	serialSendCmd(hSerial, CMD_EXIT, "");
-}
-
-void cmd_reboot (const char *cmdStr)
-{
-	serialSendCmdEx(hSerial, CMD_REBOOT, "reset", 0);
-	printf("Reboot sent\n");
-	setReadResponseState(hSerial, 0, 0);
 }
 
 void cmd_debug (const char *cmdStr)
@@ -816,6 +809,11 @@ void cmd_mpu (const char *cmdStr)
 		
 	if (!strncmp("freq:", cmdStr, 5)){
 		serialSendCmd(hSerial, CMD_MPU, cmdStr);	
+		
+	}else if (!strncmp("reboot", cmdStr, 6)){
+		serialSendCmdEx(hSerial, CMD_REBOOT, "reset", 0);
+		printf("Reboot sent\n");
+		setReadResponseState(hSerial, 0, 0);
 	}
 }
 
@@ -824,7 +822,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"help",     cmd_help,      ""},
 	{"debug",    cmd_debug,     "console:0/1/2"},
 	{"receiver", cmd_receiver,  "version, hotstart, warmstart, coldstart, poll:ubx_msg"},
-	{"log",      cmd_logcfg,    "state:0-3, reset"},
+	{"log",      cmd_log,       "state:0-3, reset"},
 	{"detail",   cmd_detail,    "poi:0/1, world:0/1, slevels:0/1, savailability:0/1, compass:0/1, route:0/1, map:0/1, locgraphic:0/1"},
 	{"backlight",cmd_backlight, "level:1-255"},
 	{"map",      cmd_map,       "zoom:15-1800, colour:0/1"},
@@ -833,17 +831,16 @@ static const cmdstr_t cmdstrs[] = {
 	{"fload",    cmd_fload,     "<a filename.tpts>. Load trackPts of this file"},
 	{"fdelete",  cmd_fdelete,   "<a filename.tpts>. Delete this file."},
 	{"frename",  cmd_frename,   "filenameFrom.tpts:filenameTo.tpts"},
-	{"flength",  cmd_flength,   "<a filename.tpts>. Return length of file"},
+	{"fmeta",    cmd_fmeta,     "<a filename.tpts>. Return length, create and modify date & time"},
 	{"ftouch",   cmd_ftouch,    "<a filename.tpts>. Set modify time to current time"},
 	{"list",     cmd_list,      "Display saved data files from /data/"},
 	{"disable",  cmd_disable,   "Disable cmd task processing (this) until next power cycle"},
-	{"reboot",   cmd_reboot,    "Reboot device"},
 	{"odo",      cmd_odo,       "start, stop, reset"},
 	{"uload",    cmd_uload,     "filename.ubx. import a .ubx file in to receiver"},
 	{"ufetch",   cmd_ufetch,    "token:<yourtoken>. Downloads and saves locally .ubx file of latest offline AssistNow data from u-blox website"},
 	{"sos",      cmd_sos,       "create, clear, poll"},
 	{"runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
-	{"mpu",      cmd_mpu,       "freq:Mhz. Set microcontroller frequency"},
+	{"mpu",      cmd_mpu,       "reboot, freq:mhz. Set microcontroller frequency"},
 	
 	{"", NULL, ""}
 };
