@@ -53,11 +53,14 @@ int cmd_task (const int pulse);
 void cmdSendError (const char *err);
 void cmdSendResponse (const char *msg);
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int cmdLoadUbx (const char *filename);
+
+
 #ifdef __cplusplus
 }
 #endif

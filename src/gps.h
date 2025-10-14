@@ -6,6 +6,8 @@
 
 #include "ubx/ubx.h"
 #include "ubx/ubxcb.h"
+#include "location.h"
+
 
 
 #define SERIAL_RATE				(230400)

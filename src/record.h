@@ -1,6 +1,6 @@
 
-#ifndef _record_h_
-#define _record_h_
+#ifndef _RECORD_H_
+#define _RECORD_H_
 
 
 #define TRACKPTS_DIR	"/data/"		// save track points here

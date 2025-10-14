@@ -136,7 +136,7 @@ FLASHMEM static void gps_setup (ubx_device_t *dev)
 
 void gps_loadOfflineAssist (const int printInfo)
 {
-	gps_setIntialPosition(54.609333767992936, -5.929224426174398, 30.0f, 200);
+	gps_setIntialPosition(MY_LAT, MY_LON, MY_ALT, 200);
 	
 	if (cmdLoadUbx(ASSISTNOW_FILENAME)){
 		if (printInfo)
