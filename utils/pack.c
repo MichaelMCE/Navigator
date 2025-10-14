@@ -79,8 +79,6 @@ size_t polypack (const int fileX, const int fileY)
 	if (!buffer) return 0;
 	
 	snprintf(file_des, sizeof(file_des), "%s\\%03i_%03i.pk32", DES_PATH, fileY, fileX);
-	//printf("-> %s\n", file_des);
-	
 	FILE *fp_des = fopen(file_des, "w+b");
 	if (!fp_des){
 		free(buffer);
@@ -107,8 +105,6 @@ size_t polypack (const int fileX, const int fileY)
 				offset += header.file[y][x].length;
 			}
 			fclose(fp_src);
-
-			//printf("%s  %i %i\n", file_src, header.file[y][x].offset, header.file[y][x].length);
 		}
 	}
 	
@@ -117,8 +113,7 @@ size_t polypack (const int fileX, const int fileY)
 	
 	fclose(fp_des);
 	free(buffer);
-		
-	//printf("\n\n");
+
 	return offset;
 }
 
@@ -126,11 +121,9 @@ size_t polypack (const int fileX, const int fileY)
 
 int main (const int argc, const char *argv[])
 {
-
+	
 	const int blockTotalLon = ceilf(coverage.width / GPS_LENGTH_LON);
 	const int blockTotalLat = ceilf(coverage.height / GPS_LENGTH_LAT);
-	//printf(" blocks: %ix%i (%i)\n", blockTotalLon, blockTotalLat, blockTotalLat*blockTotalLon);
-	
 		
 	for (int y = 0; y < blockTotalLat; y += PACK_ACROSS){
 		for (int x = 0; x < blockTotalLon; x += PACK_DOWN)
