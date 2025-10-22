@@ -14,7 +14,7 @@
 
 
 #define MEMORY_DEBUGGING	(0)
-#define MEMORYPROFILE		(1)			// 1: if memory is expensive. slower to repeat load under larger viewports
+#define MEMORYPROFILE		(0)			// 1: if memory is expensive. slower to repeat load under larger viewports
 										// 0: where memory is cheap. faster tile reloads 
 
 #define SCENEZOOM			(200.0f)	// set initial viewport, in meters vertically 
@@ -176,6 +176,12 @@ enum _course {
 };
 
 
+typedef struct {
+	uint32_t total;
+	uint8_t types[16];
+}typesPass_t;
+
+
 
 
 #define EARTH_RADIUS			(6378137.0)
@@ -211,8 +217,10 @@ enum _course {
 #define GPS_20M_LON				(GPS_1000M_LON/50.0f)
 #define GPS_10M_LAT				(GPS_1000M_LAT/100.0f)
 #define GPS_10M_LON				(GPS_1000M_LON/100.0f)
+
 #define GPS_LENGTH_LAT			(GPS_500M_LAT)
 #define GPS_LENGTH_LON			(GPS_500M_LON)
+
 #define POI_LENGTH_LAT			(GPS_2000M_LAT)
 #define POI_LENGTH_LON			(GPS_2000M_LON)
 
@@ -238,6 +246,15 @@ void sceneRenderPOI (application_t *inst);
 void sceneSetColourScheme (const int colourScheme);
 
 float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2);
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif
 
