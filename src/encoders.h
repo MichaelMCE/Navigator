@@ -30,7 +30,7 @@
 #define ENCODER3_PIN_DT			6
 #define ENCODER3_PIN_SW			7
 
-#define ENCODER_SW_DEBOUNCE		110
+#define ENCODER_SW_DEBOUNCE		120
 
 
 

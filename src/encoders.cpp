@@ -6,9 +6,7 @@
 #if ENABLE_ENCODERS
 
 #include "encoder/encoder.h"
-#include "encoders.h"
-#include "touch.h"
-
+#include "commonGlue.h"
 
 
 
@@ -75,35 +73,47 @@ static void enc3Reset ()
 
 void enc1SwCB ()
 {
-	static int lastPressTime;
+	static uint32_t lastPressTime;
 	
-	int currentPressTime = millis();
-	if (currentPressTime - lastPressTime > ENCODER_SW_DEBOUNCE){
+	uint32_t currentPressTime = millis();
+	uint32_t t1 = currentPressTime - lastPressTime;
+	
+	if (t1 > ENCODER_SW_DEBOUNCE){
 		lastPressTime = currentPressTime;
 		dial1.swChange++;
 	}
+
+	//printf(CS("1: %i %i"), t1, dial1.swChange);
 }
 
 void enc2SwCB ()
 {
-	static int lastPressTime;
+	static uint32_t lastPressTime;
 	
-	int currentPressTime = millis();
-	if (currentPressTime - lastPressTime > ENCODER_SW_DEBOUNCE){
+	uint32_t currentPressTime = millis();
+	uint32_t t1 = currentPressTime - lastPressTime;
+	
+	if (t1 > ENCODER_SW_DEBOUNCE){
 		lastPressTime = currentPressTime;
 		dial2.swChange++;
 	}
+	
+	//printf(CS("2: %i %i"), t1, dial2.swChange);
 }
 
 void enc3SwCB ()
 {
-	static int lastPressTime;
+	static uint32_t lastPressTime;
 	
-	int currentPressTime = millis();
-	if (currentPressTime - lastPressTime > ENCODER_SW_DEBOUNCE){
+	uint32_t currentPressTime = millis();
+	uint32_t t1 = currentPressTime - lastPressTime;
+
+	if (t1 > ENCODER_SW_DEBOUNCE){
 		lastPressTime = currentPressTime;
 		dial3.swChange++;
 	}
+	
+	//printf(CS("3: %i %i"), t1, dial3.swChange);
 }
 
 int encoders_isReady ()
