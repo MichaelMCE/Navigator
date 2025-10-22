@@ -45,17 +45,13 @@ const float aspectOffset = (((VHEIGHT*0.5) * (1.0 - aspectCorrection)) * ((doubl
 
 
 
-
-
-
-
-#if 1	// original			155meg
+#if 0	// original			155meg
 static const mp_coverage_t coverage = {		//  Rectangle of MAP_SOURCE coverage
 		{{55.25573, -8.188934}, {54.022522, -5.413513}},
 		2.775421/*2.77542*/,	// ° width
 		1.233208/*1.23322*/		// ° height
 };
-#else
+#elif 0
 //planet_-8.403,53.98_-4.268,55.434-garmin-osm
 // 315mb
 static const mp_coverage_t coverage = {
@@ -63,6 +59,18 @@ static const mp_coverage_t coverage = {
 		4.135,		// ° width
 		1.454		// ° height
 };
+
+#else 
+// newest 
+// 600mb, June 2025
+static const mp_coverage_t coverage = {
+		{{55.3985791, -8.8708173},
+		 {53.9454972, -5.3821777}},
+		3.4886396,		// 3.48816° width
+		1.4530819		// 1.45294° height
+};
+
+
 #endif
 
 static inline void location2Block (const vectorPt2_t *loc, int32_t *x_lon, int32_t *y_lat)
@@ -580,7 +588,6 @@ static inline int isPathInRegion (const vectorPt2_t *vec, const vectorPt4_t *win
 	return  (vec->lat <= win->v1.lat && vec->lat >= win->v2.lat) &&
 			(vec->lon >= win->v1.lon && vec->lon <= win->v2.lon);
 }
-
  
 // Returns x-value of point of intersectipn of two
 // lines
@@ -741,6 +748,7 @@ static inline poly_vector16_t *createVectorDeltas (const vectors_t *vectors, con
 	return vectors16;
 }
 */
+
 static inline void writeVectors (FILE *file, polyline_t *polyline, const vectors_t *vectors, const uint32_t from, const uint32_t to)
 {
 	const int32_t vtotal = (to - from) + 1;
@@ -760,18 +768,34 @@ static inline uint32_t doSplit (FILE *file, polylines_t *polylines, vectorPt4_t 
 	for (int p = 0; p < polylines->total; p++){
 		polyline_t *polyline = getPolyline(polylines, p);
 		if (!polyline->isPolygon){
-			if (polyline->type == 0x1C || polyline->type == 0x1D || polyline->type == 0x1E 
-				|| polyline->type&0x10000 || polyline->type == 0x15 /*sea to land border */ 
-				|| polyline->type == 0x28 || polyline->type == 0x29 || polyline->type == 0x14
-				|| polyline->type == 0x19 || polyline->type == 0x1A || polyline->type == 0x1B
-			  	|| polyline->type == 0x1F || polyline->type == 0x18
-				){
+			const int type = polyline->type;
+#if 0			
+			if (type&0x10000){
+				if (type == 0x10407) type = 0xB0;		// Bridge, supporting Railway. 
+				if (type == 0x10409) type = 0xB2;		// Bridge, supporting Road. 
+				if (type == 0x10f1e) type = 0xBE;		// Service Road (restricted) 
+				if (type == 0x10e0e) type = 0xE0;		// Country Road 
+				if (type == 0x11f13) type = 0xF1;		// Freeway 
+				if (type == 0x11f10) type = 0xC0;		// Ferry Route
+				if (type == 0x11f11) type = 0xC1;		// Steps
+				if (type == 0x11f12) type = 0xC2;		// Footpath
+				if (type == 0x11f15) type = 0xC5;		// Highway
+				if (type == 0x11f16) type = 0xC6;		// Secondary Road
+				if (type == 0x11f17) type = 0xC7;		// Side street
+				if (type == 0x11f18) type = 0xC8;		// Unclassified Road
+				if (type == 0x11f19) type = 0xC9;		// Service Road
+				if (type == 0x11f1c) type = 0xCC;		// Cyclepath
+				if (type == 0x12103) type = 0xA0;		// Railway 
+				if (type == 0x12113) type = 0xA1;		// Railway Service
+			}
+#endif			
+			if (type == 0x1C || type == 0x1D || type == 0x1E || type == 0x15 /*sea to land border */ 
+				|| type == 0x28 || type == 0x29 || type == 0x14 || type == 0x19 || type == 0x1A || type == 0x1B || type == 0x1F || type == 0x18){
 				continue;
 			}
 		}else{
-			if (/*polyline->type == 0x27 ||*/ polyline->type == 0x0E || polyline->type == 0x4A || polyline->type == 0x4B
-			  	|| polyline->type&0x10000 || polyline->type == 0x18
-				){
+			const int type = polyline->type;
+			if (type == 0x3A || type == 0x0E || type == 0x4A || type == 0x4B || type == 0x02 || type&0x10000){
 				continue;
 			}
 			

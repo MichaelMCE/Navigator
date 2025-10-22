@@ -29,14 +29,14 @@
 
 // MAP_SOURCE coverage (gmapsupp.mp)
 
-#if 1
+#if 0
 // original			155meg
 static const mp_coverage_t coverage = {
 		{{55.25573, -8.188934}, {54.022522, -5.413513}},
 		2.775421/*2.77542*/,	// ° width
 		1.233208/*1.23322*/		// ° height
 };
-#else
+#elif 0
 //planet_-8.403,53.98_-4.268,55.434-garmin-osm
 // 315mb
 static const mp_coverage_t coverage = {
@@ -44,6 +44,18 @@ static const mp_coverage_t coverage = {
 		4.135,		// ° width
 		1.454		// ° height
 };
+
+#else 
+
+// newest 
+// 600mb, June 2025
+static const mp_coverage_t coverage = {
+		{{55.3985791, -8.8708173},
+		 {53.9454972, -5.3821777}},
+		3.4886396,		// 3.48816° width
+		1.4530819		// 1.45294° height
+};
+
 #endif
 
 

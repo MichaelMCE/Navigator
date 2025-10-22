@@ -550,7 +550,7 @@ void sendFile (HANDLE hSerial, const char *filename)
 
 void cmd_hello (const char *cmdStr)
 {
-	serialSendCmd(hSerial, CMD_HELLO, "heartbeat");
+	serialSendCmd(hSerial, CMD_RECEIVER, "poll:mon_ver");
 	setReadResponseState(hSerial, 0, 1);
 }
 
@@ -592,6 +592,9 @@ void cmd_map (const char *cmdStr)
 		serialSendCmdEx(hSerial, CMD_ZOOM, cmdStr, 20);
 	else if (strlen(cmdStr) > 7 && !strncmp("colour:", cmdStr, 7))
 		serialSendCmd(hSerial, CMD_MAPSCHEME, cmdStr);
+
+	//serialSendCmd(hSerial, CMD_HELLO, "heartbeat");
+	setReadResponseState(hSerial, 0, 1);
 }
 
 void cmd_fsend (const char *cmdStr)
