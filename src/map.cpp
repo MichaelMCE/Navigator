@@ -12,12 +12,17 @@ application_t inst;
 FLASHMEM void map_init (vfont_t *vfont)
 {
 	memset(&inst, 0, sizeof(inst));
-	
-	//inst.vfont = vfont;
+
 	inst.vfont = vfont;
-	inst.colourScheme = 1;
+
 	inst.cmdTaskRunMode = 1;
 	inst.runLog.step = 4;
+	inst.loadTiles = 1;
+
+	sceneSetColourScheme(2);
+	inst.scheme.pathThickness = 11;
+	inst.scheme.spotRadius = 6;
+	
 	log_runReset();	
 	sceneSetZoom(&inst, SCENEZOOM);
 	
@@ -70,18 +75,31 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 			//uint32_t loc = ((xlon&0xFFFF)<<16) | (ylat&0xFFFF);
 			
 			//if (preLoc != loc){	// check distance is over, say, 50m
-			float distance = calcDistance(position.lat, position.lon, preLoc.lat, preLoc.lon);
-			if (distance >= 0.005f){
+			//float distance = calcDistance(position.lat, position.lon, preLoc.lat, preLoc.lon);
+			float distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+			
+			//printf(CS("distance %.2f"), distance);
+			
+			if (distance >= 500.0f){
 				preLoc = position;
 				//preLoc = loc;
 				//sceneFlushTiles(inst);
-				tilesUnload(inst.renderPassCt);
+				
+				//tilesUnload(inst.renderPassCt);
+				inst.freeTiles = 0;
+				
 				//tilesUnloadAll(inst);
 				//poiCleanBlocks(&inst->poi);
 			}
 
-			sceneLoadTiles(&inst);
-			loadCount = 8;
+			loadCount = 32;
+			inst.loadTiles = 1;
+			//sceneLoadTiles(&inst);
+		}else{
+			
+			float distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+			if (distance > 120.0f)
+				inst.loadTiles = 1;
 		}
 	}
 
