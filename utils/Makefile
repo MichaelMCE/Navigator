@@ -15,8 +15,8 @@ endif
 
 
 
-CFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=gnu23 -Wall -march=native -mtune=native
-CPPFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=c++23 -Wall -march=native -mtune=native
+CFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O3 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=gnu23 -Wall -march=native -mtune=native
+CPPFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O3 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=c++23 -Wall -march=native -mtune=native
 LIBS = $(BITMODE) -D _GNU_SOURCE -Llibmylcd/libs/x32 -L"lib" -lm -lmylcddll -lole32 -luuid -lwininet
 
 EXAMPLES=serial1_console.exe
