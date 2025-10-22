@@ -26,7 +26,13 @@
 
 
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
+float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2);
+#ifdef __cplusplus
+}
+#endif
 
 
 
@@ -325,10 +331,14 @@ FLASHMEM int nav_posecef (const uint8_t *payload, uint16_t msg_len, void *opaque
 }
 
 static int recPos = 0;
-static pos_rec_t posRecLLH[32];
+static pos_rec_t posRecLLH[48];
 
 static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 {
+	
+	if (pos->longitude == 0.000 && pos->latitude == 0.000)
+		return;
+	
 	gps->nav.longitude = pos->longitude;
 	gps->nav.latitude = pos->latitude;
 	gps->nav.altitude = pos->altitude;
@@ -336,29 +346,28 @@ static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 	posRecLLH[recPos].longitude = pos->longitude;
 	posRecLLH[recPos].latitude  = pos->latitude;
 	posRecLLH[recPos].altitude  = pos->altitude;
-	if (++recPos >= 32) recPos = 0;
+	if (++recPos >= 48) recPos = 0;
 
 	
-	double lat = 0.0;
-	double lon = 0.0;
-	float alt = 0.0f;
+	double lon = 0.0;		//posRecLLH[0].longitude;
+	double lat = 0.0;		// posRecLLH[0].latitude;
+	float alt = 0.0f;		//posRecLLH[0].altitude;
+	int ptsSumed = 0;
 	
-	/*for (int i = 0; i < 32; i++){
-		lon = (lon + posRecLLH[i].longitude) / 2.0;
-		lat = (lat + posRecLLH[i].latitude) / 2.0;
-		alt = (alt + posRecLLH[i].altitude) / 2.0f;
-	}*/
 	
-	for (int i = 0; i < 32; i++){
+	for (int i = 0; i < 48; i++){
+		//float distance = sceneCalcDistancePosRecPt2(&posRecLLH[i-1], &posRecLLH[i]);
+		//if (distance > 2000.0f) continue;
+
 		lon += posRecLLH[i].longitude;
 		lat += posRecLLH[i].latitude;
 		alt += posRecLLH[i].altitude;
+		ptsSumed++;
 	}
 	
-	gps->navAvg.longitude = lon / 32.0;
-	gps->navAvg.latitude  = lat / 32.0;
-	gps->navAvg.altitude  = alt / 32.0f;
-
+	gps->navAvg.longitude = lon / (double)ptsSumed;
+	gps->navAvg.latitude  = lat / (double)ptsSumed;
+	gps->navAvg.altitude  = alt / (float)ptsSumed;
 	gps->rates.epoch++;
 }
 
@@ -389,7 +398,7 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	//gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
 	//gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
 
-	// proto 18+
+	// proto 18
 	gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
 	gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
 

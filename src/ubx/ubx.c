@@ -555,7 +555,7 @@ static void configureGNSS (ubx_device_t *dev)
 	cfg->gnssId = GNSSID_QZSS;
 	cfg->resTrkCh = 1;
 	cfg->maxTrkCh = 8;
-	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
+	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[6];
 	cfg->gnssId = GNSSID_SBAS;
@@ -1015,5 +1015,4 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
 	ubx_msgPoll(dev, UBX_CFG, UBX_NAV_SAT);
 }
-
 
