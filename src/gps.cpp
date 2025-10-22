@@ -16,9 +16,9 @@ int gnssReceiver_PassthroughEnabled = 0;
 
 ubx_device_t dev = {0};
 extern const uint32_t baudRates[];
-static uint8_t bufferReadX[2024];
-static uint8_t bufferWriteX[2024];
-const uint32_t bufferSize = 2048*1;
+static uint8_t bufferReadX[32768];
+static uint8_t bufferWriteX[1024];
+const uint32_t bufferSize = 1024;
 static uint8_t buffer[bufferSize+16];
 static int32_t bOffset = 0;
 static uint8_t serBuffer[8];
@@ -138,6 +138,8 @@ void gps_loadOfflineAssist (const int printInfo)
 {
 	gps_setIntialPosition(MY_LAT, MY_LON, MY_ALT, 200);
 	
+	return;
+	
 	if (cmdLoadUbx(ASSISTNOW_FILENAME)){
 		if (printInfo)
 			addDebugLine((const uint8_t*)("AssistNow Offline: " ASSISTNOW_FILENAME " imported"));
@@ -159,7 +161,8 @@ void gps_init ()
 	gps_loadOfflineAssist(1);
 }
 
-void serialEvent1 ()
+#if 1
+void serial_Event1 ()
 {
 	static uint8_t len = 0;
 
@@ -180,9 +183,12 @@ void serialEvent1 ()
 		}
     }
 }
+#endif
 
 void gps_task ()
 {
+	serial_Event1();
+	
 	if (!gnssReceiver_PassthroughEnabled)
 		return;
 
