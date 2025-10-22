@@ -7,7 +7,7 @@
 #define USE_DMAMEM_BUFFER		0		// set this to 1 to use DMAMEM for the tft buffer
 #define USE_EXTMEM_BUFFER		0		// set this to 1 to use PSRAM for the tft buffer
 #define USE_STRIP_RENDERER		1		// enable/disables updates to display by STRIP_RENDERER_HEIGHT rows per iterations per frame
-#define USE_STARTUP_IMAGE		0		// display a power on image at start up
+#define USE_STARTUP_IMAGE		1		// display a power on image at start up
 #define USE_BUFFER_LAYERS		0		// enable muliple backbuffer lateys. Is valid with USE_EXTMEM_BUFFER/PSRAM only. Can not use with USE_STRIP_RENDERER
 #define BUFFER_LAYERS_TOTAL		8		// make room for n backbuffer layers. Each layer size is = (WIDTH * HEIGHT * 2)
 #define ENABLE_EXTRAM_CACHE		0		// enable PSRAM precache if using USE_EXTMEM_BUFFER. Is experimental.
@@ -16,9 +16,9 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_ILI9806		1		// Mk4
 #define USE_FLEXTFT_RM68120		0		// Mk3
-#define USE_FLEXTFT_R61529		1		// Mk2
+#define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
 
 #define USE_ARDUINO_DUE			0		// Mk1  - in memorium
@@ -88,7 +88,7 @@
 #define CFG_STRING				"800x480*2 RM68120 TFT Display"
 #define TFT_SPEED				80
 #define TFT_INTENSITY			55		// PWM value from 0 to 255
-#define STRIP_RENDERER_HEIGHT	8		// as above. Intended for use with the larger panels
+#define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
 #define MPU_CLOCK_FREQ			720
