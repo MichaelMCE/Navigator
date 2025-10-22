@@ -6,10 +6,11 @@
 
 
 #define POLY_PATH		(uint8_t*)"/polys/500_32"
+//#define POLY_PATH		(uint8_t*)"/polys/250_32"
 #define POI_PATH		(uint8_t*)"/POI"
 
 
-#if 1
+#if 0
 #define l_malloc(n)		malloc(n)
 #define l_calloc(a,b)	calloc((a),(b))
 #define l_realloc(p, n)	realloc((p),(n))

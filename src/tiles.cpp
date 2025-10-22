@@ -1,21 +1,6 @@
 
 
 #include "commonGlue.h"
-/*
-#include <Arduino.h>
-#include "config.h"
-#include "displays.h"
-#include "vfont/vfont.h"
-#include "gps.h"
-#include "fileio.h"
-#include "polyfile.h"
-#include "scene.h"
-#include "poi.h"
-#include "map.h"
-#include "tiles.h"
-#include "cmd.h"
-*/
-
 
 
 
@@ -26,6 +11,8 @@ static tile8_t ***tiles8;
 
 // 	get source map data for your region from https://extract.bbbike.org/ 
 //  convert to .mp with GPSMapEdit
+
+#if 0
 //  original			155meg
 mp_coverage_t coverage = {		// MAP_SOURCE coverage, Standard/gmapsupp.mp
 		{{55.25573,  -8.188934},
@@ -34,9 +21,17 @@ mp_coverage_t coverage = {		// MAP_SOURCE coverage, Standard/gmapsupp.mp
 		1.233208/*1.23322*/,	// degrees height
 		0, 0
 };
-
-
-
+#else
+// newest 
+// 600mb, June 2025
+mp_coverage_t coverage = {
+		{{55.3985791, -8.8708173},
+		 {53.9454972, -5.3821777}},
+		3.4886396,		// 3.48816° width
+		1.4530819,		// 1.45294° height
+		0, 0
+};
+#endif
 
 static void fileAdvance (fileio_t *file, const size_t amount)
 {
@@ -177,30 +172,25 @@ int blockLoad (block_t *block, const uint8_t *dir, const int32_t y_lat, const in
 	};
 
 
-	tileInit(block, 12);
-	//block->id.y_lat = y_lat;
-	//block->id.x_lon = x_lon;
+	tileInit(block, 64);
 
 	while (lengthRead < polyLen){
 		int ret = polyfileRead(file, &field, sizeof(field));
 		if (ret != 1) break;
 		lengthRead += sizeof(field);
-		
-		if (!(field.type&0x8000)){	// is a path
-			/*if (field.type == 0x15){	// don't load sea border with land paths
-				polyfileAdvance(file, sizeof(vector2_t)*field.total);
-				continue;
-			}*/
-		}
+
 		vectorsAlloc(field.total, &vectors);
 		
 		if (polyfileRead(file, vectors.list, sizeof(vector2_t)*field.total) == 1){
 			lengthRead += sizeof(vector2_t) * field.total;
-		//	printf("polyfileRead %i\n", sizeof(vector2_t) * field.total);
+			//printf("polyfileRead %i\n", sizeof(vector2_t) * field.total);
+
 			if (block->total == block->size){
-			//	printf("block->size %i\n", block->size);
-				block->size += 16;
-				block->list = (polyline_t*)l_realloc(block->list, block->size * sizeof(polyline_t));
+				//printf("block->size %i\n", block->size);
+				block->size += 32;
+				void *newList = (void*)l_realloc(block->list, block->size * sizeof(polyline_t));
+				if (!newList) break;
+				block->list = (polyline_t*)newList;
 			}
 
 			polyline_t *polyline = &block->list[block->total];
@@ -208,7 +198,7 @@ int blockLoad (block_t *block, const uint8_t *dir, const int32_t y_lat, const in
 			polyline->vectors = vectors;
 			block->total++;
 		}else{
-			printf(CS("polyfileRead failed %i, %i %i: %s"), (int)(sizeof(vector2_t)*field.total), (int)y_lat, (int)x_lon, dir);
+			printf(CS("blockLoad() failed: %i, %i %i: %s"), (int)(sizeof(vector2_t)*field.total), (int)y_lat, (int)x_lon, dir);
 		}
 	};
 	polyfileClose(file);
@@ -401,7 +391,7 @@ static int tilesClipRect (int *bx, int *by, int *blocksAcross, int *blocksDown)
 }
 
 
-#if 1
+#if 0
 int loadPOI (poi_t *poi, const float xlon, const float ylat, int32_t x, int32_t y)
 {
 
@@ -479,9 +469,9 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 	by -= (PACK_DOWN*2);
 	blocksDown += (PACK_DOWN*4);
 #endif
+
 	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
 		return ct;
-
 
 	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
 	block_t block;
@@ -504,6 +494,7 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 
 			block.size = 0;
 			int blkTotal = blockLoad(&block, POLY_PATH, i, j);
+			
 #if (MEMORYPROFILE == 1)		// if memory is expensive. slower to repeat load larger maps
 			if (!blkTotal) continue;
 #else							// if memory is cheap. faster tile reloads 
@@ -524,9 +515,13 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 			tile->block[y][x] = (block_t*)l_malloc(sizeof(block_t));
 			*tile->block[y][x] = block;
 			
-			loadPOI(&inst->poi, j, i, 0, 0);
-			
 			ct++;
+			
+			// load one block at a time
+			if (blkTotal){
+				//loadPOI(&inst->poi, j, i, 0, 0);
+				break;
+			}
 		}
 	}
 
