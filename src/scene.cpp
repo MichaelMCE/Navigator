@@ -1,21 +1,27 @@
 
-#include <Arduino.h>
-#include "config.h"
-#include "displays.h"
-#include "vfont/vfont.h"
-#include "gps.h"
-#include "fileio.h"
-#include "polyfile.h"
-#include "scene.h"
-#include "map.h"
-#include "tiles.h"
-#include "poi.h"
+
+#include "commonGlue.h"
 
 
 
 extern mp_coverage_t coverage;
 extern application_t inst;
 extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
+
+
+
+static const typesPass_t typesPass[8] = {
+	{14, {0x02, 0x0C, 0x3C, 0x07, 0x0A, 0x08, 0x1E, 0x26, 0x22, 0x4F, 0x33, 0x2D, 0x32, 0x0F}},
+	{ 4, {0x05, 0x06, 0x18, 0x2C}},
+	{ 7, {0x16, 0x03, 0x04, 0x17, 0x42, 0x2B, 0x13}},
+	{ 5, {0x19, 0x1A, 0x27, 0x37, 0x39}},
+	{ 4, {0x0B, 0x18, 0x34, 0x3D}},
+	{ 2, {0x36, 0x1C}},
+	{ 7, {0x25, 0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
+	{10, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x51}}
+};
+
+
 
 
 
@@ -54,159 +60,263 @@ static inline float getCourse (const vectorPt2_t *vec1, const vectorPt2_t *vec2)
 }
 #endif
 
-static inline uint16_t polylineToColour (const uint8_t type)
+
+static inline uint16_t polylineToColour_mode2 (const uint8_t type)
 {
-	if (inst.colourScheme){
-		if (type <= 0x16) return COLOUR_PAL_WHITE;			// all paths
-		if (type == 0x27) return COLOUR_PAL_LIGHTGREY;		// airport runway
-		return COLOUR_PAL_WHITE;
+	if (type == 0x01) return COLOUR_PAL_Freeway;
+	if (type == 0x02) return COLOUR_PAL_PrincipledHighway;
+	if (type == 0x03) return COLOUR_PAL_Highway;
+	if (type == 0x04) return COLOUR_PAL_ArterialRoad;
+	if (type == 0x05) return COLOUR_PAL_CollectorRoad;
+	if (type == 0x06) return COLOUR_PAL_ResidentialStreet;
+	if (type == 0x07) return COLOUR_PAL_ResidentialStreet;
+	if (type == 0x08) return COLOUR_PAL_ServiceRoad;
+	if (type == 0x09) return COLOUR_PAL_LivingStreet;
+	if (type == 0x0A) return COLOUR_PAL_Cycleway;
+	if (type == 0x0B) return COLOUR_PAL_Path;
+	if (type == 0x0C) return COLOUR_PAL_Roundabout;
+	//if (type == 0x0D) return COLOUR_PAL_BLACK;
+	if (type == 0x0E) return COLOUR_PAL_CountryRoad;
+	//if (type == 0x0F) return COLOUR_PAL_BLACK;
+	if (type == 0x12) return COLOUR_PAL_ServiceRoadRestricted;
+	if (type == 0x13) return COLOUR_PAL_Steps;
+	if (type == 0x16) return COLOUR_PAL_FootPath;
+	if (type == 0x27) return COLOUR_PAL_AirportRunway;
 	
-	}else{
-		switch (type){
-		case 0x01: return COLOUR_PAL_DARKERBROWN;
-		case 0x02: return COLOUR_PAL_DARKBROWN;
-		case 0x03: return COLOUR_PAL_BROWN;
-		case 0x04: return COLOUR_PAL_BROWN;
-		case 0x05: return COLOUR_PAL_GREY;
-		case 0x06: return COLOUR_PAL_ORANGE;
-		case 0x07: return COLOUR_PAL_LIGHTBROWN;
-		case 0x08: return COLOUR_PAL_PL08;
-		case 0x09: return COLOUR_PAL_PL09;
-		case 0x0A: return COLOUR_PAL_DARKGREY;
-		case 0x0B: return COLOUR_PAL_PL0B;
-		case 0x0C: return COLOUR_PAL_LIGHTGREY;
-		case 0x0D: return COLOUR_PAL_PL0D;
-		case 0x0E: return COLOUR_PAL_PL0E;
-		case 0x10: return COLOUR_PAL_LIGHTGREY;
-		case 0x11: return COLOUR_PAL_LIGHTERGREY;
-		case 0x12: return COLOUR_PAL_DARKERBROWN;
-		case 0x13: return COLOUR_PAL_LIGHTBROWN;
-		//case 0x14: return COLOUR_24TO16(0x55EE55);
-		case 0x15: return COLOUR_PAL_DARKBLUE;
-		
-		case 0x16: return COLOUR_PAL_PL16;
-		case 0x17: return COLOUR_PAL_GREEN;
-		//case 0x18: return COLOUR_PAL_BLUE_SEA;
-		case 0x19: return COLOUR_PAL_DARKBROWN;
-		case 0x1A: return COLOUR_PAL_PL1A;
-		//case 0x1F: return COLOUR_24TO16(0x0000BB);
-		case 0x27: return COLOUR_PAL_LIGHTGREY;
-		//case 0x2A: return COLOUR_PAL_BLUE;
-		case 0x2B: return COLOUR_PAL_BLUE_SEA;
-
-		//default:
-		//	printf("polylineToColour: unhandled type: 0x%X\n", type);
-		};
-
-		return COLOUR_PAL_BLACK;
-	}
+	
+	//printf("polylineToColour type %.2X\n", type);
+	
+	return COLOUR_PAL_BLACK;
 }
 
+static inline uint16_t polylineToColour_mode1 (const uint8_t type)
+{
+	if (type <= 0x16) return COLOUR_PAL_WHITE;			// all paths
+	if (type == 0x27) return COLOUR_PAL_LIGHTGREY;		// airport runway
+	return COLOUR_PAL_WHITE;
+}
+
+static inline uint16_t polylineToColour_mode0 (const uint8_t type)
+{
+	switch (type){
+	case 0x01: return COLOUR_PAL_DARKERBROWN;
+	case 0x02: return COLOUR_PAL_DARKBROWN;
+	case 0x03: return COLOUR_PAL_BROWN;
+	case 0x04: return COLOUR_PAL_BROWN;
+	case 0x05: return COLOUR_PAL_GREY;
+	case 0x06: return COLOUR_PAL_ORANGE;
+	case 0x07: return COLOUR_PAL_LIGHTBROWN;
+	case 0x08: return COLOUR_PAL_PL08;
+	case 0x09: return COLOUR_PAL_PL09;
+	case 0x0A: return COLOUR_PAL_DARKGREY;
+	case 0x0B: return COLOUR_PAL_PL0B;
+	case 0x0C: return COLOUR_PAL_LIGHTGREY;
+	case 0x0D: return COLOUR_PAL_PL0D;
+	case 0x0E: return COLOUR_PAL_PL0E;
+	case 0x10: return COLOUR_PAL_LIGHTGREY;
+	case 0x11: return COLOUR_PAL_LIGHTERGREY;
+	case 0x12: return COLOUR_PAL_DARKERBROWN;
+	case 0x13: return COLOUR_PAL_LIGHTBROWN;
+	//case 0x14: return COLOUR_24TO16(0x55EE55);
+	case 0x15: return COLOUR_PAL_DARKBLUE;
+	
+	case 0x16: return COLOUR_PAL_PL16;
+	case 0x17: return COLOUR_PAL_GREEN;
+	//case 0x18: return COLOUR_PAL_BLUE_SEA;
+	case 0x19: return COLOUR_PAL_DARKBROWN;
+	case 0x1A: return COLOUR_PAL_PL1A;
+	//case 0x1F: return COLOUR_24TO16(0x0000BB);
+	case 0x27: return COLOUR_PAL_LIGHTGREY;
+	//case 0x2A: return COLOUR_PAL_BLUE;
+	case 0x2B: return COLOUR_PAL_BLUE_SEA;
+
+	//default:
+	//	printf("polylineToColour: unhandled type: 0x%X\n", type);
+	};
+
+	return COLOUR_PAL_BLACK;
+}
+
+static inline uint16_t polylineToColour (const uint8_t type)
+{
+	if (inst.colourScheme == 2)
+		return polylineToColour_mode2(type);
+	else if (inst.colourScheme == 1)
+		return polylineToColour_mode1(type);
+	else
+		return polylineToColour_mode0(type);
+}
+
+static inline uint16_t polygonToColour_mode0 (const uint8_t type)
+{
+	
+	switch (type){
+	case 0x01: return COLOUR_PAL_PG_01;   //		Large urban area (>200K) 
+	//case 0x02: return COLOUR_PAL_PG_02;   //		Small urban area (<200K) 
+	case 0x03: return COLOUR_PAL_PG_03;   //		Rural housing area       
+                                                    
+	case 0x04: return COLOUR_PAL_PG_04;   //		Military base            
+	case 0x05: return COLOUR_PAL_PG_05;   //		Parking lot              
+	case 0x06: return COLOUR_PAL_PG_06;   //		Parking garage           
+	case 0x07: return COLOUR_PAL_PG_07;   //		Airport                  
+	case 0x08: return COLOUR_PAL_PG_08;   //		Shopping center          
+	case 0x09: return COLOUR_PAL_PG_09;   //		Marina                   
+	case 0x0a: return COLOUR_PAL_PG_0A;   //		University/College       
+	case 0x0b: return COLOUR_PAL_PG_0B;   //		Hospital                 
+	case 0x0c: return COLOUR_PAL_PG_0C;   //		Industrial complex       
+	case 0x0d: return COLOUR_PAL_PG_0D;   //		Reservation              
+	case 0x0e: return COLOUR_PAL_PG_0E;   //		Airport runway         
+	case 0x0F: return COLOUR_PAL_PG_05;   //		Playground
+	case 0x10: return COLOUR_PAL_DARKGREEN;	  //	unknown
+	case 0x12: return COLOUR_PAL_LIGHTGREY;	  //	quarry
+	case 0x13: return COLOUR_PAL_PG_13;   //		Building/Man-made area   
+	case 0x14: return COLOUR_PAL_PG_14;   //		National park             
+	case 0x15: return COLOUR_PAL_PG_15;   //		National park             
+	case 0x16: return COLOUR_PAL_PG_16;   //		National park             
+	case 0x17: return COLOUR_PAL_PG_17;     //		City park                 
+	case 0x18: return COLOUR_PAL_GREEN;   //		Golf course               
+	case 0x19: return COLOUR_PAL_PINK;   	//		Sports complex            
+	case 0x1a: return COLOUR_PAL_DARKGREY;   //	Cemetery                  
+	case 0x1C: return COLOUR_PAL_REDFUZZ;       //  Barracks
+	case 0x1e: return COLOUR_PAL_LIGHTGREEN;   //	State park                
+	case 0x1f: return COLOUR_PAL_LIGHTGREEN;   //	State park                
+	case 0x20: return COLOUR_PAL_LIGHTGREEN;   //	State park
+	case 0x21: return COLOUR_PAL_RED;		   //	Auto Fuel
+	case 0x22: return COLOUR_PAL_LIGHTGREEN;   //	Zoo area
+	case 0x23: return COLOUR_PAL_BROWN;   //	food garden
+    case 0x25: return COLOUR_PAL_REDFUZZ;		// power station
+    case 0x26: return COLOUR_PAL_LIGHTGREY;		//  Jail/Gaol?
+    case 0x27: return COLOUR_PAL_PINK;			//  Construction
+	case 0x28: return COLOUR_PAL_BLUE_SEA;	  //	Sea/Ocean                 
+	case 0x29: return COLOUR_PAL_BLUE_SEA;   //		Blue-Unknown              
+	case 0x2B: return COLOUR_PAL_LIGHTBROWN;
+	case 0x2C: return COLOUR_PAL_PURPLE_GLOW; 		// Airfield Apron  
+	case 0x2D: return COLOUR_PAL_LIGHTGREY; 		// Aerodrome/Airfield 
+	case 0x31: return COLOUR_PAL_WHITE;   //		Sea                   
+	case 0x32: return COLOUR_PAL_BLUE_SEA;   //		Sea                   
+	case 0x33: return COLOUR_PAL_LIGHTGREY;			// pedestrian area
+	case 0x34: return COLOUR_PAL_REDFUZZ;	 //     Emergency/Police service
+    case 0x35: return COLOUR_PAL_PINK;		//  Not a Church
+    case 0x36: return COLOUR_PAL_LDS;		//  Church
+    case 0x37: return COLOUR_PAL_GREEN;		//  playing field area
+	case 0x39: return COLOUR_PAL_DARKGREY;	//		Tower
+	case 0x3b: return COLOUR_PAL_BLUE_SEA;   //		Blue-Unknown              
+	case 0x3c: return COLOUR_PAL_WATER;   //		Large lake (250-600 km2)  
+	case 0x3d: return COLOUR_PAL_LIGHTGREY;   //		dam
+	case 0x3e: return COLOUR_PAL_WATER;   //		Medium lake (25-77 km2)   
+	case 0x3f: return COLOUR_PAL_WATER;   //		Medium lake (11-25 km2)   
+	case 0x40: return COLOUR_PAL_BLUE_SEA;   //		Small lake (0.25-11 km2)  
+	
+	//case 0x41: return COLOUR_PAL_BLUE_SEA;   //		Small lake (<0.25 km2)    	// small and large .mp's
+	case 0x41: return COLOUR_PAL_DARKGREEN;   //		playing field
+	case 0x42: return COLOUR_PAL_GREEN;   //		stadium
+	
+	case 0x43: return COLOUR_PAL_BLUE_SEA;   //		Major lake (1.1-3.3 tkm2) 
+	case 0x44: return COLOUR_PAL_BLUE_SEA;   //		Large lake (0.6-1.1 tkm2) 
+                                                    
+	case 0x45: return COLOUR_PAL_AQUA;   //			Blue-Unknown              
+	case 0x46: return COLOUR_PAL_BLUE_SEA;   //		Major river (>1 km)       
+	case 0x47: return COLOUR_PAL_BLUE_SEA;   //		Large river (200 m-1 km)  
+	case 0x48: return COLOUR_PAL_AQUA;   //			Medium river (40-200 m)   
+	case 0x49: return COLOUR_PAL_AQUA;   //			Small river (<40 m)       
+                                                    
+	//case 0x4a: return 0x0000;   //				Map selection area        
+	//case 0x4b: return 0x0000;   //				Map coverage area         
+	//case 0x3a: return 0x0000;   //				Map selection area        
+                                                    
+	case 0x4c: return COLOUR_PAL_BLUE_SEA;   //		Intermittent water        
+                                                    
+	case 0x4d: return COLOUR_PAL_CYAN;   //			Glacier                   
+	case 0x4e: return COLOUR_PAL_DARKGREEN;   //	Orchard/plantation        
+	case 0x4f: return COLOUR_PAL_PG_4F;   //		Scrub                     
+	case 0x50: return COLOUR_PAL_DARKGREEN;   //	Forest                    
+	case 0x51: return COLOUR_PAL_PG_51;   //		Wetland/swamp             
+	case 0x52: return COLOUR_PAL_DARKERGREEN;   //	Tundra                    
+	case 0x53: return COLOUR_PAL_BROWN;   //		Sand/tidal/mud flat       
+
+	//default:
+		//printf("polygonToColour: 0x%X\n", type);
+	};
+		
+	return COLOUR_PAL_BLACK;
+}
+
+static inline uint16_t polygonToColour_mode1 (const uint8_t type)
+{
+	if (type == 0x0B) return COLOUR_PAL_REDFUZZ;
+	if (type <= 0x10) return COLOUR_PAL_LIGHTERGREY;	
+	if (type == 0x17) return COLOUR_PAL_PG_17;
+	if (type >= 0x14 && type <= 0x1A) return COLOUR_PAL_GREENHUE;
+	if (type <= 0x20) return COLOUR_PAL_LIGHTGREY;
+	if (type == 0x23) return COLOUR_PAL_GREEN;
+	if (type == 0x25 || type == 0x34) return COLOUR_PAL_REDFUZZ;
+	if (type == 0x26 || type == 0x27) return COLOUR_PAL_LIGHTERGREY;
+	if (type == 0x2B) return COLOUR_PAL_HEATH;
+	if (type == 0x36) return COLOUR_PAL_LDS;
+	if (type >= 0x41 && type <= 0x41) return COLOUR_PAL_DARKGREEN;
+	if (type >= 0x28 && type <= 0x4C) return COLOUR_PAL_WATER;
+	if (type >= 0x4E && type <= 0x53) return COLOUR_PAL_BRIGHTGREEN;
+	
+	return COLOUR_PAL_BLACK;
+}
+
+static inline uint16_t polygonToColour_mode2 (const uint8_t type)
+{
+	if (type == 0x02) return COLOUR_PAL_Residential;
+	if (type == 0x04) return COLOUR_PAL_MilArea;
+	if (type == 0x05) return COLOUR_PAL_Parking;
+	if (type == 0x08) return COLOUR_PAL_RetailArea;
+	if (type == 0x0A) return COLOUR_PAL_School;
+	if (type == 0x0B) return COLOUR_PAL_Hospital;
+	if (type == 0x0C) return COLOUR_PAL_Industrail;
+	if (type == 0x0F) return COLOUR_PAL_Playground;
+	if (type == 0x12) return COLOUR_PAL_Quarry;
+	if (type == 0x13) return COLOUR_PAL_Building;
+	if (type == 0x15) return COLOUR_PAL_DeciduousForest;
+	if (type == 0x17) return COLOUR_PAL_Meadow;
+	if (type == 0x18) return COLOUR_PAL_GolfCourse;
+	if (type == 0x19) return COLOUR_PAL_SportsCentre;
+	if (type == 0x1A) return COLOUR_PAL_Cemetery;
+	if (type == 0x1C) return COLOUR_PAL_Barracks;
+	if (type == 0x1E) return COLOUR_PAL_Park;
+	if (type == 0x22) return COLOUR_PAL_Zoo;
+	if (type == 0x25) return COLOUR_PAL_PowerStation;
+	if (type == 0x26) return COLOUR_PAL_Administration;
+	if (type == 0x27) return COLOUR_PAL_Construction;
+	if (type == 0x2B) return COLOUR_PAL_HEATH;
+	if (type == 0x2C) return COLOUR_PAL_AirfieldApron;
+	if (type == 0x2D) return COLOUR_PAL_AerodromeAirfield;
+	if (type == 0x32) return COLOUR_PAL_Sea;
+	if (type == 0x33) return COLOUR_PAL_PedestrianArea;
+	if (type == 0x3C) return COLOUR_PAL_Water;
+	if (type == 0x3C) return COLOUR_PAL_Water;
+	if (type == 0x35) return COLOUR_PAL_Supermarket;
+	if (type == 0x36) return COLOUR_PAL_Church;
+	if (type == 0x37) return COLOUR_PAL_PlayingField;
+	if (type == 0x39) return COLOUR_PAL_Pier;	// and COLOUR_PAL_Mooring
+	if (type == 0x3D) return COLOUR_PAL_Dam;
+	if (type == 0x3E) return COLOUR_PAL_RailwayPlatform;
+	if (type == 0x41) return COLOUR_PAL_Pitch;
+	if (type == 0x42) return COLOUR_PAL_Stadium;
+	if (type == 0x47) return COLOUR_PAL_Sand;
+	if (type == 0x4F) return COLOUR_PAL_BrushScrub;
+	if (type == 0x51) return COLOUR_PAL_MarshWetland;
+	if (type == 0x52) return COLOUR_PAL_MixedForest;
+
+	//printf("polygonToColour: 0x%X\n", type);
+	//if (type >= 0x28 && type <= 0x4C) return COLOUR_PAL_WATER;
+	
+	return COLOUR_PAL_BLACK;
+}
 
 static inline uint16_t polygonToColour (const uint8_t type)
 {
-	if (inst.colourScheme){
-		if (type == 0x0B) return COLOUR_PAL_REDFUZZ;
-		if (type <= 0x10) return COLOUR_PAL_LIGHTERGREY;	
-		if (type == 0x17) return COLOUR_PAL_PG_17;
-		if (type >= 0x14 && type <= 0x1A) return COLOUR_PAL_GREENHUE;
-		if (type <= 0x20) return COLOUR_PAL_LIGHTGREY;
-		if (type == 0x23) return COLOUR_PAL_GREEN;
-		if (type == 0x26) return COLOUR_PAL_LIGHTERGREY;
-		if (type == 0x34) return COLOUR_PAL_REDFUZZ;
-		if (type >= 0x28 && type <= 0x4C) return COLOUR_PAL_BLUE_SEA;
-		if (type >= 0x4E && type <= 0x53) return COLOUR_PAL_BRIGHTGREEN;
-
-		return 0;
-		
-
-	}else{
-		switch (type){
-		case 0x01: return COLOUR_PAL_PG_01;   //		Large urban area (>200K) 
-		case 0x02: return COLOUR_PAL_PG_02;   //		Small urban area (<200K) 
-		case 0x03: return COLOUR_PAL_PG_03;   //		Rural housing area       
-	                                                    
-		case 0x04: return COLOUR_PAL_PG_04;   //		Military base            
-		case 0x05: return COLOUR_PAL_PG_05;   //		Parking lot              
-		case 0x06: return COLOUR_PAL_PG_06;   //		Parking garage           
-		case 0x07: return COLOUR_PAL_PG_07;   //		Airport                  
-		case 0x08: return COLOUR_PAL_PG_08;   //		Shopping center          
-		case 0x09: return COLOUR_PAL_PG_09;   //		Marina                   
-		case 0x0a: return COLOUR_PAL_PG_0A;   //		University/College       
-		case 0x0b: return COLOUR_PAL_PG_0B;   //		Hospital                 
-		case 0x0c: return COLOUR_PAL_PG_0C;   //		Industrial complex       
-		case 0x0d: return COLOUR_PAL_PG_0D;   //		Reservation              
-		case 0x0e: return COLOUR_PAL_PG_0E;   //		Airport runway         
-	  
-		case 0x0F: return COLOUR_PAL_PG_05;   //		Airport runway         
-	  
-		case 0x10: return COLOUR_PAL_DARKGREEN;	  //	unknown
-		case 0x13: return COLOUR_PAL_PG_13;   //		Building/Man-made area   
-                                                    
-		case 0x14: return COLOUR_PAL_PG_14;   //		National park             
-		case 0x15: return COLOUR_PAL_PG_15;   //		National park             
-		case 0x16: return COLOUR_PAL_PG_16;   //		National park             
-		case 0x17: return COLOUR_PAL_PG_17;     //		City park                 
-                                                    
-		//case 0x18: return COLOUR_PAL_GREEN;   //		Golf course               
-		case 0x19: return COLOUR_PAL_PINK;   	//		Sports complex            
-		case 0x1a: return COLOUR_PAL_LIGHTGREEN;   //	Cemetery                  
-                                                    
-		case 0x1e: return COLOUR_PAL_LIGHTGREEN;   //	State park                
-		case 0x1f: return COLOUR_PAL_LIGHTGREEN;   //	State park                
-		case 0x20: return COLOUR_PAL_LIGHTGREEN;   //	State park
-	
-		case 0x21: return COLOUR_PAL_RED;		   //	Auto Fuel
-	
-		case 0x23: return COLOUR_PAL_BROWN;   //	food garden
-    
-    	case 0x26: return COLOUR_PAL_LIGHTGREY;		//  Jail/Gaol?
-                                                    
-		case 0x28: return COLOUR_PAL_BLUE_SEA;	  //	Sea/Ocean                 
-		case 0x29: return COLOUR_PAL_BLUE_SEA;   //		Blue-Unknown              
-                                                    
-		case 0x32: return COLOUR_PAL_BLUE_SEA;   //		Sea                       
-                                                    
-		case 0x34: return COLOUR_PAL_REDFUZZ;	 //     Emergency/Police service
-                                                    
-		case 0x39: return COLOUR_PAL_DARKGREY;	//		Tower
-                                                    
-		case 0x3b: return COLOUR_PAL_BLUE_SEA;   //		Blue-Unknown              
-		case 0x3c: return COLOUR_PAL_WATER;   //		Large lake (250-600 km2)  
-		case 0x3d: return COLOUR_PAL_WATER;   //		Large lake (77-250 km2)   
-		case 0x3e: return COLOUR_PAL_WATER;   //		Medium lake (25-77 km2)   
-		case 0x3f: return COLOUR_PAL_WATER;   //		Medium lake (11-25 km2)   
-		case 0x40: return COLOUR_PAL_BLUE_SEA;   //		Small lake (0.25-11 km2)  
-		case 0x41: return COLOUR_PAL_BLUE_SEA;   //		Small lake (<0.25 km2)    
-		case 0x42: return COLOUR_PAL_BLUE_SEA;   //		Major lake (>3.3 tkm2)    
-		case 0x43: return COLOUR_PAL_BLUE_SEA;   //		Major lake (1.1-3.3 tkm2) 
-		case 0x44: return COLOUR_PAL_BLUE_SEA;   //		Large lake (0.6-1.1 tkm2) 
-                                                    
-		case 0x45: return COLOUR_PAL_AQUA;   //			Blue-Unknown              
-		case 0x46: return COLOUR_PAL_BLUE_SEA;   //		Major river (>1 km)       
-		case 0x47: return COLOUR_PAL_BLUE_SEA;   //		Large river (200 m-1 km)  
-		case 0x48: return COLOUR_PAL_AQUA;   //			Medium river (40-200 m)   
-		case 0x49: return COLOUR_PAL_AQUA;   //			Small river (<40 m)       
-                                                    
-		//case 0x4a: return 0x0000;   //				Map selection area        
-		//case 0x4b: return 0x0000;   //				Map coverage area         
-                                                    
-		case 0x4c: return COLOUR_PAL_BLUE_SEA;   //		Intermittent water        
-                                                    
-		case 0x4d: return COLOUR_PAL_CYAN;   //			Glacier                   
-		case 0x4e: return COLOUR_PAL_DARKGREEN;   //	Orchard/plantation        
-		case 0x4f: return COLOUR_PAL_PG_4F ;   //		Scrub                     
-		case 0x50: return COLOUR_PAL_DARKGREEN;   //	Forest                    
-		case 0x51: return COLOUR_PAL_PG_51;   //		Wetland/swamp             
-		case 0x52: return COLOUR_PAL_DARKGREEN;   //	Tundra                    
-		case 0x53: return COLOUR_PAL_BROWN;   //		Sand/tidal/mud flat       
-	
-		//default:
-			//printf("polygonToColour: 0x%X\n", type);
-		};
-		
-		return COLOUR_PAL_BLACK;
-	}
+	if (inst.colourScheme == 2)
+		return polygonToColour_mode2(type);
+	else if (inst.colourScheme == 1)
+		return polygonToColour_mode1(type);
+	else
+		return polygonToColour_mode0(type);
 }
 
 static inline uint32_t polylineToThickness (const uint8_t roadClass)
@@ -215,21 +325,22 @@ static inline uint32_t polylineToThickness (const uint8_t roadClass)
 	
 	switch (roadClass){
 	case 0x00: thickness = 3; break;
-	case 0x01: thickness = 5; break;
-	case 0x02: thickness = 4; break;
+	case 0x01: thickness = 3; break;
+	case 0x02: thickness = 3; break;
 	case 0x03: thickness = 3; break;
 	case 0x04: thickness = 3; break;
 	case 0x05: thickness = 2; break;
-	case 0x06: thickness = 2; break;
+	case 0x06: thickness = 0; break;
 	case 0x07: thickness = 0; break;
-	case 0x08: thickness = 2; break;
+	case 0x08: thickness = 0; break;
 	case 0x09: thickness = 2; break;
-	case 0x0A: thickness = 2; break;
-	case 0x0B: thickness = 2; break;
+	case 0x0A: thickness = -4; break;
+	case 0x0B: thickness = -4; break;
 	case 0x0C: thickness = 2; break;
 	
+	case 0x13: thickness = -4; break;
 	case 0x15: thickness = -5; break;	//sea border
-	case 0x16: thickness = -2; break;
+	case 0x16: thickness = -4; break;
 	
 	case 0x18: thickness = 3; break;
 	case 0x1F: thickness = 1; break;
@@ -237,19 +348,20 @@ static inline uint32_t polylineToThickness (const uint8_t roadClass)
 	case 0x2A: thickness = 0; break;
 	case 0x2B: thickness = 2; break;
 
+	case 0x12: thickness = 1; break;
+	case 0x0E: thickness = 1; break;
+	
+	case 0x26: thickness = 8; break;
 	case 0x27: thickness = 1; break;
-	//default:
-	//	printf("polylineToThickness: 0x%X\n", roadClass);
+	default:
+		printf("polylineToThickness: 0x%X\n", roadClass);
 	}
-
-	if (!inst.colourScheme)
-		thickness *= 3;
-
+	
+	//thickness *= 4;
 	thickness += 5;
 	if (thickness < 1) thickness = 1;
 	return thickness;
 }
-
 
 static inline float viewportGetWidth (application_t *inst)
 {
@@ -289,7 +401,6 @@ static inline void drawMapFileBoundries (application_t *inst, const vectorPt2_t 
 	vectorPt2_t loc[2];
 	int x1, y1, x2, y2;
 
-
 	for (int32_t x = 1; x < blockTotalLon; x++){
 		block2Location(x, 0, &loc[0]);
 		block2Location(x, blockTotalLat-1, &loc[1]);
@@ -297,7 +408,8 @@ static inline void drawMapFileBoundries (application_t *inst, const vectorPt2_t 
 		x1 = (((loc[0].lon - window->v1.lon)) / dw);
 		y1 = (((window->v1.lat - loc[0].lat) / aspectCorrection) / dh) - aspectOffset;
 		y2 = (((window->v1.lat - loc[1].lat) / aspectCorrection) / dh) - aspectOffset;
-		drawLineV(x1, y1, y2, colour);
+		//drawLineV(x1, y1, y2, colour);
+		drawLine(x1, y1, x1, y2, colour);
 	}
 
 	for (int32_t y = 1; y < blockTotalLat; y++){
@@ -353,12 +465,8 @@ void blockDrawFills (application_t *inst, block_t *block, const vectorPt2_t *cen
 	vectorPt4_t region;
 	sceneMakeGPSWindow(center, spanMeters*COVERAGE_OVERSCAN, &region);
 	
-
-#if VERTICAL_DISPLAY		// fudge for vertical displays
-	float delta2 = (region.v2.lat - region.v1.lat) / 4.0f;
-	region.v1.lat -= delta2;
-	region.v2.lat += delta2;
-#endif
+	const int totalTypes = typesPass[pass].total;
+	const uint8_t *types = typesPass[pass].types;
 
 	for (int i = 0; i < (int)block->total; i++){
 		polyline_t *polyline = &block->list[i];
@@ -366,56 +474,23 @@ void blockDrawFills (application_t *inst, block_t *block, const vectorPt2_t *cen
 
 		const uint32_t type = polyline->type&0x7FFF;
 
-		//if (findUnknown(type)) continue;
+		for (int t = 0; t < totalTypes; t++){
+			if (type == types[t]){
+				vectors_t *vectors = getVectors(polyline);
 		
-#if 1
-		if (pass == 1){
-			if (type != 0x0C && type != 0x07 && type != 0x0A)
-				continue;
-		}else if (pass == 2){
-			if (type != 0x05 && type != 0x06)
-				continue;
-		}else if (pass == 3){
-			if (type != 0x16 && type != 0x03 && type != 0x04 && type != 0x17 && type != 0x1E)
-				continue;
-		}else if (pass == 4){
-			if (type != 0x19 && type != 0x1A)
-				continue;
-		}else if (pass == 5){
-			if (type != 0x0B && type != 0x18 && type != 0x26 && type != 0x34)
-				continue;
-		}else if (pass == 6){
-			if (type != 0x13)
-				continue;
-		}else if (pass == 7){
-			if (type != 0x1F && type != 0x50 && type != 0x15 && type != 0x52)	// state parks, sometimes over/around water
-				continue;
-		}else if (pass == 8){
-			if (!(type >= 0x35 && type <= 0x49) && type != 0x51 && type != 0x32 && type != 0x33 && type != 0x08)	// water, sea, lakes
-				continue;
-		}else{
-			if (type == 0x17 || type == 0x0C || type == 0x07 || (type >= 0x32 && type <= 0x49)
-			 || type == 0x0B || type == 0x18 || type == 0x50 || type == 0x16 || type == 0x1f 
-			 || type == 0x1A || type == 0x0A || type == 0x08 || type == 0x13 || type == 0x03 || type == 0x15 || type == 0x52 || type == 0x1E
-			 || type == 0x04 || type == 0x19 || type == 0x05 || type == 0x06 || type == 0x26
-			){
-				continue;
-			}else{
-				//printf("pass %i, type 0x%X\n", pass, type);
-				//continue;
-			}
-		}
-#endif
-		vectors_t *vectors = getVectors(polyline);
-		
-		for (uint32_t j = 0; j < vectors->total; ){
-			const vectorPt2_t *vec = (vectorPt2_t*)getVector2(vectors, j);
-			if (isVectorInRegion(vec, &region)){
-				uint16_t colour = polygonToColour(type);
-				drawFilledObject(vectors, type, window, dw, dh, colour);
+				for (uint32_t j = 0; j < vectors->total; ){
+					const vectorPt2_t *vec = (vectorPt2_t*)getVector2(vectors, j);
+					if (isVectorInRegion(vec, &region)){
+						uint16_t colour = polygonToColour(type);
+						//if (colour != COLOUR_PAL_BLACK)
+							drawFilledObject(vectors, type, window, dw, dh, colour);
+						break;
+					}
+					//j += 5;	// should be j++, reset if there are edge artifacts
+					j++;
+				}
 				break;
 			}
-			j += 2;	// should be j++, reset if there are edge artifacts
 		}
 	}
 }
@@ -424,41 +499,31 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 {
 	int bx, by, blocksAcross, blocksDown;
 	tilesGetBlockCoverage(loc, spanMeters, &bx, &by, &blocksAcross, &blocksDown);
-	
-	
-#if VERTICAL_DISPLAY		// fudge for vertical displays
-	by -= (PACK_DOWN*2);
-	blocksDown += (PACK_DOWN*4);
-#endif
 
 	for (int i = by; i < by+blocksDown; i++){
 		for (int j = bx; j < bx+blocksAcross; j++){
 			block_t *block = tilesBlock8Get(j, i);
 			if (!block) continue;
-
 			block->lastRendered = inst->renderPassCt;
 
 			if (spanMeters < 18000.0f){
 				if (spanMeters < 15000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 1);
+					blockDrawFills(inst, block, center, spanMeters, 0);
 				if (spanMeters < 6000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 3);
-				if (spanMeters < 17000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 4);
-				if (spanMeters < 2000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 2);
+				if (spanMeters < 17000.0f)
+					blockDrawFills(inst, block, center, spanMeters, 3);
+				if (spanMeters < 2000.0f)
+					blockDrawFills(inst, block, center, spanMeters, 1);
 				if (spanMeters < 5000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 5);
-
-				blockDrawFills(inst, block, center, spanMeters, 0);
+					blockDrawFills(inst, block, center, spanMeters, 4);
 			}
-			blockDrawFills(inst, block, center, spanMeters, 7);
-				
+			blockDrawFills(inst, block, center, spanMeters, 6);
 			if (spanMeters < 18000.0f){
 				if (spanMeters < 2500.0f)
-					blockDrawFills(inst, block, center, spanMeters, 6);
+					blockDrawFills(inst, block, center, spanMeters, 5);
 				if (spanMeters < 5000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 8);
+					blockDrawFills(inst, block, center, spanMeters, 7);
 			}
 		}
 	}
@@ -576,6 +641,15 @@ float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2)
 	return calcDistMf(lat1, lon1, lat2, lon2);
 }
 
+float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2)
+{
+	const float lat1 = pt1->latitude;
+	const float lon1 = pt1->longitude;
+	const float lat2 = pt2->latitude;
+	const float lon2 = pt2->longitude;
+
+	return calcDistMf(lat1, lon1, lat2, lon2);
+}
 
 static inline void drawTrackPath (application_t *inst, trackPoint_t *points, const uint32_t total, const float lineThickness, const uint16_t colour)
 {
@@ -1106,10 +1180,10 @@ static inline void drawPOI (application_t *inst, poi_t *poi, vfont_t *vctx, cons
 static inline void renderFrame (application_t *inst, const vectorPt2_t *center)
 {
 	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON);				// filled areas
-	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);		// polygon outlines	
+	//drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);		// polygon outlines	
 	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH);				// paths
 	//drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH_LINE);			// single pixel width poly paths
-	//drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_TILE_BOUNDRY);		// tile boundries
+	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_TILE_BOUNDRY);		// tile boundries
 }
 
 static inline void sceneRender (application_t *inst)
