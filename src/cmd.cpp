@@ -288,10 +288,14 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 	}else if (!strncmp(msg, "locgraphic:", 11)){	
 		map_setDetail(MAP_RENDER_LOCGRAPTHIC, atoi(&msg[11])&0x01);
 
+	}else if (!strncmp(msg, "loadTilesAll", 12)){
+		sceneLoadTilesComplete(&inst);
+
 	}else if (!strncmp(msg, "savailability:", 14)){
 		map_setDetail(MAP_RENDER_SAVAIL, atoi(&msg[14])&0x01);
-	}
 
+	}
+	
 	render_signalUpdate();
 }
 
