@@ -97,6 +97,7 @@ int fio_listDir (const uint8_t *dir)
 FLASHMEM bool fio_init ()
 {
 	if (!SD.sdfs.begin(SdioConfig(FIFO_SDIO))){
+	//if (!SD.begin(BUILTIN_SDCARD)){
 		//printf("SD.sdfs.begin() failed\r\n");
 		return false;
 	}
