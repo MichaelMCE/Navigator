@@ -10,17 +10,17 @@ extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
 
 
 
-static const typesPass_t typesPass[8] = {
+static const typesPass_t typesPass[9] = {
 	{14, {0x02, 0x0C, 0x3C, 0x07, 0x0A, 0x08, 0x1E, 0x26, 0x22, 0x4F, 0x33, 0x2D, 0x32, 0x0F}},
 	{ 4, {0x05, 0x06, 0x18, 0x2C}},
 	{ 7, {0x16, 0x03, 0x04, 0x17, 0x42, 0x2B, 0x13}},
 	{ 5, {0x19, 0x1A, 0x27, 0x37, 0x39}},
-	{ 4, {0x0B, 0x18, 0x34, 0x3D}},
+	{ 3, {0x18, 0x34, 0x3D}},
 	{ 2, {0x36, 0x1C}},
 	{ 7, {0x25, 0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
-	{10, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x51}}
+	{10, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x51}},
+	{ 1, {0x0B}},
 };
-
 
 
 
@@ -471,7 +471,6 @@ void blockDrawFills (application_t *inst, block_t *block, const vectorPt2_t *cen
 	for (int i = 0; i < (int)block->total; i++){
 		polyline_t *polyline = &block->list[i];
 		if (!(polyline->type&0x8000)) continue;
-
 		const uint32_t type = polyline->type&0x7FFF;
 
 		for (int t = 0; t < totalTypes; t++){
@@ -509,8 +508,10 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 			if (spanMeters < 18000.0f){
 				if (spanMeters < 15000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 0);
-				if (spanMeters < 6000.0f)
+				if (spanMeters < 6000.0f){
+					blockDrawFills(inst, block, center, spanMeters, 8);
 					blockDrawFills(inst, block, center, spanMeters, 2);
+				}
 				if (spanMeters < 17000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 3);
 				if (spanMeters < 2000.0f)
@@ -867,13 +868,6 @@ void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 	int bx, by, blocksAcross, blocksDown;
 	tilesGetBlockCoverage(loc, spanMeters, &bx, &by, &blocksAcross, &blocksDown);
 
-
-#if VERTICAL_DISPLAY		// fudge for vertical displays
-	by -= (PACK_DOWN*1);
-	blocksDown += (PACK_DOWN*2);
-#endif
-
-	
 	for (int i = by; i < by+blocksDown; i++){
 		for (int j = bx; j < bx+blocksAcross; j++){
 			block_t *block = tilesBlock8Get(j, i);
@@ -925,12 +919,6 @@ static void blockDrawFillOutline (application_t *inst, block_t *block, const vec
 	vectorPt4_t region;
 	sceneMakeGPSWindow(center, spanMeters*COVERAGE_OVERSCAN, &region);
 
-
-#if VERTICAL_DISPLAY		// fudge for vertical displays
-	float delta2 = (region.v2.lat - region.v1.lat) / 4.0f;
-	region.v1.lat -= delta2;
-	region.v2.lat += delta2;
-#endif
 
 	const uint16_t colour = COLOUR_PAL_BLACK;
 
@@ -998,7 +986,7 @@ static void inline drawTiles (application_t *inst, const vectorPt2_t *center, co
 	  case DRAWLAYER_PATH_LINE: 
 	  	drawTiles_Paths(inst, &loc, center, spanMeters, 1);
 	  	break;
-	  case DRAWLAYER_TILE_BOUNDRY:
+	  case DRAWLAYER_TILE_BOUNDARY:
 		drawTiles_FileBoundries(inst, &loc, center, spanMeters);
 		break;
 	};
@@ -1093,38 +1081,10 @@ static inline void drawMapCenter (application_t *inst, const vectorPt2_t *center
 
 static inline void overlayRender (application_t *inst)
 {
-#if 0
-	vfont_t *ctx = inst->vfont;
-	vectorPt2_t loc = sceneGetLocation(inst);
 
-	char text[2][16];
-	snprintf((char*)text[0], sizeof(text[0]), "%f", loc.lat);
-	snprintf((char*)text[1], sizeof(text[1]), "%f", loc.lon);
-	
-	int x = 10;
-	int y = 50;
-
-	setBrushStep(inst->vfont, 1.0f);
-	setBrushSize(ctx, 1.0f);
-	setGlyphScale(ctx, 1.0f);
-	setBrushColour(ctx, COLOUR_PAL_BLACK);
-	
-	drawString(ctx, text[0], x, y);
-	drawString(ctx, text[1], x, y + 80);
-
-	float zoom = sceneGetZoom(inst);
-	snprintf((char*)text[0], sizeof(text[0]), "%im", (int)zoom);
-	drawString(ctx, text[0], VWIDTH-100, y + 40);
-
-#if 0
-	int32_t polyTotal = blocksCountVts(&inst->blocks);
-	snprintf(text[0], sizeof(text[0]), "%i", polyTotal);
-	drawString(ctx, text[0], VWIDTH-220, y + 80);
-#endif
-#endif
 }
 
-#if 1
+#if 0
 static inline void drawPOI (application_t *inst, poi_t *poi, vfont_t *vctx, const vectorPt2_t *center, const float spanMeters)
 {
 	const vectorPt4_t *window = viewportGetWindow(inst);
@@ -1179,11 +1139,11 @@ static inline void drawPOI (application_t *inst, poi_t *poi, vfont_t *vctx, cons
 
 static inline void renderFrame (application_t *inst, const vectorPt2_t *center)
 {
-	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON);				// filled areas
-	//drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);		// polygon outlines	
-	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH);				// paths
-	//drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH_LINE);			// single pixel width poly paths
-	drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_TILE_BOUNDRY);		// tile boundries
+	if (inst->rstats.rflags.mapFilled)   drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON);				// filled areas
+	if (inst->rstats.rflags.mapOutline)  drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);		// polygon outlines	
+	if (inst->rstats.rflags.pathFilled)  drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH);				// paths
+	if (inst->rstats.rflags.pathLine)    drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH_LINE);			// single pixel width poly paths
+	if (inst->rstats.rflags.tileOutline) drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_TILE_BOUNDARY);		// tile boundries
 }
 
 static inline void sceneRender (application_t *inst)
@@ -1209,7 +1169,7 @@ void sceneRenderCompass (application_t *inst)
 
 void sceneRenderPOI (application_t *inst)
 {
-	drawPOI(inst, &inst->poi, inst->vfont, &inst->viewport.location, inst->viewport.zoom);
+	//drawPOI(inst, &inst->poi, inst->vfont, &inst->viewport.location, inst->viewport.zoom);
 }
 
 void sceneRenderOverlay (application_t *inst)
@@ -1220,11 +1180,11 @@ void sceneRenderOverlay (application_t *inst)
 void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord)
 {
 	//const int total = trackRecord->marker;
-	
 	//drawTrackPath(inst, &trackRecord->trackPoints[trackRecord->marker - total], total, 6, COLOUR_PAL_AQUA);
-	//drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.spotRadius, COLOUR_PAL_AQUA);
-	drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.pathThickness, COLOUR_PAL_AQUA);
-	//drawTrackPath_Line(inst, trackRecord->trackPoints, trackRecord->marker, COLOUR_PAL_DARKGREY);
+	
+	if (inst->rstats.rflags.trackSpot) drawTrackSpot(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.spotRadius, COLOUR_PAL_AQUA);
+	if (inst->rstats.rflags.trackPath) drawTrackPath(inst, trackRecord->trackPoints, trackRecord->marker, inst->scheme.pathThickness, COLOUR_PAL_AQUA);
+	if (inst->rstats.rflags.trackLine) drawTrackPath_Line(inst, trackRecord->trackPoints, trackRecord->marker, COLOUR_PAL_DARKGREY);
 }
 
 void sceneRenderLocGraphic (application_t *inst)
@@ -1237,13 +1197,23 @@ void sceneLocation2Tile (const vectorPt2_t *loc, int32_t *x_lon, int32_t *y_lat)
 	location2Block(loc, x_lon, y_lat);
 }
 
-void sceneClose ()
+void sceneClose (application_t *inst)
 {
 	tilesClose();
 }
 
-FLASHMEM void sceneInit ()
+FLASHMEM void sceneInit (application_t *inst)
 {
+	inst->rstats.rflags.mapFilled = 1;
+	inst->rstats.rflags.mapOutline = 0;
+	inst->rstats.rflags.pathFilled = 1;
+	inst->rstats.rflags.pathLine = 0;
+	inst->rstats.rflags.tileOutline = 0;
+	
+	inst->rstats.rflags.trackSpot = 0;
+	inst->rstats.rflags.trackPath = 1;
+	inst->rstats.rflags.trackLine = 0;
+	
 	tilesInit();
 }
 

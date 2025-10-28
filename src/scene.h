@@ -9,23 +9,19 @@
 
 
 #define SCENE_ZOOM_MIN		15.0f
-#define SCENE_ZOOM_MAX		1800.0f
+#define SCENE_ZOOM_MAX		2500.0f
 #define SCENE_ZOOM_STEP		25.0f
 
 
 #define MEMORY_DEBUGGING	(0)
-#define MEMORYPROFILE		(0)			// 1: if memory is expensive. slower to repeat load under larger viewports
+#define MEMORYPROFILE		(1)			// 1: if memory is expensive. slower to repeat load under larger viewports
 										// 0: where memory is cheap. faster tile reloads 
 
 #define SCENEZOOM			(200.0f)	// set initial viewport, in meters vertically 
 									
 #define TILE_UNLOAD_DELTA	(40)		// unload unused blocks after n frames, when a block has not been accessed for n frames, unload it 
-
-#if (VERTICAL_DISPLAY)
-#define COVERAGE_OVERSCAN	(1.4f)
-#else
 #define COVERAGE_OVERSCAN	(1.0f)
-#endif
+
 
 						
 									
@@ -33,7 +29,7 @@
 #define DRAWLAYER_POLYGON_OUTLINE	(2)
 #define DRAWLAYER_PATH				(3)
 #define DRAWLAYER_PATH_LINE			(4)
-#define DRAWLAYER_TILE_BOUNDRY		(5)
+#define DRAWLAYER_TILE_BOUNDARY		(5)
 
 
 
@@ -66,7 +62,7 @@ typedef struct {
 
 typedef struct __attribute__((packed)){
 	vector2_t *list;
-	uint8_t total;
+	uint32_t total;
 }vectors_t;
 
 typedef struct __attribute__((packed)){
@@ -75,8 +71,8 @@ typedef struct __attribute__((packed)){
 }polyline_t;
 
 typedef struct {
-	uint32_t size;			// length of list
-	uint32_t total;
+	int size;			// length of list
+	int total;
 	uint32_t lastRendered;
 	polyline_t *list;
 }block_t;
@@ -117,7 +113,15 @@ typedef struct {
 		uint32_t console:1;
 		uint32_t trkPts:1;
 		uint32_t map:1;
-		uint32_t stub:23;
+		uint32_t mapFilled:1;
+		uint32_t mapOutline:1;
+		uint32_t pathFilled:1;
+		uint32_t pathLine:1;
+		uint32_t tileOutline:1;
+		uint32_t trackPath:1;
+		uint32_t trackSpot:1;
+		uint32_t trackLine:1;
+		uint32_t stub:15;
 	}rflags;		// render flags
 }runState_t;
 
@@ -147,6 +151,8 @@ typedef struct {
 	uint8_t loadTiles;
 	uint8_t freeTiles;
 	uint8_t stun[1];
+	
+	float distance;				// dstance traveled, in meters, since last tile update
 	
 	uint32_t renderPassCt;
 	uint32_t renderFlags;
@@ -218,16 +224,16 @@ typedef struct {
 #define GPS_10M_LAT				(GPS_1000M_LAT/100.0f)
 #define GPS_10M_LON				(GPS_1000M_LON/100.0f)
 
-#define GPS_LENGTH_LAT			(GPS_500M_LAT)
-#define GPS_LENGTH_LON			(GPS_500M_LON)
+//#define GPS_LENGTH_LAT			(GPS_250M_LAT)
+//#define GPS_LENGTH_LON			(GPS_250M_LON)
 
 #define POI_LENGTH_LAT			(GPS_2000M_LAT)
 #define POI_LENGTH_LON			(GPS_2000M_LON)
 
 
-void sceneInit ();
-void sceneClose ();
-void sceneLoadTiles (application_t *inst);
+void sceneInit (application_t *inst);
+void sceneClose (application_t *inst);
+int sceneLoadTiles (application_t *inst);
 float sceneGetZoom (application_t *inst);
 void sceneSetZoom (application_t *inst, const float zoomMeters);
 void sceneLocation2Tile (const vectorPt2_t *loc, int32_t *x_lon, int32_t *y_lat);
@@ -242,19 +248,21 @@ void sceneResetViewport (application_t *inst);
 void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord);
 void sceneRenderLocGraphic (application_t *inst);
 void sceneRenderPOI (application_t *inst);
-
 void sceneSetColourScheme (const int colourScheme);
-
 float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
+void sceneLoadTilesComplete (application_t *inst);
+void sceneLoadTilesMax (application_t *inst, const int max);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2);
+
+
 #ifdef __cplusplus
 }
 #endif
 
 
 #endif
-
