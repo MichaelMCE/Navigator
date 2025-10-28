@@ -65,5 +65,3 @@
 
 #define COMPILEMEONCE 1
 #include "tft_display.cpp"
-
-

@@ -68,4 +68,3 @@ int cmdLoadUbx (const char *filename);
 
 
 #endif
-

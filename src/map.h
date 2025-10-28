@@ -27,4 +27,3 @@ void map_setDetail (const uint32_t detail, uint32_t state);
 
 
 #endif
-

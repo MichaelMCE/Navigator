@@ -22,4 +22,3 @@ void mtp_task ()
 }
 
 #endif
-

@@ -8,5 +8,3 @@
 #include "encoder/encoder.cpp"
 
 #endif
-
-

@@ -183,4 +183,3 @@ FLASHMEM void palette_init ()
 	paletteSet(COLOUR_PAL_Mooring,          COLOUR_24TO16(0xf2efe9));
 	
 }
-

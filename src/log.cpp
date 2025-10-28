@@ -100,4 +100,3 @@ void log_reset ()
 	inst.rstats.trkptsTotal = 0;
 	inst.rstats.trkptsToWrite = 0;
 }
-

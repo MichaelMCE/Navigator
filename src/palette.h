@@ -217,5 +217,3 @@ uint16_t paletteGet (const uint8_t idx);
 
 
 #endif
-
-

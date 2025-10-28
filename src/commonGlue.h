@@ -55,4 +55,3 @@ extern "C" uint32_t set_arm_clock (uint32_t frequency);
 
 
 #endif
-
