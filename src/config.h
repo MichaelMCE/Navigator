@@ -3,6 +3,12 @@
 #define _CONFIG_H_
 
 
+#define GPS_LENGTH_LAT			(GPS_250M_LAT)
+#define GPS_LENGTH_LON			(GPS_250M_LON)
+
+#define POLY_PATH				(uint8_t*)"/polys/250_32"
+#define POI_PATH				(uint8_t*)"/POI"
+
 
 #define USE_DMAMEM_BUFFER		0		// set this to 1 to use DMAMEM for the tft buffer
 #define USE_EXTMEM_BUFFER		0		// set this to 1 to use PSRAM for the tft buffer
@@ -16,8 +22,8 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_ILI9806		1		// Mk4
-#define USE_FLEXTFT_RM68120		0		// Mk3
+#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_RM68120		1		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
 
@@ -91,7 +97,7 @@
 #define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
-#define MPU_CLOCK_FREQ			720
+#define MPU_CLOCK_FREQ			816
 #define ENABLE_ENCODERS			1
 
 #elif USE_FLEXTFT_R61408
@@ -180,4 +186,3 @@
 
 
 #endif
-

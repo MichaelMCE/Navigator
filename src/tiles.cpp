@@ -1,11 +1,11 @@
 
 
+
 #include "commonGlue.h"
 
 
-
-
 static tile8_t ***tiles8;
+
 
 
 
@@ -27,11 +27,28 @@ mp_coverage_t coverage = {		// MAP_SOURCE coverage, Standard/gmapsupp.mp
 mp_coverage_t coverage = {
 		{{55.3985791, -8.8708173},
 		 {53.9454972, -5.3821777}},
-		3.4886396,		// 3.48816° width
-		1.4530819,		// 1.45294° height
+		3.4886396,		// 3.48816 width
+		1.4530819,		// 1.45294 height
 		0, 0
 };
 #endif
+
+
+
+EXTMEM static uint8_t pkFileBuffer[400*1024];
+EXTMEM static uint8_t pkMemAllocAddr[5*1024*1024];
+
+static const size_t extBaseAddr = (size_t)pkMemAllocAddr;
+static size_t extCurrentAddr = (size_t)extBaseAddr;
+
+static uint16_t pk_x = 0xFFFF;
+static uint16_t pk_y = 0xFFFF;
+static uint64_t pk_len = 0;
+
+
+
+
+
 
 static void fileAdvance (fileio_t *file, const size_t amount)
 {
@@ -47,72 +64,15 @@ static size_t polyfileRead (fileio_t *file, void *buffer, const size_t len)
 {
 	return fio_read(file, buffer, len);
 }
-
+/*
 static int polyfileSeek (fileio_t *file, const size_t pos)
 {
 	return fio_seek(file, pos);
-}
+}*/
 
-static void polyfileClose (fileio_t *file)
+static inline void polyfileClose (fileio_t *file)
 {
 	fio_close(file);
-}
-
-static fileio_t *polyfileOpen (const uint8_t *dir, const int32_t x_lon, const int32_t y_lat, size_t *polyLen)
-{
-	const int xm = (x_lon % PACK_ACROSS);
-	const int ym = (y_lat % PACK_DOWN);
-	const int x = x_lon - xm;
-	const int y = y_lat - ym;
-
-
-	//printf("\r\n");
-
-	*polyLen = 0;
-	uint8_t filename[1024];
-	snprintf((char*)filename, sizeof(filename)-1, "%s/%03i_%03i.pk32", dir, y, x);
-
-	//printf(CS("polyfileOpen: %i %i: %s"), y, x, filename);
-
-	fileio_t *file = fio_open(filename, FIO_READ);
-	if (!file){
-		printf(CS("polyfileOpen(): open failed: %s"), filename);
-		return NULL;
-	}else{
-		//printf("polyfileOpen(): ready for '%s'\r\n", filename);
-	}
-	
-	//printf("poly_pack_header_t size %i\r\n", (int)sizeof(poly_pack_header_t));
-
-	// poly files are stored as 4x4 for pk16 and 8x8 for pk32 files, 1 pk16 covers and area of 2km*2km
-	size_t pos = (ym * PACK_ACROSS * sizeof(poly_pack_file_t)) + (xm * sizeof(poly_pack_file_t));
-	if (!polyfileSeek(file, pos)){
-		//printf("polyfileOpen(): '%s' can not seek to %i\r\n", filename, (int)pos);
-		polyfileClose(file);
-		return NULL;
-	}
-	
-	poly_pack_file_t *poly = (poly_pack_file_t*)filename;	// sharing the buffer, saving a few bytes of uc stack/ram
-	if (polyfileRead(file, poly, sizeof(poly_pack_file_t)) != 1){
-		//printf("polyfileOpen(): can not read\r\n");
-		polyfileClose(file);
-		return NULL;
-	}	
-
-	if (!poly->offset || !poly->length){
-		//printf("polyfileOpen(): zero length %i %i\r\n", (int)poly->offset, (int)poly->length);
-		polyfileClose(file);
-		return NULL;
-	}
-	
-	if (!polyfileSeek(file, poly->offset)){
-		//printf("polyfileOpen(): can not seek 2 %i\r\n", (int)poly->offset);
-		polyfileClose(file);
-		return NULL;
-	}
-
-	*polyLen = poly->length;
-	return file;
 }
 
 static inline block_t *block8Get (const int x_lon, const int y_lat)
@@ -134,21 +94,53 @@ static inline block_t *block8Get (const int x_lon, const int y_lat)
 	return NULL;
 }
 
-static void tileInit (block_t *block, const int tPolySize)
+static inline void *extMalloc (size_t size)
+{
+	size_t addr = extCurrentAddr;
+
+	size >>= 2;		// round up to 4 bytes
+	size <<= 2;
+	size += 4;
+	extCurrentAddr += size;
+
+	return (void*)(addr);
+}
+
+static inline void *extCalloc (const size_t nmemb, const size_t size)
+{
+	void *addr = extMalloc(nmemb*size);
+	if (addr){
+		char *paddr = (char*)addr;
+		for (int i = 0; i < (int)(nmemb*size); i++)
+			paddr[i] = 0;
+	}
+	return addr;
+}
+
+static inline void extMemcpy (void *dest_str, const void *src_str, size_t n)
+{
+	char *d = (char*)dest_str;
+	char *s = (char*)src_str;
+	
+	for (int i = 0; i < (int)n; i++)
+		*d++ = *s++;
+}
+
+FASTRUN static inline void tileInit (block_t *block, const int tPolySize)
 {
 	block->total = 0;
 	block->size = tPolySize;
-	block->list = (polyline_t*)l_malloc(block->size * sizeof(polyline_t));
+	block->list = (polyline_t*)extMalloc(block->size * sizeof(polyline_t));
 	block->lastRendered = 0;
 }
 
-static inline void vectorsAlloc (const uint32_t total, vectors_t *vectors)
+FASTRUN static inline void vectorsAlloc (const uint32_t total, vectors_t *vectors)
 {
 	vectors->total = total;
-	vectors->list = (vector2_t*)l_malloc(total * sizeof(vector2_t));
+	vectors->list = (vector2_t*)extMalloc(total * sizeof(vector2_t));
 }
 
-static inline void blockRelease (block_t *block)
+FASTRUN static void blockRelease (block_t *block)
 {
 	if (block->list){
 		for (int j = 0; j < (int)block->total; j++)
@@ -157,54 +149,91 @@ static inline void blockRelease (block_t *block)
 	}
 }
 
-int blockLoad (block_t *block, const uint8_t *dir, const int32_t y_lat, const int32_t x_lon)
+FASTRUN static const uint8_t *pkOpen (const uint8_t *dir, const int32_t x_lon, const int32_t y_lat, int *polyLen)
 {
-	poly_field_t field;
-	vectors_t vectors;
-	size_t lengthRead = 0;
-	size_t polyLen = 0;
+	const int xm = (x_lon % PACK_ACROSS);
+	const int ym = (y_lat % PACK_DOWN);
+	const int x = x_lon - xm;
+	const int y = y_lat - ym;
 
+	*polyLen = 0;
 
-	fileio_t *file = polyfileOpen(dir, x_lon, y_lat, &polyLen);
-	if (!file){
+	if (x != pk_x || y != pk_y){
+		pk_x = x;
+		pk_y = y;
+		
+		uint8_t filename[64];
+		snprintf((char*)filename, sizeof(filename)-1, "%s/%03i_%03i.pk32", dir, y, x);
+
+		//printf(CS(" pkOpen(): %i %i"), y, x);
+
+		fileio_t *file = fio_open(filename, FIO_READ);
+		if (!file){
+			printf(CS(" pkOpen(): open failed for '%s'"), filename);
+			return NULL;
+		}
+		
+		pk_len = fio_length(file);
+		if (polyfileRead(file, pkFileBuffer, pk_len) != 1){
+			printf(CS("pkOpen(): read failed for '%s'"), filename);
+			polyfileClose(file);
+			return NULL;
+		}
+		polyfileClose(file);
+	}
+	
+	size_t pos = (ym * PACK_ACROSS * sizeof(poly_pack_file_t)) + (xm * sizeof(poly_pack_file_t));
+	poly_pack_file_t *poly = (poly_pack_file_t*)&pkFileBuffer[pos];
+	
+	if (poly->offset >= pk_len){
+		return NULL;
+	}
+
+	*polyLen = poly->length;
+	
+	return &pkFileBuffer[poly->offset];
+}
+
+FASTRUN static int pkBlockLoad (block_t *block, const uint8_t *dir, const int32_t y_lat, const int32_t x_lon)
+{
+	int polyLen = 0;
+	const uint8_t * const buffer = pkOpen(dir, x_lon, y_lat, &polyLen);
+	if (!buffer){
 		//printf("could not open %i %i from '%s\\'\n", x_lon, y_lat, dir);
 		return 0;
-	};
+	}
 
-
-	tileInit(block, 64);
+	int bCt = 0;
+	int lengthRead = 0;
 
 	while (lengthRead < polyLen){
-		int ret = polyfileRead(file, &field, sizeof(field));
-		if (ret != 1) break;
-		lengthRead += sizeof(field);
-
-		vectorsAlloc(field.total, &vectors);
-		
-		if (polyfileRead(file, vectors.list, sizeof(vector2_t)*field.total) == 1){
-			lengthRead += sizeof(vector2_t) * field.total;
-			//printf("polyfileRead %i\n", sizeof(vector2_t) * field.total);
-
-			if (block->total == block->size){
-				//printf("block->size %i\n", block->size);
-				block->size += 32;
-				void *newList = (void*)l_realloc(block->list, block->size * sizeof(polyline_t));
-				if (!newList) break;
-				block->list = (polyline_t*)newList;
-			}
-
-			polyline_t *polyline = &block->list[block->total];
-			polyline->type = field.type;
-			polyline->vectors = vectors;
-			block->total++;
-		}else{
-			printf(CS("blockLoad() failed: %i, %i %i: %s"), (int)(sizeof(vector2_t)*field.total), (int)y_lat, (int)x_lon, dir);
-		}
+		poly_field_t *field = (poly_field_t*)&buffer[lengthRead];
+		lengthRead += sizeof(poly_field_t);
+		lengthRead += sizeof(vector2_t) * field->total;
+		bCt++;
 	};
-	polyfileClose(file);
 	
-	if (!block->total) blockRelease(block);
-	return block->total;
+	if (!bCt) return bCt;
+
+	tileInit(block, bCt);
+	bCt = 0;
+	lengthRead = 0;
+
+	while (lengthRead < polyLen){
+		poly_field_t *field = (poly_field_t*)&buffer[lengthRead];
+		lengthRead += sizeof(poly_field_t);
+
+		polyline_t *polyline = &block->list[bCt++];
+		polyline->type = field->type;
+		vectorsAlloc(field->total, &polyline->vectors);
+		
+		//memcpy(polyline->vectors.list, &buffer[lengthRead], sizeof(vector2_t) * field->total);
+		extMemcpy(polyline->vectors.list, &buffer[lengthRead], sizeof(vector2_t) * field->total);
+		lengthRead += sizeof(vector2_t) * field->total;
+	};
+
+	block->total = bCt;
+	return bCt;
 }
 
 static inline uint32_t calcTilesTotalAcross ()
@@ -223,17 +252,17 @@ static inline void calcTileCoverage ()
 	coverage.tilesDown = calcTilesTotalDown();
 }
 	
-uint32_t tilesTotalAcross ()
+FASTRUN uint32_t tilesTotalAcross ()
 {
 	return coverage.tilesAcross;
 }
 
-uint32_t tilesTotalDown ()
+FASTRUN uint32_t tilesTotalDown ()
 {
 	return coverage.tilesDown;
 }
 
-static inline tile8_t *tile8Get (const int y_lat, const int x_lon)
+FASTRUN static inline tile8_t *tile8Get (const int y_lat, const int x_lon)
 {
 	if (x_lon < 0 || (x_lon >= (int)tilesTotalAcross()) || y_lat < 0 || (y_lat >= (int)tilesTotalDown()))
 		return NULL;
@@ -274,7 +303,6 @@ static inline int tileUnload (const uint32_t renderPass, const int32_t y_lat, co
 					block_t *block = blocks[y][x];
 					int rDiff = (renderPass - block->lastRendered);
 					if (rDiff > TILE_UNLOAD_DELTA){
-						
 						//printf(CS("tileUnload, blockRelease: %i %i"), (int)x, (int)y);
 						
 						blockRelease(block);
@@ -456,25 +484,63 @@ int loadPOI (poi_t *poi, const float xlon, const float ylat, int32_t x, int32_t 
 }
 #endif
 
-// load tile(s) that would be visible across the viewport
-static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const float zoom)
+static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 {
-	
+	int bx, by, blocksAcross, blocksDown;
+	getBlockCoverage(location, 2.0f, &bx, &by, &blocksAcross, &blocksDown);
+
+	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
+		return 0;
+
+	int tileY = (by & ~PACK_MASK) / PACK_DOWN;
+	int tileX = (bx & ~PACK_MASK) / PACK_ACROSS;
+	int y = by & PACK_MASK;
+	int x = bx & PACK_MASK;
+
+	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
+	if (!tiles8[tileY])
+		tiles8[tileY] = (tile8_t**)calloc(tAcrossRowLength, sizeof(tile8_t*));
+
+	tile8_t *tile = tiles8[tileY][tileX];	
+	if (tile){
+		if (tile->block && tile->block[y] && tile->block[y][x])
+			return 1;
+	}
+
+	block_t block;
+	block.size = 0;
+	int blkTotal = pkBlockLoad(&block, POLY_PATH, by, bx);
+	if (!blkTotal) memset(&block, 0, sizeof(block));
+	if (!tile){
+		tile = (tile8_t*)calloc(1, sizeof(tile8_t));
+		tile8Set(by, bx, tile);
+	}
+
+	if (!tile->block)
+		tile->block = (block_t***)calloc(PACK_DOWN, sizeof(block_t*));
+	if (!tile->block[y])
+		tile->block[y] = (block_t**)calloc(PACK_ACROSS, sizeof(block_t*));
+
+	tile->block[y][x] = (block_t*)malloc(sizeof(block_t));
+	*tile->block[y][x] = block;
+
+	return 1;
+}
+
+static block_t ext_block;
+
+// load tile(s) that would be visible across the viewport
+static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const float zoom, const int maxLoadable)
+{
 	int ct = 0;
 	int bx, by, blocksAcross, blocksDown;
 	getBlockCoverage(location, zoom, &bx, &by, &blocksAcross, &blocksDown);
-
-
-#if VERTICAL_DISPLAY		// fudge for vertical displays
-	by -= (PACK_DOWN*2);
-	blocksDown += (PACK_DOWN*4);
-#endif
 
 	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
 		return ct;
 
 	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
-	block_t block;
+
 	
 	for (int i = by; i < by+blocksDown; i++){
 		for (int j = bx; j < bx+blocksAcross; j++){
@@ -482,7 +548,7 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 			int tileX = (j & ~PACK_MASK) / PACK_ACROSS;
 			
 			if (!tiles8[tileY])
-				tiles8[tileY] = (tile8_t**)l_calloc(tAcrossRowLength, sizeof(tile8_t*));
+				tiles8[tileY] = (tile8_t**)calloc(tAcrossRowLength, sizeof(tile8_t*));
 
 			tile8_t *tile = tiles8[tileY][tileX];
 			if (tile){
@@ -492,35 +558,32 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 					continue;
 			}
 
-			block.size = 0;
-			int blkTotal = blockLoad(&block, POLY_PATH, i, j);
+			ext_block.size = 0;
+			int blkTotal = pkBlockLoad(&ext_block, POLY_PATH, i, j);
 			
 #if (MEMORYPROFILE == 1)		// if memory is expensive. slower to repeat load larger maps
 			if (!blkTotal) continue;
 #else							// if memory is cheap. faster tile reloads 
-			if (!blkTotal) memset(&block, 0, sizeof(block));
+			if (!blkTotal) memset(&ext_block, 0, sizeof(ext_block));
 #endif
 			const int y = i & PACK_MASK;
 			const int x = j & PACK_MASK;
 				
 			if (!tile){
-				tile = (tile8_t*)l_calloc(1, sizeof(tile8_t));
+				tile = (tile8_t*)calloc(1, sizeof(tile8_t));
 				tile8Set(i, j, tile);
 			}
 			if (!tile->block)
-				tile->block = (block_t***)l_calloc(PACK_DOWN, sizeof(block_t*));
+				tile->block = (block_t***)calloc(PACK_DOWN, sizeof(block_t*));
 			if (!tile->block[y])
-				tile->block[y] = (block_t**)l_calloc(PACK_ACROSS, sizeof(block_t*));
+				tile->block[y] = (block_t**)calloc(PACK_ACROSS, sizeof(block_t*));
 				
-			tile->block[y][x] = (block_t*)l_malloc(sizeof(block_t));
-			*tile->block[y][x] = block;
-			
-			ct++;
-			
-			// load one block at a time
-			if (blkTotal){
+			tile->block[y][x] = (block_t*)malloc(sizeof(block_t));
+			*tile->block[y][x] = ext_block;
+
+			if (++ct >= maxLoadable){
 				//loadPOI(&inst->poi, j, i, 0, 0);
-				break;
+				return ct;
 			}
 		}
 	}
@@ -551,10 +614,13 @@ void windowToLocation (application_t *inst, const int x, const int y, vectorPt2_
 	loc->lon = win->v1.lon + ((double)x * viewportGetWidth(inst));
 }
 
-void sceneLoadTiles (application_t *inst)
+int sceneLoadTiles (application_t *inst)
 {
 	vectorPt2_t loc = sceneGetLocation(inst);
-	tiles8LoadBySpan(inst, &loc, sceneGetZoom(inst));
+	tiles8LoadByLocation(inst, &loc);
+	int ct = tiles8LoadBySpan(inst, &loc, sceneGetZoom(inst), 1);
+
+	//printf(CS("extCurrentAddr: %i"), extCurrentAddr-extBaseAddr);
 
 #if 0
 	int bx, by, blocksAcross, blocksDown;
@@ -562,15 +628,29 @@ void sceneLoadTiles (application_t *inst)
 
 	int x = bx + (blocksAcross/2);
 	int y = by + (blocksDown/2);
-	loadPOI(&inst->poi, x, y, 0, 0);
+	ct += loadPOI(&inst->poi, x, y, 0, 0);
 #endif
+
+	return ct;
+}
+
+void sceneLoadTilesMax (application_t *inst, const int max)
+{
+	vectorPt2_t loc = sceneGetLocation(inst);
+	tiles8LoadBySpan(inst, &loc, sceneGetZoom(inst), max);
 	
+	printf(CS("extCurrentAddr: %i"), extCurrentAddr-extBaseAddr);
+}
+
+void sceneLoadTilesComplete (application_t *inst)
+{
+	sceneLoadTilesMax(inst, 200);
 }
 
 FLASHMEM void tilesInit ()
 {
 	calcTileCoverage();
-	tiles8 = (tile8_t***)l_calloc((tilesTotalDown()/PACK_DOWN)+1, sizeof(tile8_t*));
+	tiles8 = (tile8_t***)extCalloc((tilesTotalDown()/PACK_DOWN)+1, sizeof(tile8_t*));
 }
 
 void tilesClose ()

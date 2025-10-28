@@ -5,9 +5,9 @@
 
 
 
-#define POLY_PATH		(uint8_t*)"/polys/500_32"
+//#define POLY_PATH		(uint8_t*)"/polys/500_32"
 //#define POLY_PATH		(uint8_t*)"/polys/250_32"
-#define POI_PATH		(uint8_t*)"/POI"
+//#define POI_PATH		(uint8_t*)"/POI"
 
 
 #if 0
@@ -35,4 +35,3 @@ block_t *tilesBlock8Get (const int x_lon, const int y_lat);
 
 
 #endif
-
