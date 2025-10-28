@@ -28,6 +28,7 @@ volatile static int32_t recordSignal = 0;
 volatile static int32_t renderSignal = 0xFF;
 volatile static int32_t receiverUpdateSignal = 0;
 volatile static int32_t appendSignal = 0;
+volatile static int32_t twiceLoadSig = 0;
 volatile static int serialConnected = 0;
 
 
@@ -49,6 +50,7 @@ extern touchCtx_t touchCtx;
 #endif
 
 static IntervalTimer onceSecondTimer;
+static IntervalTimer twiceSecondTimer;
 static vfont_t vfontContext;
 static debugOverlay_t debugStrings;
 static gpsdata_t gpsData;
@@ -433,6 +435,9 @@ static inline void drawStrings (gpsdata_t *data, sat_stats_t *sats)
 	if (inst.runLog.enabled){
 		snprintf(tbuffer, sizeof(tbuffer), "%i", (int)inst.runLog.idx);
 		drawString(inst.vfont, tbuffer, VWIDTH-400, VHEIGHT-15);
+	}else{
+		snprintf(tbuffer, sizeof(tbuffer), "%.0fm", inst.distance);
+		drawString(inst.vfont, tbuffer, VWIDTH-480, VHEIGHT-15);
 	}
 
 	snprintf(tbuffer, sizeof(tbuffer), "%i", (int)trackRecord.marker-(int)trackRecord.lastFrom);
@@ -672,6 +677,11 @@ void render_signalUpdate ()
 	renderSignal = 0xFF;
 }
 
+void ISR_twiceSecond_sig ()
+{
+	twiceLoadSig = 0xFF;
+}
+
 void ISR_onceSecond_sig ()
 {
 	inst.rstats.nothingCountSecond = inst.rstats.nothingCount;
@@ -708,8 +718,8 @@ static inline void drawMap (const pos_rec_t *loc, const float heading)
 	uint32_t t1 = micros();
 	inst.rstats.rtime.map = (t1 - t0)/1000.0f;
 
-	map_render(&trackRecord, loc, heading, MAP_RENDER_POI);
-	inst.rstats.rtime.poi = (micros() - t1)/1000.0f;
+	//map_render(&trackRecord, loc, heading, MAP_RENDER_POI);
+	inst.rstats.rtime.poi = 0;//(micros() - t1)/1000.0f;
 
 	t1 = micros();
 	map_render(&trackRecord, loc, heading, MAP_RENDER_TRACKPOINTS);
@@ -773,7 +783,10 @@ FLASHMEM void init_isrTimers ()
 {
 	// render update timer. Set to once per second
 	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);		// in microseconds
-	onceSecondTimer.priority(200);
+	onceSecondTimer.priority(180);
+
+	twiceSecondTimer.begin(ISR_twiceSecond_sig, 1*500*1000);		// in microseconds
+	twiceSecondTimer.priority(210);
 
 #if ENABLE_TOUCH_FT5216	
 	touch_startTimer();
@@ -821,12 +834,6 @@ FLASHMEM void setup ()
 #if ENABLE_ENCODERS
 void doEncoders (encodersrd_t *encoders)
 {
-	
-/*	printf(CS("%i %i, %i %i, %i %i"), 
-			encoders->encoder[0].buttonPress, encoders->encoder[0].positionChange,
-			encoders->encoder[1].buttonPress, encoders->encoder[1].positionChange,
-			encoders->encoder[2].buttonPress, encoders->encoder[2].positionChange);
-*/
 	if (encoders->encoder[2].positionChange != 0){
 		float zoomlevel = sceneGetZoom(&inst);
 		float mul = 1.0f;
@@ -839,14 +846,13 @@ void doEncoders (encodersrd_t *encoders)
 			zoomlevel += (SCENE_ZOOM_STEP * mul);
 		else
 			zoomlevel -= (SCENE_ZOOM_STEP * mul);
-			
+
 		if (zoomlevel < SCENE_ZOOM_MIN) zoomlevel = SCENE_ZOOM_MIN;
 		else if (zoomlevel > SCENE_ZOOM_MAX) zoomlevel = SCENE_ZOOM_MAX;
 
 		sceneSetZoom(&inst, zoomlevel);
 		sceneResetViewport(&inst);
-		sceneLoadTiles(&inst);
-		
+		inst.loadTiles = 100;
 		renderSignal = 1;
 	}
 
@@ -984,15 +990,18 @@ FASTRUN void loop ()
 			}
 		}
 
-		if (inst.freeTiles){
+		if (0 && inst.freeTiles){
 			inst.freeTiles = 0;
 			tilesUnload(inst.renderPassCt);
 		}
+	}
 
+	if (twiceLoadSig){
+		twiceLoadSig = 0;
 		if (inst.loadTiles){
-			inst.loadTiles = 0;
-			sceneLoadTiles(&inst);
-			gps_task();
+			inst.loadTiles--;
+			if (sceneLoadTiles(&inst))
+				gps_task();
 		}
 	}
 
