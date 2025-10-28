@@ -32,4 +32,3 @@ void fio_setCreationTime (const char *filename, dategps_t *date, timegps_t *time
 int fio_setModifyTime (const char *filename, dategps_t *date, timegps_t *time);
 
 #endif
-

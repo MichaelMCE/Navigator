@@ -198,4 +198,3 @@ void gps_task ()
 	if (Serial1.available())
 		Serial.write(Serial1.read());   // read it and send it out Serial (USB)
 }
-

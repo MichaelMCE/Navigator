@@ -62,5 +62,3 @@ int encoders_read (encodersrd_t *encoders);
 
 
 #endif
-
-
