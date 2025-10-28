@@ -29,7 +29,7 @@ FLASHMEM void map_init (vfont_t *vfont)
 	poi_t *poi = &inst.poi;
 	poiInit(poi);
 	
-	sceneInit();
+	sceneInit(&inst);
 	sceneSetHeading(&inst, 0);
 	
 	map_setDetail(MAP_RENDER_POI, 1);
@@ -56,7 +56,7 @@ static inline float calcDistance (const float x1, const float y1, const float x2
 
 void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const float heading, const uint32_t flags)
 {
-	static int32_t loadCount = 0;
+	//static int32_t loadCount = 0;
 	//static uint32_t preLoc = 0;
 	static vectorPt2_t preLoc;
 	//static vectorPt2_t previousLoc;
@@ -68,6 +68,17 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 	sceneSetLocation(&inst, &position);
 	sceneSetHeading(&inst, heading);
 
+#if 1
+	if (flags&MAP_RENDER_VIEWPORT){
+		inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+		if (inst.distance > 80.0f){
+			inst.loadTiles = 6;
+			preLoc = position;
+			//printf(CS("\nmap_render(): loadTiles set. (distance %.2f)"), distance);
+		}
+	}
+
+#else
 	if (flags&MAP_RENDER_VIEWPORT){
 		if (!loadCount--){
 			//int32_t xlon, ylat;
@@ -76,11 +87,11 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 			
 			//if (preLoc != loc){	// check distance is over, say, 50m
 			//float distance = calcDistance(position.lat, position.lon, preLoc.lat, preLoc.lon);
-			float distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+			inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
 			
 			//printf(CS("distance %.2f"), distance);
 			
-			if (distance >= 500.0f){
+			if (inst.distance >= 500.0f){
 				preLoc = position;
 				//preLoc = loc;
 				//sceneFlushTiles(inst);
@@ -97,11 +108,12 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 			//sceneLoadTiles(&inst);
 		}else{
 			
-			float distance = sceneCaleDistanceVecPt2(&position, &preLoc);
-			if (distance > 120.0f)
+			inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+			if (inst.distance > 120.0f)
 				inst.loadTiles = 1;
 		}
 	}
+#endif
 
 	if (inst.rstats.rflags.map)
 		if (flags&MAP_RENDER_VIEWPORT)	  sceneRenderViewport(&inst);
@@ -140,5 +152,3 @@ void map_setDetail (const uint32_t detail, uint32_t state)
 	else if (detail == MAP_RENDER_LOCGRAPTHIC)
 		inst.rstats.rflags.locgraphic = state;
 }
-
-
