@@ -33,4 +33,3 @@ void date_formatDateTime (gpsdata_t *gps, char *buffer, const uint32_t len);
 
 
 #endif
-

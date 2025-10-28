@@ -60,4 +60,3 @@ void poiInit (poi_t *poi);
 
 
 #endif
-
