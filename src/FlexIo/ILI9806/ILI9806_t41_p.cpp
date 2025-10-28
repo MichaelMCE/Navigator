@@ -609,7 +609,7 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 	}
 #else
     if (length){
-		for(uint32_t i=0; i<length; i++){
+		for (uint32_t i=0; i<length; i++){
 			p->SHIFTBUF[0] = *value++;
       		while(0 == (p->SHIFTSTAT & (1U << 0))){
 			}

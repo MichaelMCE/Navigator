@@ -1423,9 +1423,10 @@ FASTRUN void RM68120_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 			delayNanoseconds(6);
       		//while (0 == (p->SHIFTSTAT & (3 << 0))){
     		//}
+    		asm("dsb");
 		}
 	}
-
+	asm("dsb");
 	delayNanoseconds(5);
     CSHigh();
 	//delayNanoseconds(10);
