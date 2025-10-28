@@ -73,22 +73,6 @@ sat_stats_t *getSats ()
 	return &stats;
 }
 
-
-/*
-typedef struct {
-	uint32_t iTow;				// milliseconds
-	 int32_t velN;				// cm/s North velocity component
-	 int32_t velE;				// cm/s East velocity component
-	 int32_t velD;				// cm/s Down velocity component
-	uint32_t speed;				// cm/s Speed (3D)
-	uint32_t gSpeed;			// cm/s Ground Speed (2D)
-	 int32_t heading;			// deg, 1e-5. heading 2-D
-	uint32_t sAcc;				// cm/s, speed acc estimate
-	uint32_t cAcc;				// deg, 1e-5, Course/heading acc  estimate
-}__attribute__((packed))nav_velned_t;
-
-
-*/
 FLASHMEM int nav_velned (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {
 	printf(CS("\nnav_velned %i"), msg_len);
