@@ -143,11 +143,9 @@ void drawDebugStrings (debugOverlay_t *debugLines)
 	}
 }
 
-void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
+void drawSatSignalAvailabilitySv (sat_stats_t *sats, const uint8_t gnssId, const int row, const uint8_t colour)
 {
-	if (!inst.rstats.rflags.satAvailability)
-		return;
-	
+
 #if (VHEIGHT > 320)
 	int satsPerRow = 18;	// svId's per row
 	int boxHeight = 16;	
@@ -156,12 +154,6 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	int xStart = boxWidth - 2;
 	int hSpace = 4;
 	int vSpace = 8;
-	
-	int rowGPS = 190;
-	int rowGLO = 240;
-	int rowGAL = 290;
-	int rowBEI = rowGLO;
-	int rowQZS = 340;
 #else
 	int satsPerRow = 18;
 	int boxHeight = 12;
@@ -170,7 +162,42 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	int xStart = -10;
 	int hSpace = 2;
 	int vSpace = 4;
+#endif
+
 	
+	int x = 0;
+	int y = 0;
+
+	for (int i = 0; i < sats->numSvs; i++){
+		if (sats->sv[i].gnssId == gnssId){
+			if (sats->sv[i].svId <= satsPerRow){
+				x = xStart + (sats->sv[i].svId * boxWidth);
+				y = row;
+			}else{
+				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
+				y = row + boxHeight + vSpace;
+			}
+				
+			if (sats->sv[i].cno)
+				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, colour);
+			else
+				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, colour);
+		}
+	}
+}
+
+void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
+{
+	if (!inst.rstats.rflags.satAvailability)
+		return;
+	
+#if (VHEIGHT > 320)
+	int rowGPS = 190;
+	int rowGLO = 240;
+	int rowGAL = 290;
+	int rowBEI = rowGLO;
+	int rowQZS = 340;
+#else
 	int rowGPS = 160;
 	int rowGLO = 195;
 	int rowGAL = 230;
@@ -178,99 +205,12 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	int rowQZS = 265;
 #endif
 
-	int x = 0;
-	int y = 0;
 
-
-	for (int i = 0; i < sats->numSvs; i++){
-		if (sats->sv[i].gnssId == GNSSID_GPS){
-			if (sats->sv[i].svId <= satsPerRow){
-				x = xStart + (sats->sv[i].svId * boxWidth);
-				y = rowGPS;
-			}else{
-				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
-				y = rowGPS + boxHeight + vSpace;
-			}
-				
-			if (sats->sv[i].cno){
-				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_DARKGREEN);
-			}else{
-				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_DARKGREEN);
-			}
-		}
-	}
-
-	for (int i = 0; i < sats->numSvs; i++){
-		if (sats->sv[i].gnssId == GNSSID_GLONASS){
-			if (sats->sv[i].svId <= satsPerRow){
-				x = xStart + (sats->sv[i].svId * boxWidth);
-				y = rowGLO;
-			}else{
-				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
-				y = rowGLO + boxHeight + vSpace;
-			}
-				
-			if (sats->sv[i].cno){
-				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_RED);
-			}else{
-				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_RED);
-			}
-		}
-	}
-	
-	for (int i = 0; i < sats->numSvs; i++){
-		if (sats->sv[i].gnssId == GNSSID_GALILEO){
-			if (sats->sv[i].svId <= satsPerRow){
-				x = xStart + (sats->sv[i].svId * boxWidth);
-				y = rowGAL;
-			}else{
-				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
-				y = rowGAL + boxHeight + vSpace;
-			}
-				
-			if (sats->sv[i].cno){
-				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_BLUE);
-			}else{
-				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_BLUE);
-			}
-		}
-	}
-	
-	for (int i = 0; i < sats->numSvs; i++){
-		if (sats->sv[i].gnssId == GNSSID_BEIDOU){
-			if (sats->sv[i].svId <= satsPerRow){
-				x = xStart + (sats->sv[i].svId * boxWidth);
-				y = rowBEI;
-			}else{
-				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
-				y = rowBEI + boxHeight + vSpace;
-			}
-				
-			if (sats->sv[i].cno){
-				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_GOLD);
-			}else{
-				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_GOLD);
-			}
-		}
-	}
-
-	for (int i = 0; i < sats->numSvs; i++){
-		if (sats->sv[i].gnssId == GNSSID_QZSS){
-			if (sats->sv[i].svId <= satsPerRow){
-				x = xStart + (sats->sv[i].svId * boxWidth);
-				y = rowQZS;
-			}else{
-				x = xStart + ((sats->sv[i].svId-satsPerRow) * boxWidth);
-				y = rowQZS + boxHeight + vSpace;
-			}
-				
-			if (sats->sv[i].cno){
-				drawRectangleFilled(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_CHERRYBLOSSOM);
-			}else{
-				drawRectangle(x, y, x+boxWidth-hSpace, y+boxHeight, COLOUR_PAL_CHERRYBLOSSOM);
-			}
-		}
-	}
+	drawSatSignalAvailabilitySv(sats, GNSSID_GPS, rowGPS, COLOUR_PAL_DARKGREEN);
+	drawSatSignalAvailabilitySv(sats, GNSSID_GLONASS, rowGLO, COLOUR_PAL_RED);
+	drawSatSignalAvailabilitySv(sats, GNSSID_GALILEO, rowGAL, COLOUR_PAL_BLUE);
+	drawSatSignalAvailabilitySv(sats, GNSSID_BEIDOU, rowBEI, COLOUR_PAL_GOLD);
+	drawSatSignalAvailabilitySv(sats, GNSSID_QZSS, rowQZS, COLOUR_PAL_CHERRYBLOSSOM);
 }
 
 void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
@@ -325,19 +265,19 @@ void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 	if (!inst.rstats.rflags.satWorld)
 		return;
 	
-	float radius = 105.0;
-	float multiplier = 1.0;
+	float radius = 105.0f;
+	float multiplier = 1.0f;
 	
 #if (VHEIGHT > 320)
-	multiplier = 1.7;
+	multiplier = 1.7f;
 	radius *= multiplier;
 #endif
 	
-	float cx = (VWIDTH  - radius) - 3.0;
-	float cy = (VHEIGHT - radius) - 3.0;
+	float cx = (VWIDTH  - radius) - 3.0f;
+	float cy = (VHEIGHT - radius) - 3.0f;
 	uint8_t colour;
 	
-	for (float r = 2.0; r <= radius; r += 25.0)
+	for (float r = 2.0f; r <= radius; r += 25.0f)
 		drawCircle(cx, cy, r, COLOUR_PAL_REDISH);
 		
 	for (int i = 0; i < sats->numSvs; i++){
@@ -352,11 +292,11 @@ void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 
 		if (sats->sv[i].elev >= 0){
 			float elv = (90.0f - (float)sats->sv[i].elev) * multiplier;
-			float az = (float)sats->sv[i].azim - 90.0;
+			float az = (float)sats->sv[i].azim - 90.0f;
 		
 			int x = cx + (elv * cosDegrees(az));
 			int y = cy + (elv * sinDegrees(az));
-			drawCircleFilled(x, y, 5.0*multiplier, colour);
+			drawCircleFilled(x, y, 5.0f * multiplier, colour);
 		}
 	}
 	
@@ -377,8 +317,8 @@ void getDateTime (dategps_t *date, timegps_t *time)
 	date->month = data->date.month;
 	date->year = data->date.year;
 	
-	printf(CS(" %i %i %i"), date->day, date->month, date->year);
-	printf(CS(" %i %i %i"), time->hour, time->min, time->sec);
+	//printf(CS(" %i %i %i"), date->day, date->month, date->year);
+	//printf(CS(" %i %i %i"), time->hour, time->min, time->sec);
 }
 
 static inline void drawStrings (gpsdata_t *data, sat_stats_t *sats)
@@ -657,13 +597,13 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 		
 		date_adjustTime4BST(&gpsData);
 		recordCreatePathname(&trackRecord, &gpsData);
-		printf(CS("FirstFix. Filename: %s"), trackRecord.filename);
+		//printf(CS("FirstFix. Filename: %s"), trackRecord.filename);
 		trackRecord.recordActive = 1;
 		
 		dategps_t date;
 		timegps_t time;
 
-		cmdSendResponse("date time:");
+		//cmdSendResponse("date time:");
 		getDateTime(&date, &time);
 		
 		gps_resetOdo();
@@ -895,7 +835,7 @@ void doEncoders (encodersrd_t *encoders)
 			if (level < 5) level = 0;
 			tft_setBacklight(level);
 		}
-		printf(CS("Backlight: %i"), (int)level);
+		//printf(CS("Backlight: %i"), (int)level);
 	}
 
 	if (encoders->encoder[0].buttonPress){
