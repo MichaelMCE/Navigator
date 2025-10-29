@@ -28,7 +28,7 @@ volatile static int32_t recordSignal = 0;
 volatile static int32_t renderSignal = 0xFF;
 volatile static int32_t receiverUpdateSignal = 0;
 volatile static int32_t appendSignal = 0;
-volatile static int32_t twiceLoadSig = 0;
+volatile static int32_t tilesLoadSig = 0;
 volatile static int serialConnected = 0;
 
 
@@ -50,7 +50,7 @@ extern touchCtx_t touchCtx;
 #endif
 
 static IntervalTimer onceSecondTimer;
-static IntervalTimer twiceSecondTimer;
+static IntervalTimer tilesLoadTimer;
 static vfont_t vfontContext;
 static debugOverlay_t debugStrings;
 static gpsdata_t gpsData;
@@ -677,9 +677,9 @@ void render_signalUpdate ()
 	renderSignal = 0xFF;
 }
 
-void ISR_twiceSecond_sig ()
+void ISR_tilesLoad_sig ()
 {
-	twiceLoadSig = 0xFF;
+	tilesLoadSig = 0xFF;
 }
 
 void ISR_onceSecond_sig ()
@@ -785,8 +785,8 @@ FLASHMEM void init_isrTimers ()
 	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);		// in microseconds
 	onceSecondTimer.priority(180);
 
-	twiceSecondTimer.begin(ISR_twiceSecond_sig, 1*500*1000);		// in microseconds
-	twiceSecondTimer.priority(210);
+	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*250*1000);		// in microseconds
+	tilesLoadTimer.priority(210);
 
 #if ENABLE_TOUCH_FT5216	
 	touch_startTimer();
@@ -804,7 +804,6 @@ FLASHMEM void setup ()
 	return;
 #endif
 		
-	//while (!Serial){}
 	Serial.begin(SERIAL_RATE);
 
 	init_display();
@@ -992,12 +991,12 @@ FASTRUN void loop ()
 
 		if (0 && inst.freeTiles){
 			inst.freeTiles = 0;
-			tilesUnload(inst.renderPassCt);
+			//tilesUnload(inst.renderPassCt);
 		}
 	}
 
-	if (twiceLoadSig){
-		twiceLoadSig = 0;
+	if (tilesLoadSig){
+		tilesLoadSig = 0;
 		if (inst.loadTiles){
 			inst.loadTiles--;
 			if (sceneLoadTiles(&inst))
