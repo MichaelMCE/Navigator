@@ -32,7 +32,7 @@
 #define UBLOX_OFFLINE_SERVER_2			2
 #define UBLOX_OFFLINE_SERVER_3			3
 
-static const char *ubloxUrl = "http://offline-live%i.services.u-blox.com/GetOfflineData.ashx?token=%s;gnss=gps,glo;alm=gps,glo;period=1;resolution=1";
+static const char *ubloxUrl = "http://offline-live%i.services.u-blox.com/GetOfflineData.ashx?token=%s;gnss=gps,glo;alm=gps,glo,qzss;period=1;resolution=1";
 static const uint32_t baudRates[] = {9600, 9600*2, 9600*4, 9600*6, 115200, 115200*2, 115200*4, 115200*8, 0};
 
 static HANDLE hSerial;
@@ -570,6 +570,7 @@ void cmd_detail (const char *cmdStr)
 		printf("Setting %s\n", cmdStr);
 		serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
 	}
+	setReadResponseState(hSerial, 1, 1);
 }
 
 void cmd_backlight (const char *cmdStr)
@@ -669,12 +670,17 @@ void cmd_disable (const char *cmdStr)
 void cmd_debug (const char *cmdStr)
 {
 	if (strlen(cmdStr) > 8 && !strncmp("console:", cmdStr, 8)){
-		serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
-		
-		if (!strncmp("console:1", cmdStr, 9))
+		if (!strncmp("console:1", cmdStr, 9)){
+			serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
 			setReadResponseState(hSerial, 1, 1);
-		else if (!strncmp("console:2", cmdStr, 9))
+			
+		}else if (!strncmp("console:2", cmdStr, 9)){
+			serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
 			setReadResponseState(hSerial, 1, 0);
+
+		}else if (!strncmp("console:3", cmdStr, 9)){
+			setReadResponseState(hSerial, 1, 1);
+		}
 	}
 }
 
@@ -817,6 +823,10 @@ void cmd_mpu (const char *cmdStr)
 		serialSendCmdEx(hSerial, CMD_REBOOT, "reset", 0);
 		printf("Reboot sent\n");
 		setReadResponseState(hSerial, 0, 0);
+
+	}else{
+		serialSendCmd(hSerial, CMD_MPU, cmdStr);
+		setReadResponseState(hSerial, 1, 1);
 	}
 }
 
