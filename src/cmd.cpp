@@ -285,6 +285,10 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 	}else if (!strncmp(msg, "console:", 8)){
 		map_setDetail(MAP_RENDER_CONSOLE, atoi(&msg[8])&0x01);
 
+	}else if (!strncmp(msg, "tilesClean", 10)){
+		tilesUnloadAll(&inst);
+		inst.loadTiles = 25;
+
 	}else if (!strncmp(msg, "locgraphic:", 11)){	
 		map_setDetail(MAP_RENDER_LOCGRAPTHIC, atoi(&msg[11])&0x01);
 
