@@ -28,8 +28,7 @@ void tilesInit ();
 void tilesMakeGPSWindow (const vectorPt2_t *center, const double spanMeters, vectorPt4_t *out);
 uint32_t tilesTotalAcross ();
 uint32_t tilesTotalDown ();
-int tilesUnloadAll (application_t *inst);
-int tilesUnload (const uint32_t renderPass);
+void tilesUnloadAll (application_t *inst);
 void tilesGetBlockCoverage (vectorPt2_t *center, const float spanMeters, int *x_lon, int *y_lat, int *blocksAcross, int *blocksDown);
 block_t *tilesBlock8Get (const int x_lon, const int y_lat);
 
