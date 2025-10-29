@@ -211,11 +211,12 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 		char *pollMsg = &msg[5];
 		if (!gps_pollMsg(pollMsg))
 			printf(CS("ubx message '%s' not available"), pollMsg);
-
-	}else if (!strncmp(msg, "setpos:", 7)){
+		
+	}else if (!strncmp(msg, "setpos:", 7)){		// finish me
+	
 		//char *pollMsg = &msg[5];
-		gps_setIntialPosition(54.609333767992936, -5.929224426174398, 30.0f, 200);
-		cmdSendResponse("Position set");
+		//gps_setIntialPosition( ,  ,  , 200);
+		cmdSendResponse("Position not set");
 
 	}else if (!strncmp(msg, "status", 6)){
 		gps_printStatus();
