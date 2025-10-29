@@ -140,6 +140,7 @@ FASTRUN static inline void vectorsAlloc (const uint32_t total, vectors_t *vector
 	vectors->list = (vector2_t*)extMalloc(total * sizeof(vector2_t));
 }
 
+#if 0
 FASTRUN static void blockRelease (block_t *block)
 {
 	if (block->list){
@@ -148,6 +149,7 @@ FASTRUN static void blockRelease (block_t *block)
 		l_free(block->list);
 	}
 }
+#endif
 
 FASTRUN static const uint8_t *pkOpen (const uint8_t *dir, const int32_t x_lon, const int32_t y_lat, int *polyLen)
 {
@@ -227,7 +229,6 @@ FASTRUN static int pkBlockLoad (block_t *block, const uint8_t *dir, const int32_
 		polyline->type = field->type;
 		vectorsAlloc(field->total, &polyline->vectors);
 		
-		//memcpy(polyline->vectors.list, &buffer[lengthRead], sizeof(vector2_t) * field->total);
 		extMemcpy(polyline->vectors.list, &buffer[lengthRead], sizeof(vector2_t) * field->total);
 		lengthRead += sizeof(vector2_t) * field->total;
 	};
@@ -282,90 +283,15 @@ static inline void tile8Set (const int y_lat, const int x_lon, tile8_t *tile)
 	tiles8[tileY][tileX] = tile;
 }
 
-static inline int tileUnload (const uint32_t renderPass, const int32_t y_lat, const int32_t x_lon)
+static inline void tilesClean ()
 {
-	
-	//printf("tileUnload %i %i\r\n", (int)y_lat, (int)x_lon);
-	
-	int ct = 0;
-	
-	tile8_t *tile = tile8Get(y_lat, x_lon);
-	if (tile){
-		block_t ***blocks = tile->block;
-		if (!blocks) return 0;
-		int freeTile = 1;
-		
-		for (int y = 0; y < PACK_DOWN; y++){
-			if (!blocks[y]) continue;
-
-			for (int x = 0; x < PACK_ACROSS; x++){
-				if (blocks[y][x]){
-					block_t *block = blocks[y][x];
-					int rDiff = (renderPass - block->lastRendered);
-					if (rDiff > TILE_UNLOAD_DELTA){
-						//printf(CS("tileUnload, blockRelease: %i %i"), (int)x, (int)y);
-						
-						blockRelease(block);
-						l_free(block);
-						blocks[y][x] = NULL;
-						ct++;
-					}else{
-						freeTile = 0;
-					}
-				}
-			}
-		}
-
-		if (freeTile){
-			if (blocks){
-				for (int j = 0; j < PACK_DOWN; j++)
-					if (blocks[j]) l_free(blocks[j]);
-				l_free(blocks);
-			}
-			l_free(tile);
-			tile8Set(y_lat, x_lon, NULL);
-			return ct;
-		}
-	}
-	return 0;
+	extCurrentAddr = (size_t)extBaseAddr;
+	memset(pkMemAllocAddr, 0, sizeof(pkMemAllocAddr));
 }
 
-int tilesUnload (const uint32_t renderPass)
+void tilesUnloadAll (application_t *inst)
 {
-	int ct = 0;
-	const int blockTotalLon = tilesTotalAcross();
-	const int blockTotalLat = tilesTotalDown();
-	
-	for (int i = 0; i < blockTotalLat; i++){
-		for (int j = 0; j < blockTotalLon; j++){
-			ct += tileUnload(renderPass, i, j);
-		}
-	}
-	return ct;
-}
-
-int tilesUnloadAll (application_t *inst)
-{
-	int ct = 0;
-	
-	const uint32_t renderPass = inst->renderPassCt + TILE_UNLOAD_DELTA + 1;
-	const int blockTotalLon = tilesTotalAcross();
-	const int blockTotalLat = tilesTotalDown();
-	
-	for (int i = 0; i < blockTotalLat; i++){
-		for (int j = 0; j < blockTotalLon; j++){
-			ct += tileUnload(renderPass, i, j);
-		}
-	}
-
-	const int yTotal = (tilesTotalDown()/PACK_DOWN)+1;
-	for (int i = 0; i < yTotal; i++){
-		if (tiles8[i]){
-			l_free(tiles8[i]);
-			tiles8[i] = NULL;
-		}
-	}
-	return ct;
+	tilesInit();
 }
 
 static inline void makeGPSWindow (const vectorPt2_t *center, const double spanMeters, vectorPt4_t *out)
@@ -499,7 +425,7 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 
 	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
 	if (!tiles8[tileY])
-		tiles8[tileY] = (tile8_t**)calloc(tAcrossRowLength, sizeof(tile8_t*));
+		tiles8[tileY] = (tile8_t**)extCalloc(tAcrossRowLength, sizeof(tile8_t*));
 
 	tile8_t *tile = tiles8[tileY][tileX];	
 	if (tile){
@@ -512,16 +438,17 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 	int blkTotal = pkBlockLoad(&block, POLY_PATH, by, bx);
 	if (!blkTotal) memset(&block, 0, sizeof(block));
 	if (!tile){
-		tile = (tile8_t*)calloc(1, sizeof(tile8_t));
+		tile = (tile8_t*)extCalloc(1, sizeof(tile8_t));
 		tile8Set(by, bx, tile);
 	}
 
 	if (!tile->block)
-		tile->block = (block_t***)calloc(PACK_DOWN, sizeof(block_t*));
+		tile->block = (block_t***)extCalloc(PACK_DOWN, sizeof(block_t*));
 	if (!tile->block[y])
-		tile->block[y] = (block_t**)calloc(PACK_ACROSS, sizeof(block_t*));
+		tile->block[y] = (block_t**)extCalloc(PACK_ACROSS, sizeof(block_t*));
+	if (!tile->block[y][x])
+		tile->block[y][x] = (block_t*)extMalloc(sizeof(block_t));
 
-	tile->block[y][x] = (block_t*)malloc(sizeof(block_t));
 	*tile->block[y][x] = block;
 
 	return 1;
@@ -548,7 +475,7 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 			int tileX = (j & ~PACK_MASK) / PACK_ACROSS;
 			
 			if (!tiles8[tileY])
-				tiles8[tileY] = (tile8_t**)calloc(tAcrossRowLength, sizeof(tile8_t*));
+				tiles8[tileY] = (tile8_t**)extCalloc(tAcrossRowLength, sizeof(tile8_t*));
 
 			tile8_t *tile = tiles8[tileY][tileX];
 			if (tile){
@@ -570,15 +497,15 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 			const int x = j & PACK_MASK;
 				
 			if (!tile){
-				tile = (tile8_t*)calloc(1, sizeof(tile8_t));
+				tile = (tile8_t*)extCalloc(1, sizeof(tile8_t));
 				tile8Set(i, j, tile);
 			}
 			if (!tile->block)
-				tile->block = (block_t***)calloc(PACK_DOWN, sizeof(block_t*));
+				tile->block = (block_t***)extCalloc(PACK_DOWN, sizeof(block_t*));
 			if (!tile->block[y])
-				tile->block[y] = (block_t**)calloc(PACK_ACROSS, sizeof(block_t*));
+				tile->block[y] = (block_t**)extCalloc(PACK_ACROSS, sizeof(block_t*));
 				
-			tile->block[y][x] = (block_t*)malloc(sizeof(block_t));
+			tile->block[y][x] = (block_t*)extMalloc(sizeof(block_t));
 			*tile->block[y][x] = ext_block;
 
 			if (++ct >= maxLoadable){
@@ -649,6 +576,11 @@ void sceneLoadTilesComplete (application_t *inst)
 
 FLASHMEM void tilesInit ()
 {
+	pk_x = 0xFFFF;
+	pk_y = 0xFFFF;
+	pk_len = 0;
+
+	tilesClean();
 	calcTileCoverage();
 	tiles8 = (tile8_t***)extCalloc((tilesTotalDown()/PACK_DOWN)+1, sizeof(tile8_t*));
 }
@@ -656,7 +588,7 @@ FLASHMEM void tilesInit ()
 void tilesClose ()
 {
 	// this is a memleak but is never called
-	l_free(tiles8);
+	//l_free(tiles8);
 }
 
 void tilesMakeGPSWindow (const vectorPt2_t *center, const double spanMeters, vectorPt4_t *out)
