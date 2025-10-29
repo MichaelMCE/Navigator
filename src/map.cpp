@@ -68,52 +68,15 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 	sceneSetLocation(&inst, &position);
 	sceneSetHeading(&inst, heading);
 
-#if 1
+
 	if (flags&MAP_RENDER_VIEWPORT){
 		inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
 		if (inst.distance > 80.0f){
 			inst.loadTiles = 6;
 			preLoc = position;
-			//printf(CS("\nmap_render(): loadTiles set. (distance %.2f)"), distance);
 		}
 	}
 
-#else
-	if (flags&MAP_RENDER_VIEWPORT){
-		if (!loadCount--){
-			//int32_t xlon, ylat;
-			//sceneLocation2Tile(&inst.viewport.location, &xlon, &ylat);
-			//uint32_t loc = ((xlon&0xFFFF)<<16) | (ylat&0xFFFF);
-			
-			//if (preLoc != loc){	// check distance is over, say, 50m
-			//float distance = calcDistance(position.lat, position.lon, preLoc.lat, preLoc.lon);
-			inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
-			
-			//printf(CS("distance %.2f"), distance);
-			
-			if (inst.distance >= 500.0f){
-				preLoc = position;
-				//preLoc = loc;
-				//sceneFlushTiles(inst);
-				
-				//tilesUnload(inst.renderPassCt);
-				inst.freeTiles = 0;
-				
-				//tilesUnloadAll(inst);
-				//poiCleanBlocks(&inst->poi);
-			}
-
-			loadCount = 32;
-			inst.loadTiles = 1;
-			//sceneLoadTiles(&inst);
-		}else{
-			
-			inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
-			if (inst.distance > 120.0f)
-				inst.loadTiles = 1;
-		}
-	}
-#endif
 
 	if (inst.rstats.rflags.map)
 		if (flags&MAP_RENDER_VIEWPORT)	  sceneRenderViewport(&inst);
