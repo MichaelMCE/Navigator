@@ -253,6 +253,7 @@ float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
 void sceneLoadTilesComplete (application_t *inst);
 void sceneLoadTilesMax (application_t *inst, const int max);
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
