@@ -570,7 +570,7 @@ void cmd_detail (const char *cmdStr)
 		printf("Setting %s\n", cmdStr);
 		serialSendCmd(hSerial, CMD_DETAIL, cmdStr);
 	}
-	setReadResponseState(hSerial, 1, 1);
+	setReadResponseState(hSerial, 0, 1);
 }
 
 void cmd_backlight (const char *cmdStr)
@@ -594,7 +594,6 @@ void cmd_map (const char *cmdStr)
 	else if (strlen(cmdStr) > 7 && !strncmp("colour:", cmdStr, 7))
 		serialSendCmd(hSerial, CMD_MAPSCHEME, cmdStr);
 
-	//serialSendCmd(hSerial, CMD_HELLO, "heartbeat");
 	setReadResponseState(hSerial, 0, 1);
 }
 
@@ -826,7 +825,7 @@ void cmd_mpu (const char *cmdStr)
 
 	}else{
 		serialSendCmd(hSerial, CMD_MPU, cmdStr);
-		setReadResponseState(hSerial, 1, 1);
+		setReadResponseState(hSerial, 0, 1);
 	}
 }
 
