@@ -4,7 +4,7 @@
 
 
 #define TRACKPTS_DIR	"/data/"		// save track points here
-#define TRACKPTS_MAX	(60*60*24)		// 1 day
+#define TRACKPTS_MAX	(60*60*16)		// 1 day
 
 
 typedef struct {

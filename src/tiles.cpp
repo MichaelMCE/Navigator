@@ -35,8 +35,8 @@ mp_coverage_t coverage = {
 
 
 
+EXTMEM static uint8_t pkMemAllocAddr[(int)(4.5f*1024*1024)];
 EXTMEM static uint8_t pkFileBuffer[400*1024];
-EXTMEM static uint8_t pkMemAllocAddr[5*1024*1024];
 
 static const size_t extBaseAddr = (size_t)pkMemAllocAddr;
 static size_t extCurrentAddr = (size_t)extBaseAddr;
@@ -454,7 +454,52 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 	return 1;
 }
 
-static block_t ext_block;
+int tilesCount ()
+{
+	const int across = tilesTotalAcross() / PACK_ACROSS;
+	const int down = tilesTotalDown() / PACK_DOWN;
+	
+	int ct = 0;
+	for (int y = 0; y < down; y++){
+		if (!tiles8[y]) continue;
+		
+		for (int x = 0; x < across; x++){
+			ct += (tiles8[y][x] != NULL);
+		}
+	}
+	
+	return ct;
+}
+
+int blocksCount ()
+{
+	const int across = tilesTotalAcross() / PACK_ACROSS;
+	const int down = tilesTotalDown() / PACK_DOWN;
+	
+	int ct = 0;
+	for (int y = 0; y < down; y++){
+		if (!tiles8[y]) continue;
+		
+		for (int x = 0; x < across; x++){
+			if (tiles8[y][x]){
+				for (int i = 0; i < PACK_DOWN; i++){
+					if (!tiles8[y][x]->block[i]) continue;
+
+					for (int j = 0; j < PACK_ACROSS; j++){
+						ct += (tiles8[y][x]->block[i][j] != NULL);
+					}
+				}
+			}
+		}
+	}
+	
+	return ct;
+}
+
+size_t tileMemoryUsage ()
+{
+	return (extCurrentAddr - extBaseAddr);
+}
 
 // load tile(s) that would be visible across the viewport
 static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const float zoom, const int maxLoadable)
@@ -466,8 +511,8 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
 		return ct;
 
+	block_t ext_block;
 	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
-
 	
 	for (int i = by; i < by+blocksDown; i++){
 		for (int j = bx; j < bx+blocksAcross; j++){
@@ -566,7 +611,7 @@ void sceneLoadTilesMax (application_t *inst, const int max)
 	vectorPt2_t loc = sceneGetLocation(inst);
 	tiles8LoadBySpan(inst, &loc, sceneGetZoom(inst), max);
 	
-	printf(CS("extCurrentAddr: %i"), extCurrentAddr-extBaseAddr);
+	//printf(CS("extCurrentAddr: %i"), extCurrentAddr-extBaseAddr);
 }
 
 void sceneLoadTilesComplete (application_t *inst)

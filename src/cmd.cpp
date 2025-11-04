@@ -117,6 +117,10 @@ FLASHMEM static void cmd_fdata (char *msg, const int cmdlen)
 		
 		if (fileTrans.pending) extmem_free(fileTrans.pending);
 		fileTrans.pending = (char*)extmem_calloc(1, fileTrans.length.expected);
+		if (!fileTrans.pending){
+			//printf(CS("calloc failed for %i bytes"), fileTrans.length.expected);
+			return;
+		}
 
 		fileTrans.length.read = 0;
 		int toRead = fileTrans.length.expected;
@@ -604,6 +608,17 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 			delay(1);
 		}
 		printf(CS("Clock frequency: %u"), (unsigned int)F_CPU_ACTUAL);
+
+	}else if (!strncmp(msg, "detail", 6)){
+		extern uint8_t external_psram_size;
+		
+		cmdSendResponse(CFG_STRING);
+		printf(CS("Clock frequency: %uMhz"), (unsigned int)F_CPU_ACTUAL/1000/1000);
+		printf(CS("CPU temp: %.2fc"), InternalTemperature.readTemperatureC());
+		printf(CS("ExtMem: %uMB"), external_psram_size);
+		printf(CS("Tiles: %i"), tilesCount());
+		printf(CS("Blocks: %i"), blocksCount());
+		printf(CS("Tile memory used: %u"), tileMemoryUsage());
 	}
 }
 
