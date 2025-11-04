@@ -8,19 +8,21 @@
 #include "record.h"
 
 
-#define SCENE_ZOOM_MIN		15.0f
-#define SCENE_ZOOM_MAX		2500.0f
-#define SCENE_ZOOM_STEP		25.0f
+#define SCENE_ZOOM_MIN				15.0f
+#define SCENE_ZOOM_MAX				2500.0f
+#define SCENE_ZOOM_STEP				25.0f
 
+#define SCENE_TILE_DISTANCE			80.0f		// perform a tile load check after N meters travelled
+#define SCENE_TILE_COUNT			6			// after above meters travelled, trigger a tile reload N times
 
-#define MEMORY_DEBUGGING	(0)
-#define MEMORYPROFILE		(1)			// 1: if memory is expensive. slower to repeat load under larger viewports
-										// 0: where memory is cheap. faster tile reloads 
+#define MEMORY_DEBUGGING			(0)
+#define MEMORYPROFILE				(1)			// 1: if memory is expensive. slower to repeat load under larger viewports
+												// 0: where memory is cheap. faster tile reloads 
 
-#define SCENEZOOM			(200.0f)	// set initial viewport, in meters vertically 
+#define SCENE_ZOOM					(200.0f)	// set initial viewport, in meters vertically 
 									
-#define TILE_UNLOAD_DELTA	(40)		// unload unused blocks after n frames, when a block has not been accessed for n frames, unload it 
-#define COVERAGE_OVERSCAN	(1.0f)
+//#define TILE_UNLOAD_DELTA			(40)		// unload unused blocks after n frames, when a block has not been accessed for n frames, unload it 
+#define COVERAGE_OVERSCAN			(1.0f)
 
 
 						
@@ -253,17 +255,10 @@ float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
 void sceneLoadTilesComplete (application_t *inst);
 void sceneLoadTilesMax (application_t *inst, const int max);
 
+void scenePositionToScreenVecPt2 (application_t *inst, const vectorPt2_t *location, float *x, float *y);
+void scenePositionToScreenPosRec (application_t *inst, const pos_rec_t *location, float *x, float *y);
+float sceneCalcDistancePosRec (const pos_rec_t *pt1, const pos_rec_t *pt2);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2);
-
-
-#ifdef __cplusplus
-}
-#endif
 
 
 #endif

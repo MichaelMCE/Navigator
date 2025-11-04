@@ -81,6 +81,7 @@ static inline uint16_t polylineToColour_mode2 (const uint8_t type)
 	if (type == 0x12) return COLOUR_PAL_ServiceRoadRestricted;
 	if (type == 0x13) return COLOUR_PAL_Steps;
 	if (type == 0x16) return COLOUR_PAL_FootPath;
+	if (type == 0x26) return COLOUR_PAL_Water;
 	if (type == 0x27) return COLOUR_PAL_AirportRunway;
 	
 	
@@ -351,7 +352,7 @@ static inline uint32_t polylineToThickness (const uint8_t roadClass)
 	case 0x12: thickness = 1; break;
 	case 0x0E: thickness = 1; break;
 	
-	case 0x26: thickness = 8; break;
+	case 0x26: thickness = 3; break;
 	case 0x27: thickness = 1; break;
 	default:
 		printf("polylineToThickness: 0x%X\n", roadClass);
@@ -642,7 +643,7 @@ float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2)
 	return calcDistMf(lat1, lon1, lat2, lon2);
 }
 
-float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2)
+float sceneCalcDistancePosRec (const pos_rec_t *pt1, const pos_rec_t *pt2)
 {
 	const float lat1 = pt1->latitude;
 	const float lon1 = pt1->longitude;
@@ -654,7 +655,7 @@ float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2)
 
 static inline void drawTrackPath (application_t *inst, trackPoint_t *points, const uint32_t total, const float lineThickness, const uint16_t colour)
 {
-	if (total < 5) return;
+	if (total < 6) return;
 
 	const vectorPt4_t *window = viewportGetWindow(inst);
 	const float dw = viewportGetWidth(inst);
@@ -663,7 +664,7 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 
 	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst), &region);
 
-	trackPoint_t *tp = &points[0];
+	trackPoint_t *tp = &points[3];
 	float preX = (tp->location.longitude - window->v1.lon) / dw;
 	float preY = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
 
@@ -672,7 +673,7 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 	col[0] = colour;
 	col[1] = COLOUR_PAL_GOLD;
 
-	for (uint32_t j = 2; j < total-1; j += 2){
+	for (uint32_t j = 4; j < total-1; j += 2){
 		trackPoint_t *tp = &points[j];
 
 		float x = (tp->location.longitude - window->v1.lon) / dw;
@@ -682,19 +683,36 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 			if (!((y >= VHEIGHT && preY >= VHEIGHT) || (y < 0 && preY < 0))){
 				if (!((x >= VWIDTH && preX >= VWIDTH) || (x < 0 && preX < 0))){
 					const float distance = calcDistMetersTrkPt(tp, &points[j-1]);
-					if (distance >= 0.20f){
-						if (distance < 11.0f)
+					if (distance >= 0.20f/* && distance < 50.0f*/){
+						if (distance < 11.0f){
 							drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
+						}else{
+							tp = &points[j+2];
+							x = (tp->location.longitude - window->v1.lon) / dw;
+							y = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
+						}
 					}else{
 						x = preX;
 						y = preY;
 					}
+				}else{
+					tp = &points[j+2];
+					x = (tp->location.longitude - window->v1.lon) / dw;
+					y = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
 				}
+			}else{
+				tp = &points[j+2];
+				x = (tp->location.longitude - window->v1.lon) / dw;
+				y = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
 			}
-		}
+		}else{
+			tp = &points[j+2];
+			x = (tp->location.longitude - window->v1.lon) / dw;
+			y = (((window->v1.lat - tp->location.latitude) / aspectCorrection) / dh) - aspectOffset;
+		}			
+
 		altCol++;
 		altCol &= 0x01;
-		
 		preX = x;
 		preY = y;
 	}
@@ -862,7 +880,6 @@ void blockDrawPaths (application_t *inst, block_t *block, const vectorPt2_t *cen
 	}
 }
 
-
 void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *center, const float spanMeters, const int drawPolyLine)
 {
 	int bx, by, blocksAcross, blocksDown;
@@ -875,37 +892,36 @@ void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 
 			block->lastRendered = inst->renderPassCt;
 
-			if (spanMeters < 2000.0f)
+			//if (spanMeters < 2000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x16, drawPolyLine);
-			if (spanMeters < 6000.0f)
+			//if (spanMeters < 6000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x0B, drawPolyLine);
-			if (spanMeters < 5000.0f)
+			//if (spanMeters < 5000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x0A, drawPolyLine);
 
-			if (spanMeters < 16000.0f)
+			//if (spanMeters < 16000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x09, drawPolyLine);
 
-			if (spanMeters < 4000.0f)
+			//if (spanMeters < 4000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x08, drawPolyLine);
-			if (spanMeters < 2500.0f)
+			//if (spanMeters < 2500.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x06, drawPolyLine);
-			if (spanMeters < 2000.0f)
+			//if (spanMeters < 2000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x07, drawPolyLine);
-			if (spanMeters < 15000.0f)
+			//if (spanMeters < 15000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x05, drawPolyLine);
-			if (spanMeters < 35000.0f)
+			//if (spanMeters < 35000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x04, drawPolyLine);
 
-			if (spanMeters < 50000.0f)
+			//if (spanMeters < 50000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x03, drawPolyLine);
 	
 			blockDrawPaths(inst, block, center, spanMeters, 0x02, drawPolyLine);
 			blockDrawPaths(inst, block, center, spanMeters, 0x01, drawPolyLine);
-			
 
-			if (spanMeters < 10000.0f)
+			//if (spanMeters < 10000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x0C, drawPolyLine);
-			if (spanMeters < 18000.0f)
+			//if (spanMeters < 18000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x00, drawPolyLine);
 		}
 	}
@@ -1215,6 +1231,26 @@ FLASHMEM void sceneInit (application_t *inst)
 	inst->rstats.rflags.trackLine = 0;
 	
 	tilesInit();
+}
+
+void scenePositionToScreenVecPt2 (application_t *inst, const vectorPt2_t *location, float *x, float *y)
+{
+	const vectorPt4_t *window = viewportGetWindow(inst);
+	const float dw = viewportGetWidth(inst);
+	const float dh = viewportGetHeight(inst);
+
+	*x = (location->lon - window->v1.lon) / dw;
+	*y = (((window->v1.lat - location->lat) / aspectCorrection) / dh) - aspectOffset;
+}
+
+void scenePositionToScreenPosRec (application_t *inst, const pos_rec_t *location, float *x, float *y)
+{
+	const vectorPt4_t *window = viewportGetWindow(inst);
+	const float dw = viewportGetWidth(inst);
+	const float dh = viewportGetHeight(inst);
+
+	*x = (location->longitude - window->v1.lon) / dw;
+	*y = (((window->v1.lat - location->latitude) / aspectCorrection) / dh) - aspectOffset;
 }
 
 uint32_t sceneGetSize (application_t *inst)
