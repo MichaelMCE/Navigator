@@ -14,7 +14,6 @@ FLASHMEM void map_init (vfont_t *vfont)
 	memset(&inst, 0, sizeof(inst));
 
 	inst.vfont = vfont;
-
 	inst.cmdTaskRunMode = 1;
 	inst.runLog.step = 4;
 	inst.loadTiles = 1;
@@ -24,7 +23,7 @@ FLASHMEM void map_init (vfont_t *vfont)
 	inst.scheme.spotRadius = 6;
 	
 	log_runReset();	
-	sceneSetZoom(&inst, SCENEZOOM);
+	sceneSetZoom(&inst, SCENE_ZOOM);
 	
 	poi_t *poi = &inst.poi;
 	poiInit(poi);
@@ -45,38 +44,23 @@ FLASHMEM void map_init (vfont_t *vfont)
 	map_setDetail(MAP_RENDER_CONSOLE, 0);
 }
 
-static inline float calcDistance (const float x1, const float y1, const float x2, const float y2)
-{
-	const float x = x1 - x2;
-	const float y = y1 - y2;
-	return sqrtf((x * x) + (y * y));
-
-	//return sqrtf((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-}
-
 void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const float heading, const uint32_t flags)
 {
-	//static int32_t loadCount = 0;
-	//static uint32_t preLoc = 0;
-	static vectorPt2_t preLoc;
-	//static vectorPt2_t previousLoc;
-	
 	vectorPt2_t position;
 	position.lon = location->longitude;
 	position.lat = location->latitude;
 	
+	vectorPt2_t preLoc = sceneGetLocation(&inst);
 	sceneSetLocation(&inst, &position);
 	sceneSetHeading(&inst, heading);
 
-
 	if (flags&MAP_RENDER_VIEWPORT){
 		inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
-		if (inst.distance > 80.0f){
-			inst.loadTiles = 6;
+		if (inst.distance > SCENE_TILE_DISTANCE){
+			inst.loadTiles = SCENE_TILE_COUNT;
 			preLoc = position;
 		}
 	}
-
 
 	if (inst.rstats.rflags.map)
 		if (flags&MAP_RENDER_VIEWPORT)	  sceneRenderViewport(&inst);
