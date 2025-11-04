@@ -143,7 +143,7 @@ void drawDebugStrings (debugOverlay_t *debugLines)
 	}
 }
 
-void drawSatSignalAvailabilitySv (sat_stats_t *sats, const uint8_t gnssId, const int row, const uint8_t colour)
+static void drawSatSignalAvailabilitySvId (sat_stats_t *sats, const uint8_t gnssId, const int row, const uint8_t colour)
 {
 
 #if (VHEIGHT > 320)
@@ -206,11 +206,11 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 #endif
 
 
-	drawSatSignalAvailabilitySv(sats, GNSSID_GPS, rowGPS, COLOUR_PAL_DARKGREEN);
-	drawSatSignalAvailabilitySv(sats, GNSSID_GLONASS, rowGLO, COLOUR_PAL_RED);
-	drawSatSignalAvailabilitySv(sats, GNSSID_GALILEO, rowGAL, COLOUR_PAL_BLUE);
-	drawSatSignalAvailabilitySv(sats, GNSSID_BEIDOU, rowBEI, COLOUR_PAL_GOLD);
-	drawSatSignalAvailabilitySv(sats, GNSSID_QZSS, rowQZS, COLOUR_PAL_CHERRYBLOSSOM);
+	drawSatSignalAvailabilitySvId(sats, GNSSID_GPS, rowGPS, COLOUR_PAL_DARKGREEN);
+	drawSatSignalAvailabilitySvId(sats, GNSSID_GLONASS, rowGLO, COLOUR_PAL_RED);
+	drawSatSignalAvailabilitySvId(sats, GNSSID_GALILEO, rowGAL, COLOUR_PAL_BLUE);
+	drawSatSignalAvailabilitySvId(sats, GNSSID_BEIDOU, rowBEI, COLOUR_PAL_GOLD);
+	drawSatSignalAvailabilitySvId(sats, GNSSID_QZSS, rowQZS, COLOUR_PAL_CHERRYBLOSSOM);
 }
 
 void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
@@ -221,9 +221,9 @@ void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
 	#define SDISPLAY_MAX 32
 
 #if (VHEIGHT > 320)
-	float barScale = 2.0;
+	float barScale = 2.0f;
 #else
-	float barScale = 1.5;
+	float barScale = 1.5f;
 #endif
 	
 	int y = VHEIGHT-3;
@@ -585,8 +585,7 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 
 	if (!assistNowAutoLoad)
 		assistNowAutoLoad = gpsData.dateConfirmed && gpsData.timeConfirmed;
-
-	if (gpsData.fix.type == PVT_FIXTYPE_NOFIX)
+	if (opaque->fix.type == PVT_FIXTYPE_NOFIX)
 		return;
  	if (trackRecord.acquDisabled)
  		return;
@@ -605,7 +604,6 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 
 		//cmdSendResponse("date time:");
 		getDateTime(&date, &time);
-		
 		gps_resetOdo();
 	}
 
@@ -796,7 +794,7 @@ void doEncoders (encodersrd_t *encoders)
 	}
 
 	if (encoders->encoder[2].buttonPress){
-		sceneSetZoom(&inst, SCENEZOOM);
+		sceneSetZoom(&inst, SCENE_ZOOM);
 		sceneResetViewport(&inst);
 		sceneLoadTiles(&inst);
 		renderSignal = 1;
