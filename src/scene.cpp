@@ -11,15 +11,15 @@ extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
 
 
 static const typesPass_t typesPass[9] = {
-	{14, {0x02, 0x0C, 0x3C, 0x07, 0x0A, 0x08, 0x1E, 0x26, 0x22, 0x4F, 0x33, 0x2D, 0x32, 0x0F}},
+	{11, {0x02, 0x0C, 0x07, 0x08, 0x1E, 0x26, 0x22, 0x4F, 0x33, 0x2D, 0x32}},
 	{ 4, {0x05, 0x06, 0x18, 0x2C}},
-	{ 7, {0x16, 0x03, 0x04, 0x17, 0x42, 0x2B, 0x13}},
+	{ 6, {0x16, 0x03, 0x04, 0x17, 0x42, 0x13}},
 	{ 5, {0x19, 0x1A, 0x27, 0x37, 0x39}},
 	{ 3, {0x18, 0x34, 0x3D}},
 	{ 2, {0x36, 0x1C}},
 	{ 7, {0x25, 0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
 	{10, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x51}},
-	{ 1, {0x0B}},
+	{ 5, {0x0B, 0x0F, 0x3C, 0x2B, 0x0A}},
 };
 
 
@@ -506,27 +506,27 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 			if (!block) continue;
 			block->lastRendered = inst->renderPassCt;
 
-			if (spanMeters < 18000.0f){
-				if (spanMeters < 15000.0f)
+			//if (spanMeters < 18000.0f){
+				//if (spanMeters < 15000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 0);
-				if (spanMeters < 6000.0f){
+				//if (spanMeters < 6000.0f){
 					blockDrawFills(inst, block, center, spanMeters, 8);
 					blockDrawFills(inst, block, center, spanMeters, 2);
-				}
-				if (spanMeters < 17000.0f)
+				//}
+				//if (spanMeters < 17000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 3);
-				if (spanMeters < 2000.0f)
+				//if (spanMeters < 2000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 1);
-				if (spanMeters < 5000.0f)
+				//if (spanMeters < 5000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 4);
-			}
+			//}
 			blockDrawFills(inst, block, center, spanMeters, 6);
-			if (spanMeters < 18000.0f){
-				if (spanMeters < 2500.0f)
+			//if (spanMeters < 18000.0f){
+				//if (spanMeters < 2500.0f)
 					blockDrawFills(inst, block, center, spanMeters, 5);
-				if (spanMeters < 5000.0f)
+				//if (spanMeters < 5000.0f)
 					blockDrawFills(inst, block, center, spanMeters, 7);
-			}
+			//}
 		}
 	}
 }
@@ -1155,8 +1155,8 @@ static inline void drawPOI (application_t *inst, poi_t *poi, vfont_t *vctx, cons
 
 static inline void renderFrame (application_t *inst, const vectorPt2_t *center)
 {
-	if (inst->rstats.rflags.mapFilled)   drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON);				// filled areas
-	if (inst->rstats.rflags.mapOutline)  drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);		// polygon outlines	
+	if (inst->rstats.rflags.mapFilled)   drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON);			// filled areas
+	if (inst->rstats.rflags.mapOutline)  drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_POLYGON_OUTLINE);	// polygon outlines	
 	if (inst->rstats.rflags.pathFilled)  drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH);				// paths
 	if (inst->rstats.rflags.pathLine)    drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_PATH_LINE);			// single pixel width poly paths
 	if (inst->rstats.rflags.tileOutline) drawTiles(inst, center, sceneGetZoom(inst), DRAWLAYER_TILE_BOUNDARY);		// tile boundries
