@@ -123,7 +123,8 @@ typedef struct {
 		uint32_t trackPath:1;
 		uint32_t trackSpot:1;
 		uint32_t trackLine:1;
-		uint32_t stub:15;
+		uint32_t overlay:1;
+		uint32_t stub:14;
 	}rflags;		// render flags
 }runState_t;
 
@@ -141,6 +142,7 @@ typedef struct {
 		float dw;
 		float dh;
 		float heading;
+		double metersPerPixelH;
 	}viewport;
 
 	struct {
@@ -255,9 +257,13 @@ float sceneCaleDistanceVecPt2 (const vectorPt2_t *pt1, const vectorPt2_t *pt2);
 void sceneLoadTilesComplete (application_t *inst);
 void sceneLoadTilesMax (application_t *inst, const int max);
 
+double sceneDrawLineLengthHori (application_t *inst, const int x, const int y, const double lengthMeters, const uint8_t colour);
+double sceneDrawLineLengthVert (application_t *inst, const int x, const int y, const double lengthMeters, const uint8_t colour);
+
 void scenePositionToScreenVecPt2 (application_t *inst, const vectorPt2_t *location, float *x, float *y);
 void scenePositionToScreenPosRec (application_t *inst, const pos_rec_t *location, float *x, float *y);
 float sceneCalcDistancePosRec (const pos_rec_t *pt1, const pos_rec_t *pt2);
+
 
 
 
