@@ -151,7 +151,7 @@ FASTRUN static void blockRelease (block_t *block)
 }
 #endif
 
-FASTRUN static const uint8_t *pkOpen (const uint8_t *dir, const int32_t x_lon, const int32_t y_lat, int *polyLen)
+FASTRUN static const uint8_t *pkLoad (const uint8_t *dir, const int32_t x_lon, const int32_t y_lat, int *polyLen)
 {
 	const int xm = (x_lon % PACK_ACROSS);
 	const int ym = (y_lat % PACK_DOWN);
@@ -167,17 +167,15 @@ FASTRUN static const uint8_t *pkOpen (const uint8_t *dir, const int32_t x_lon, c
 		uint8_t filename[64];
 		snprintf((char*)filename, sizeof(filename)-1, "%s/%03i_%03i.pk32", dir, y, x);
 
-		//printf(CS(" pkOpen(): %i %i"), y, x);
-
 		fileio_t *file = fio_open(filename, FIO_READ);
 		if (!file){
-			printf(CS(" pkOpen(): open failed for '%s'"), filename);
+			printf(CS(" pkLoad(): open failed for '%s'"), filename);
 			return NULL;
 		}
 		
 		pk_len = fio_length(file);
 		if (polyfileRead(file, pkFileBuffer, pk_len) != 1){
-			printf(CS("pkOpen(): read failed for '%s'"), filename);
+			printf(CS("pkLoad(): read failed for '%s'"), filename);
 			polyfileClose(file);
 			return NULL;
 		}
@@ -187,19 +185,17 @@ FASTRUN static const uint8_t *pkOpen (const uint8_t *dir, const int32_t x_lon, c
 	size_t pos = (ym * PACK_ACROSS * sizeof(poly_pack_file_t)) + (xm * sizeof(poly_pack_file_t));
 	poly_pack_file_t *poly = (poly_pack_file_t*)&pkFileBuffer[pos];
 	
-	if (poly->offset >= pk_len){
+	if (poly->offset >= pk_len)
 		return NULL;
-	}
 
 	*polyLen = poly->length;
-	
 	return &pkFileBuffer[poly->offset];
 }
 
 FASTRUN static int pkBlockLoad (block_t *block, const uint8_t *dir, const int32_t y_lat, const int32_t x_lon)
 {
 	int polyLen = 0;
-	const uint8_t * const buffer = pkOpen(dir, x_lon, y_lat, &polyLen);
+	const uint8_t * const buffer = pkLoad(dir, x_lon, y_lat, &polyLen);
 	if (!buffer){
 		//printf("could not open %i %i from '%s\\'\n", x_lon, y_lat, dir);
 		return 0;
