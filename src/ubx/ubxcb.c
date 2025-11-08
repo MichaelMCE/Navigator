@@ -315,11 +315,10 @@ FLASHMEM int nav_posecef (const uint8_t *payload, uint16_t msg_len, void *opaque
 }
 
 static int recPos = 0;
-static pos_rec_t posRecLLH[48];
+static pos_rec_t posRecLLH[54];
 
 static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 {
-	
 	if (pos->longitude == 0.000 && pos->latitude == 0.000)
 		return;
 	
@@ -330,19 +329,14 @@ static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 	posRecLLH[recPos].longitude = pos->longitude;
 	posRecLLH[recPos].latitude  = pos->latitude;
 	posRecLLH[recPos].altitude  = pos->altitude;
-	if (++recPos >= 48) recPos = 0;
+	if (++recPos >= 54) recPos = 0;
 
-	
-	double lon = 0.0;		//posRecLLH[0].longitude;
-	double lat = 0.0;		// posRecLLH[0].latitude;
-	float alt = 0.0f;		//posRecLLH[0].altitude;
+	double lon = 0.0;
+	double lat = 0.0;
+	float alt = 0.0f;
 	int ptsSumed = 0;
 	
-	
-	for (int i = 0; i < 48; i++){
-		//float distance = sceneCalcDistancePosRecPt2(&posRecLLH[i-1], &posRecLLH[i]);
-		//if (distance > 2000.0f) continue;
-
+	for (int i = 0; i < 54; i++){
 		lon += posRecLLH[i].longitude;
 		lat += posRecLLH[i].latitude;
 		alt += posRecLLH[i].altitude;
@@ -350,8 +344,8 @@ static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 	}
 	
 	gps->navAvg.longitude = lon / (double)ptsSumed;
-	gps->navAvg.latitude  = lat / (double)ptsSumed;
-	gps->navAvg.altitude  = alt / (float)ptsSumed;
+	gps->navAvg.latitude = lat / (double)ptsSumed;
+	gps->navAvg.altitude = alt / (float)ptsSumed;
 	gps->rates.epoch++;
 }
 
