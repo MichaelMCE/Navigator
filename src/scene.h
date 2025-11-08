@@ -154,8 +154,9 @@ typedef struct {
 	uint8_t colourScheme;
 	uint8_t loadTiles;
 	uint8_t freeTiles;
-	uint8_t stun[1];
+	uint8_t stub[1];
 	
+	vectorPt2_t	tileLoadLoc;	// tiles for loading were last checked at this location
 	float distance;				// dstance traveled, in meters, since last tile update
 	
 	uint32_t renderPassCt;

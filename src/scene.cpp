@@ -626,7 +626,7 @@ static inline double calcDistM (double lat1, double lon1, double lat2, double lo
 
 static inline float calcDistMf (float lat1, float lon1, float lat2, float lon2)
 {
-	const float R = 6378137.0;		// Earths radius
+	const float R = 6378137.0f;		// Earths radius
 	const float pi80 = M_PI / 180.0f;
 	
 	lat1 *= pi80;
