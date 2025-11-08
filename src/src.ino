@@ -579,7 +579,7 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 {
 	gpsData = *opaque;
 
-#if 1
+#if 0
 	gpsData.navAvg.latitude = MY_LAT;
 	gpsData.navAvg.longitude = MY_LON;
 	gpsData.navAvg.altitude = MY_ALT;
