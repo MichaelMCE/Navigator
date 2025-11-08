@@ -34,8 +34,10 @@ enum _course {
 };
 
 
-#ifndef EARTH_RADIUS
+#define LAT16_MULTIPLIER		(2200000.0)
+#define LON16_MULTIPLIER		(525000.0)
 
+#ifndef EARTH_RADIUS
 #define EARTH_RADIUS			(6378137.0)
 #define LENGTH_SCALE			(1.0/(EARTH_RADIUS * (M_PI/180.0)))
 #define LENGTH_1000M_LAT		(LENGTH_SCALE * 1000.0)
@@ -52,7 +54,6 @@ enum _course {
 #define GPS_1000M_LAT			(LENGTH_1000M_LAT)
 #define GPS_1000M_LON			(LENGTH_1000M_LON)
 #endif
-
 #endif
 
 
@@ -71,9 +72,14 @@ enum _course {
 #define GPS_10M_LAT				(GPS_1000M_LAT/100.0f)
 #define GPS_10M_LON				(GPS_1000M_LON/100.0f)
 
-#define GPS_LENGTH_LAT			(GPS_500M_LAT)
-#define GPS_LENGTH_LON			(GPS_500M_LON)
+#define GPS_LENGTH_LAT			(GPS_250M_LAT)
+#define GPS_LENGTH_LON			(GPS_250M_LON)
 
+#define TWO_PI 6.283185307179586476925286766559
+#define DEG_TO_RAD 0.017453292519943295769236907684886
+#define RAD_TO_DEG 57.295779513082320876798154814105
+#define toRadians(deg) ((deg)*DEG_TO_RAD)
+#define toDegrees(rad) ((rad)*RAD_TO_DEG)
 
 
 #define CALC_PITCH_1(w)			(((w)>>3)+(((w)&0x07)!=0))	// 1bit packed, calculate number of storage bytes per row given width (of glyph)

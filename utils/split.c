@@ -6,72 +6,65 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <math.h>
-
 #include <mylcd.h>
 #include <demos.h>
 #include "split.h"
 #include "polyfile.h"
-#include "logformat.h"
 
 
 
-#define LAT16_MULTIPLIER		(2200000.0)
-#define LON16_MULTIPLIER		(525000.0)
+// source .mp map
+#define MAP_SOURCE				((uint8_t*)"M:\\RamdiskTemp\\map\\leisure_gmapsupp.mp")
+
+// destination poly location
+#define POLY_PATH				((uint8_t*)"M:\\polys\\250")
+
+
+/*
+
+Maps are by FSK derived from: https://freizeitkarte-osm.de/garmin/en/westeuropa.html
+
+Converting from .mp to .poly's can generate 500k+ files. Use a RamDisk if you care about your SSD.
+SoftPerfect RAM Disk (64-bit) is my preference.
+
+Use: https://extract.bbbike.org/?lang=en
+Create a coverage Region bounding box: Record those numbers somewhere
+Select format 'Garmin Leisure (UTF8-8)'
+Add a map name.
+Add an Email to later receive the download link when processed
+...
+Download and Extract .img file
+Import .img in to GPSMapEdit: https://www.geopainting.com 
+Add Map Skin 6372.typ, then select for viewing
+Save as 'Polish Format (.mp)'
+
+*/
+
+
+
+// Define your region. Keep it small at first for testing
+#if 0
+static const mp_coverage_t coverage = {		//  Rectangle of MAP_SOURCE coverage
+		{{55.25573, -8.188934}, {54.022522, -5.413513}},
+		2.775421/*2.77542*/,	// ° width
+		1.233208/*1.23322*/		// ° height
+};
+#else
+static const mp_coverage_t coverage = {
+		{{55.3985791, -8.8708173},
+		 {53.9454972, -5.3821777}},
+		3.4886396,		// width
+		1.4530819		// height
+};
+#endif
+
 
 
 #define  aspectCorrection  (1.0 / ((double)VWIDTH/(double)VHEIGHT))
 const float aspectOffset = (((VHEIGHT*0.5) * (1.0 - aspectCorrection)) * ((double)VWIDTH/(double)VHEIGHT));
 
 
-#define TWO_PI 6.283185307179586476925286766559
-#define DEG_TO_RAD 0.017453292519943295769236907684886
-#define RAD_TO_DEG 57.295779513082320876798154814105
-#define toRadians(deg) ((deg)*DEG_TO_RAD)
-#define toDegrees(rad) ((rad)*RAD_TO_DEG)
-
-
-
-
-// source .mp map
-#define MAP_SOURCE				((uint8_t*)"gmapsupp.mp")
-//#define MAP_SOURCE			((uint8_t*)"E:\\polys\\Standard\\gmapsupp.mp")
-//#define MAP_SOURCE			((uint8_t*)"E:\\polys\\Larger\\gmapsupp.mp")
-
-// destination poly location
-#define POLY_PATH				((uint8_t*)"m:\\polys\\500")
-
-
-
-
-#if 0	// original			155meg
-static const mp_coverage_t coverage = {		//  Rectangle of MAP_SOURCE coverage
-		{{55.25573, -8.188934}, {54.022522, -5.413513}},
-		2.775421/*2.77542*/,	// ° width
-		1.233208/*1.23322*/		// ° height
-};
-#elif 0
-//planet_-8.403,53.98_-4.268,55.434-garmin-osm
-// 315mb
-static const mp_coverage_t coverage = {
-		{{55.434, -8.403}, {53.98, -4.268}},
-		4.135,		// ° width
-		1.454		// ° height
-};
-
-#else 
-// newest 
-// 600mb, June 2025
-static const mp_coverage_t coverage = {
-		{{55.3985791, -8.8708173},
-		 {53.9454972, -5.3821777}},
-		3.4886396,		// 3.48816° width
-		1.4530819		// 1.45294° height
-};
-
-
-#endif
 
 static inline void location2Block (const vectorPt2_t *loc, int32_t *x_lon, int32_t *y_lat)
 {
@@ -143,27 +136,19 @@ static inline void makeBlockWindow (const int32_t x_lon, const int32_t y_lat, ve
 
 static inline double measureDistance (vector2_t *v1, vector2_t *v2)
 {
-	
-	//printf("%f %f %f %f\n", lat1, lon1, lat2, lon2);
-	
 	#define earthsRadius (6378137.0)
 	#define pi80 (M_PI / 180.0)
-
 		
 	double lat1 = v1->y * pi80;
 	double lon1 = v1->x * pi80;
 	double lat2 = v2->y * pi80;
 	double lon2 = v2->x * pi80;
 
-	//double dd = acos( sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lon2-lon1) ) * earthsRadius;
-	//printf("dist dd %lf\n", dd);
-	
 	double dlat = fabs(lat2 - lat1);
 	double dlon = fabs(lon2 - lon1);
 	double a = sin(dlat / 2.0) * sin(dlat / 2.0) + cos(lat1) * cos(lat2) * sin(dlon /2.0) * sin(dlon / 2.0);
 	double c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
 	double d = earthsRadius * c;
-	//printf("dist %.0f\n", d);
 
 	return d;
 }
@@ -331,7 +316,6 @@ static inline int isLineVectorString (const uint8_t *string)
 			return (string[5] == '=');
 		}
 	}
-	
 	return 0;
 }
 
@@ -384,13 +368,11 @@ static inline vectors_t *readVectors (uint8_t *string)
 			for (int v = 0; v < vTotal; v++){
 				if (!readVector(string, &vectors->list[v]))
 					break;
-				//printf("%i/%i %.5f %.5f\n", v, vTotal, vectors->list[v].x, vectors->list[v].y);
 				string = nextVector(string);
 				//if (!string) break;
 			}
 		}
 	}
-	
 	return vectors;
 }
 
@@ -409,15 +391,12 @@ static inline polyline_t *processPolyline (uint8_t **lines, const int lTotal)
 				if (!polyline->vectors){
 					polyline->vectors = readVectors(firstVector(line));
 					if (polyline->vectors){
-						//printf("vectors %i\n", polyline->vectors->total);
 						//vIdx++;
 					}
 				}
 			//}
 		}else if (isLineType(line)){
 			readType(line, &polyline->type);
-			//printf("type 0X%x\n", type);
-			
 #if 0
 		}else if (isLineNode(line)){
 			int32_t nodeNo;
@@ -432,7 +411,6 @@ static inline polyline_t *processPolyline (uint8_t **lines, const int lTotal)
 			int ret = addNode(polyline, &node);
 			if (ret < 0)
 				printf("addNode Failed %i\n", ret);
-			//printf("node %i: %i %i\n", nodeNo, node.index, node.id);
 #endif
 		}else if (isLineEnd(line)){
 			break;
@@ -450,34 +428,24 @@ static inline polyline_t *processPolyline (uint8_t **lines, const int lTotal)
 static inline polylines_t *importMP (const uint8_t *path)
 {
 
-	printf("Path: %s\n", path);
-
 	TASCIILINE *al = readFileA((char*)path);
-	if (!al) return NULL;
+	if (!al){
+		printf("readFileA() failed\n");
+		return NULL;
+	}
 	
 	int vectors = 0;
-	//int total = 0;
-	
 	polylines_t *polylines = polylinesAlloc(512, 512);
 	
 	for (int i = 0; i < al->tlines; i++){
 		uint8_t *line = al->line[i];
-
-		
-#if 1
 		const int isapolygon = isLinePolygon(line);
-#else
-		const int isapolygon = 0;
-#endif
 		
 		if (isapolygon || isLinePolyline(line)){
 			polyline_t *polyline = processPolyline(&al->line[i], al->tlines-i);
 			if (polyline){
 				/*total =*/ addPolyline(polylines, polyline);
 				polyline->isPolygon = isapolygon;
-				
-				//printf("%i: 0x%X %i\n", i, polyline->type, polyline->vectors->total);
-				
 				vectors += polyline->vectors->total;
 			}
 		}
@@ -496,47 +464,6 @@ static inline double vectorDistance (const vector2_t *v1, const vector2_t *v2)
 {
 	return sqrt((fabs(v1->x - v2->x)*fabs(v1->x - v2->x)) + (fabs(v1->y - v2->y)*fabs(v1->y - v2->y)));
 }
-
-#if 0
-polyline_t *findNearestPath (const polylines_t *polylines, const uint32_t type, const vector2_t *loc, vectors_t **vectors, uint32_t *vIdx)
-{
-	polyline_t *polyline = NULL;
-	
-	
-		double minDistance = 360.0;
-		int idxI = 0;
-		int idxC = 0;
-	//	int idxJ = 0;
-	//	vector2_t *minLoc = NULL;
-		
-		for (int i = 0; i < polylines->total; i++){
-			polyline = polylines->list[i];
-			if (polyline->type && polyline->type != type) continue;
-			
-			//for (int j = 0; j < 2 && polyline->vectors[j]; j++){
-				vectors_t *vectors = polyline->vectors;
-			
-				for (int c = 0; c < vectors->total; c++){
-					double distance = vectorDistance(loc, &vectors->list[c]);
-				
-					if (distance < minDistance){
-						minDistance = distance;
-						idxI = i;
-					//	idxJ = j;
-						idxC = c;
-						//minLoc = &vectors->list[c];
-					}
-				}
-			//}
-		}
-		
-	
-	polyline = polylines->list[idxI];
-	if (vectors) *vectors = polyline->vectors;
-	if (vIdx) *vIdx = idxC;
-	return polyline;
-}
-#endif
 
 static inline nodes_t *getNodes (polyline_t *polyline)
 {
@@ -588,6 +515,7 @@ static inline int isPathInRegion (const vectorPt2_t *vec, const vectorPt4_t *win
 	return  (vec->lat <= win->v1.lat && vec->lat >= win->v2.lat) &&
 			(vec->lon >= win->v1.lon && vec->lon <= win->v2.lon);
 }
+
  
 // Returns x-value of point of intersectipn of two
 // lines
@@ -723,39 +651,12 @@ vectors_t *polygonClip (vectors_t *in, vectorPt4_t *region)
 	return NULL;
 }
 
-/*
-static inline poly_vector16_t *createVectorDeltas (const vectors_t *vectors, const uint32_t from, const uint32_t to)
-{
-	const uint32_t vtotal = (to - from) + 1;
-	poly_vector16_t *vectors16 = calloc(vtotal-1, sizeof(poly_vector16_t));
-	
-	vectorPt2_t *vec0 = (vectorPt2_t*)getPath(vectors, from);
-	int i = 0;
-	
-	for (int v = from+1; v <= to; v++, i++){
-		vectorPt2_t *vec1 = (vectorPt2_t*)getPath(vectors, v);
-			
-		float dlat = vec1->lat - vec0->lat;
-		float lat = dlat * (float)LAT16_MULTIPLIER;
-		vectors16[i].lat = lat;
-
-		float dlon = vec1->lon - vec0->lon;
-		float lon = dlon * (float)LON16_MULTIPLIER;
-		vectors16[i].lon = lon;
-
-		vec0 = vec1;
-	}
-	return vectors16;
-}
-*/
-
 static inline void writeVectors (FILE *file, polyline_t *polyline, const vectors_t *vectors, const uint32_t from, const uint32_t to)
 {
 	const int32_t vtotal = (to - from) + 1;
 	uint16_t type = polyline->type;
 	if (polyline->isPolygon) type |= 0x8000;
-	
-	//poly_field_t field = {.type=type, .total=vtotal};
+
 	poly_field_t field = {type, vtotal};
 	fwrite(&field, sizeof(field), 1, file);
 	fwrite(&vectors->list[from], sizeof(vector2_t), vtotal, file);
@@ -767,53 +668,30 @@ static inline uint32_t doSplit (FILE *file, polylines_t *polylines, vectorPt4_t 
 	
 	for (int p = 0; p < polylines->total; p++){
 		polyline_t *polyline = getPolyline(polylines, p);
+		
 		if (!polyline->isPolygon){
-			const int type = polyline->type;
-#if 0			
-			if (type&0x10000){
-				if (type == 0x10407) type = 0xB0;		// Bridge, supporting Railway. 
-				if (type == 0x10409) type = 0xB2;		// Bridge, supporting Road. 
-				if (type == 0x10f1e) type = 0xBE;		// Service Road (restricted) 
-				if (type == 0x10e0e) type = 0xE0;		// Country Road 
-				if (type == 0x11f13) type = 0xF1;		// Freeway 
-				if (type == 0x11f10) type = 0xC0;		// Ferry Route
-				if (type == 0x11f11) type = 0xC1;		// Steps
-				if (type == 0x11f12) type = 0xC2;		// Footpath
-				if (type == 0x11f15) type = 0xC5;		// Highway
-				if (type == 0x11f16) type = 0xC6;		// Secondary Road
-				if (type == 0x11f17) type = 0xC7;		// Side street
-				if (type == 0x11f18) type = 0xC8;		// Unclassified Road
-				if (type == 0x11f19) type = 0xC9;		// Service Road
-				if (type == 0x11f1c) type = 0xCC;		// Cyclepath
-				if (type == 0x12103) type = 0xA0;		// Railway 
-				if (type == 0x12113) type = 0xA1;		// Railway Service
-			}
-#endif			
-			if (type == 0x1C || type == 0x1D || type == 0x1E || type == 0x15 /*sea to land border */ 
-				|| type == 0x28 || type == 0x29 || type == 0x14 || type == 0x19 || type == 0x1A || type == 0x1B || type == 0x1F || type == 0x18){
+			if (polyline->type == 0x1C || polyline->type == 0x1D || polyline->type == 0x1E 
+				|| polyline->type&0x10000 || polyline->type == 0x15 /*sea to land border */ 
+				|| polyline->type == 0x28 || polyline->type == 0x29 || polyline->type == 0x14
+				|| polyline->type == 0x19 || polyline->type == 0x1A || polyline->type == 0x1B
+			  	|| polyline->type == 0x1F
+				){
 				continue;
 			}
 		}else{
-			const int type = polyline->type;
-			if (type == 0x3A || type == 0x0E || type == 0x4A || type == 0x4B || type == 0x02 || type&0x10000){
+			if (/*polyline->type == 0x27 ||*/ polyline->type == 0x0E || polyline->type == 0x4A || polyline->type == 0x4B
+			  	|| polyline->type&0x10000
+				){
 				continue;
 			}
 			
-			//const vectors_t *vectors = getVectors(polyline);
-			//for (int v = 0; v < vectors->total; v++){
-				//vectorPt2_t *vec = (vectorPt2_t*)getPath(vectors, v);
-				//if (isPathInRegion(vec, region)){
-					vectors_t *out = polygonClip(polyline->vectors, region);
-					if (out){
-						if (out->total >= 3)
-							writeVectors(file, polyline, out, 0, out->total-1);
-						vectorsFree(out);
-					}
-					//break;
-				//}
-			//}
+			vectors_t *out = polygonClip(polyline->vectors, region);
+			if (out){
+				if (out->total >= 3)
+					writeVectors(file, polyline, out, 0, out->total-1);
+				vectorsFree(out);
+			}
 			continue;
-
 		}
 		
 		const vectors_t *vectors = getVectors(polyline);
@@ -858,9 +736,7 @@ static inline uint32_t splitBlock (polylines_t *polylines, const uint8_t *dir, c
 {
 	vectorPt4_t region;
 	makeBlockWindow(x_lon, y_lat, &region);
-	
-	//printf("%lf %lf, %lf %lf\n", region.v1.lat, region.v1.lon, region.v2.lat, region.v2.lon);
-	
+
 	char filename[64];
 	snprintf(filename, sizeof(filename), "%s\\%03i_%03i.poly", dir, y_lat, x_lon);
 	
@@ -870,12 +746,9 @@ static inline uint32_t splitBlock (polylines_t *polylines, const uint8_t *dir, c
 		polyCount = doSplit(file, polylines, &region);
 		fclose(file);
 	}
-	
-	//printf("polyCount %i\n", polyCount);
-	
+
 	return polyCount;
 }
-
 
 static inline int polylineSearch (polylines_t *polylines, polyline_t *polylineB)
 {
@@ -893,10 +766,8 @@ static inline int polylineSearch (polylines_t *polylines, polyline_t *polylineB)
 			vectorA = getVector(polylineA, 1);
 			if (vectorA && (vectorA->x == vectorB1->x) && (vectorA->y == vectorB1->y)){
 				vectorA = getVector(polylineA, 2);
-				if (vectorA && vectorA->x == vectorB2->x && vectorA->y == vectorB2->y){
-					//printf("%f %f %f %f\n", vectorA->x, vectorB2->x, vectorA->y, vectorB2->y);
+				if (vectorA && vectorA->x == vectorB2->x && vectorA->y == vectorB2->y)
 					return 1;
-				}
 			}
 		}
 	}
@@ -906,27 +777,7 @@ static inline int polylineSearch (polylines_t *polylines, polyline_t *polylineB)
 
 static inline int loadBlock (const uint8_t *dir, polylines_t *polylines, const int32_t x_lon, const int32_t y_lat)
 {
-#if 0
-	static point16_t pastBlocks[4];
-	
-	if (pastBlocks[0].x == x_lon && pastBlocks[0].y == y_lat)
-		return 0;
-	else if (pastBlocks[1].x == x_lon && pastBlocks[1].y == y_lat)
-		return 0;
-	else if (pastBlocks[2].x == x_lon && pastBlocks[2].y == y_lat)
-		return 0;
-	else if (pastBlocks[3].x == x_lon && pastBlocks[3].y == y_lat)
-		return 0;
-
-	pastBlocks[0] = pastBlocks[1];
-	pastBlocks[1] = pastBlocks[2];
-	pastBlocks[2] = pastBlocks[3];
-	pastBlocks[3].x = x_lon;
-	pastBlocks[3].y = y_lat;
-#endif	
-	//printf("loadBlock %i %i\n", x_lon, y_lat);
-	
-	char filename[64];
+	char filename[260];
 	snprintf(filename, sizeof(filename)-1, "%s\\%03i_%03i.poly", dir, y_lat, x_lon);
 	
 	int32_t polylinesAdded = 0;
@@ -972,16 +823,13 @@ static inline int loadBlock (const uint8_t *dir, polylines_t *polylines, const i
 
 		//printf("polyline total %i\n", polylines->total);
 		//printf("polylines->vectorTotal %i\n", polylines->vectorTotal);
-
 		fclose(file);
 	}
-	
 	return polylinesAdded;
 }
 
-// function intended for parallel processing of map.
-// one quadrant per process.
-static uint32_t generatePolyBlocks (polylines_t *const polylines, const mp_coverage_t *coverage, const uint8_t *destDir, const int quadBlock)
+
+uint32_t generatePolyBlocks (polylines_t *const polylines, const mp_coverage_t *coverage, const uint8_t *destDir, const int quadBlock)
 {
 
 	char *areaName[] = {"unasigned", "Top left", "Bottom left", "Top right", "Bottom right"};
@@ -1010,7 +858,26 @@ static uint32_t generatePolyBlocks (polylines_t *const polylines, const mp_cover
 	printf("\t%i x %i = %i\n", blockTotalLon>>1, blockTotalLat>>1, quadtotal);
 	printf("\n... ");
 	
-	if (quadBlock == 1){
+	
+	if (quadBlock == 0){			// render a subregion from the predefine coverage area. Useful for testing.
+		int32_t x_lon1, y_lat1;
+		int32_t x_lon2, y_lat2;
+
+		const vectorPt2_t loc1 = {54.656217, -6.017136};
+		const vectorPt2_t loc2 = {54.546214, -5.788685};
+
+		location2Block(&loc1, &x_lon1, &y_lat1);
+		location2Block(&loc2, &x_lon2, &y_lat2);
+		
+		printf("\nBox coverage: %i,%i -> %i,%i\n", x_lon1, y_lat1, x_lon2, y_lat2);
+		
+		for (int y = y_lat1; y <= y_lat2; y++){
+			for (int x = x_lon1; x <= x_lon2; x++)
+				totalPaths += splitBlock(polylines, destDir, x, y);
+
+			printf("\r Row:%i, Paths:%i ", y, totalPaths);
+		}
+	}else if (quadBlock == 1){
 		int row = 1;
 		
 		for (int y = 0; y < blockTotalLat>>1; y++){
@@ -1061,39 +928,6 @@ static uint32_t generatePolyBlocks (polylines_t *const polylines, const mp_cover
 
 	printf("\n");
 
-#if 0
-	// or process as a whole
-	// dont do this.
-	
-	int32_t x_lon1, y_lat1;
-	const vectorPt2_t loc1 = {54.953971, -6.400604};
-	location2Block(&loc1, &x_lon1, &y_lat1);
-	int32_t x_lon2, y_lat2;
-	const vectorPt2_t loc2 = {54.355693, -5.606812};
-	location2Block(&loc2, &x_lon2, &y_lat2);
-	printf("box coverage: %i,%i -> %i,%i\n", x_lon1, y_lat1, x_lon2, y_lat2);
-
-	/*for (int y = y_lat1; y < y_lat2; y++){
-		for (int x = x_lon1; x < x_lon2; x++)
-			splitBlock(polylines, destDir, x, y);
-	}*/
-
-	int ylat = 142;
-	int xlon = 290;
-	
-	y_lat1 = ylat-5;
-	y_lat2 = ylat+5;
-	x_lon1 = xlon-5;
-	x_lon2 = xlon+5;
-	
-	for (int y = y_lat1; y < y_lat2; y++){
-		for (int x = x_lon1; x < x_lon2; x++)
-			totalPaths += splitBlock(polylines, destDir, x, y);
-	}
-
-	return;
-#endif
-	
 	polylinesFree(polylines);
 	return totalPaths;
 }
@@ -1102,10 +936,6 @@ static inline polylines_t *importPolys (const uint8_t *dir, const mp_coverage_t 
 {
 	polylines_t *polylines = polylinesAlloc(512, 256);
 	if (!polylines) return NULL;
-
-	//vectorPt2_t loc;
-	//block2LocationCentered(39, 104, &loc);
-	//printf("loc: %lf, %lf   %i\n", loc.lat, loc.lon, sizeof(vector2_t));
 
 	const int blockTotalLon = ceilf(coverage->width / GPS_LENGTH_LON);
 	const int blockTotalLat = ceilf(coverage->height / GPS_LENGTH_LAT);
@@ -1139,6 +969,185 @@ static inline polylines_t *importPolys (const uint8_t *dir, const mp_coverage_t 
 	return polylines;
 }
 
+static inline float dot (const float x1, const float y1, const float x2, const float y2)
+{
+    return x1 * x2 + y1 * y2;
+}
+
+static inline float length (const float x, const float y)
+{
+	return sqrtf((x * x) + (y * y));
+}
+
+static inline double courseTo (vectorPt2_t *vec1, vectorPt2_t *vec2)
+{
+	float dlon = toRadians(vec2->lon - vec1->lon);
+	float lat1 = toRadians(vec1->lat);
+	float lat2 = toRadians(vec2->lat);
+	float a1 = sinf(dlon) * cosf(lat2);
+	float a2 = sinf(lat1) * cosf(lat2) * cosf(dlon);
+	a2 = cosf(lat1) * sin(lat2) - a2;
+	a2 = atan2f(a1, a2);
+
+	if (a2 < 0.0f) a2 += TWO_PI;
+	return toDegrees(a2);
+}
+/*
+static inline const char *direction16 (const float course)
+{
+	static const char *directions[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+	int direction = (int)((course + 11.25f) / 22.5f);
+	return directions[direction % 16];
+}*/
+
+static inline const char *direction8 (const float course)
+{
+	static const char *directions[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+	int direction = (int)(((course + 11.25f) / 22.5f) / 2.0f);
+	return directions[direction % 8];
+}
+
+static inline uint32_t vectorDirection (const float course)
+{
+	int direction = (int)(((course + 11.25f) / 22.5f) / 2.0f);
+	return (direction%8);
+}
+
+int test ()
+{
+    // Defining clipper polygon vertices in clockwise order
+    // 1st Example with square clipper
+    //vector2_t window[4] = {{150,150}, {150,200}, {200,200}, {200,150}};
+    vector2_t window[4];
+
+
+    window[0].x = 100;
+    window[0].y = 200;
+
+    window[1].x = 200;
+    window[1].y = 200; 
+    
+    window[2].x = 200;
+    window[2].y = 100;
+    
+	window[3].x = 100;
+    window[3].y = 100;
+
+ 
+    
+    // Defining polygon vertices in clockwise order
+    int vtotal = 4;
+    vector2_t vectors[20];
+    memset(vectors, 0, sizeof(vectors));
+
+#if 0    
+    vectors[0].x = 0;
+    vectors[0].y = 300;
+    
+    vectors[1].x = 300;
+    vectors[1].y = 300;
+    
+    vectors[2].x = 300;
+    vectors[2].y = 0;
+    
+    vectors[3].x = 0;
+    vectors[3].y = 0;
+#elif 0
+    vectors[0].x = 125;
+    vectors[0].y = 175;
+    
+    vectors[1].x = 175;
+    vectors[1].y = 175;
+    
+    vectors[2].x = 175;
+    vectors[2].y = 125;
+    
+    vectors[3].x = 125;
+    vectors[3].y = 125;
+#else
+    vectors[0].x = 1250;
+    vectors[0].y = 1750;
+    
+    vectors[1].x = 1750;
+    vectors[1].y = 1750;
+    
+    vectors[2].x = 1750;
+    vectors[2].y = 1250;
+    
+    vectors[3].x = 1250;
+    vectors[3].y = 1250;
+#endif
+ 
+    // 2nd Example with triangle clipper
+    /*int clipper_size = 3;
+    int clipper_points[][2] = {{100,300}, {300,300},
+                                {200,100}};*/
+ 
+    //Calling the clipping function
+    vectorsClip(vectors, &vtotal, window);
+
+	printf("vtotal %i\n", vtotal);
+
+    // Printing vertices of clipped polygon
+    for (int i = 0; i < vtotal; i++)
+		printf("%i: %f %f\n", i, vectors[i].x, vectors[i].y);
+ 
+    return 0;
+}
+
+static inline void coordinateDecode64 (const int64_t source, double *_lat, double *_lon)
+{
+	// Extract grid and local offset
+	char encoded[8] = {0};
+	char *pEncoded = &encoded[0];
+	
+	((int64_t*)pEncoded)[0] = source;
+	int grid = ((uint16_t*)pEncoded)[0];
+	double ilon = ((uint16_t*)pEncoded)[1] + (((uint32_t)pEncoded[6]) << 16);
+	double ilat = ((uint16_t*)pEncoded)[2] + (((uint32_t)pEncoded[7]) << 16);
+	
+	
+	// Recalculate 0..(180/90) coordinates
+	double dlon = (uint32_t)(grid % 360) + (ilon / 10000000);
+	double dlat = (uint32_t)(grid / 360) + (ilat / 10000000);
+	
+	// Returns to WGS84
+	*_lon = (double)(dlon - 180);
+	*_lat = (double)(dlat - 90);
+}
+
+static inline int64_t coordinateEncode64 (double lat, double lon)
+{
+	// Ensure valid lat/lon
+	if (lon < -180.0) lon = 180.0+(lon+180.0); else if (lon > 180.0) lon = -180.0 + (lon-180.0);
+	if (lat < -90.0) lat = 90.0 + (lat + 90.0); else if (lat > 90.0) lat = -90.0 + (lat - 90.0);
+
+
+	// Move to 0..(180/90)
+	double dlon = (double)lon + 180;
+	double dlat = (double)lat + 90;
+	
+	// Calculate grid
+	int grid = (((int)dlat) * 360) + ((int)dlon);
+	
+	// Get local offset
+	uint32_t ilon = (uint32_t)((dlon - (int)(dlon))*10000000);
+	uint32_t ilat = (uint32_t)((dlat - (int)(dlat))*10000000);
+	
+	char encoded[8] = {0};
+	char *pEncoded = &encoded[0];
+	
+	((uint16_t*)pEncoded)[0] = (uint16_t)grid;
+	((uint16_t*)pEncoded)[1] = (uint16_t)(ilon&0xFFFF);
+	((uint16_t*)pEncoded)[2] = (uint16_t)(ilat&0xFFFF);
+	pEncoded[6] = (char)((ilon >> 16)&0xFF);
+	pEncoded[7] = (char)((ilat >> 16)&0xFF);
+	
+	int64_t _encoded = ((int64_t*) pEncoded)[0];
+	    
+	return _encoded;
+}
+
 int main (const int argc, const char *argv[])
 {
 #if 1
@@ -1155,19 +1164,32 @@ int main (const int argc, const char *argv[])
 		printf("\n\nPaths written: %i\n", totalPaths);
 	}
 
-
-
 #else
 	printf("\n");
-	
-	const uint32_t t1 = GetTickCount();
+	printf("importing map: '%s'...\n", (char*)MAP_SOURCE);
 
-	printf("importing map: '%s'...", (char*)MAP_SOURCE);
-	polylines_t *polylines = importMP(MAP_SOURCE);
-	//polylines_t *polylines = importPolys(POLY_PATH, &coverage);
+	//polylines_t *polylines = importMP(MAP_SOURCE);
+	polylines_t *polylines = importPolys(POLY_PATH, &coverage);
 	printf("done\n\n");
 	if (!polylines) abort();
+
+	int max = 0;
+	int maxI = 0;
+	
+	for (int i = 0; i <= polylines->total; i++){
+		polyline_t *polyline = getPolyline(polylines, i);
+		if (!polyline) continue;
+		vectors_t *vectors = getVectors(polyline);
+		
+		if (vectors->total > max){
+			max = vectors->total;
+			maxI = i;
+		}
+	}
+
+	printf("total %i %i, %i\n", max, maxI, polylines->total);
 #endif
+	
 	return 1;
 }
 
