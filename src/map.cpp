@@ -23,20 +23,20 @@ FLASHMEM void map_init (vfont_t *vfont)
 	inst.scheme.spotRadius = 6;
 	
 	log_runReset();	
-	sceneSetZoom(&inst, SCENE_ZOOM);
-	
 	poi_t *poi = &inst.poi;
 	poiInit(poi);
 	
 	sceneInit(&inst);
 	sceneSetHeading(&inst, 0);
+	sceneSetZoom(&inst, SCENE_ZOOM);
+	sceneResetViewport(&inst);
 	
 	map_setDetail(MAP_RENDER_POI, 1);
 	map_setDetail(MAP_RENDER_COMPASS, 1);
 	map_setDetail(MAP_RENDER_VIEWPORT, 1);
 	map_setDetail(MAP_RENDER_TRACKPOINTS, 1);
 	map_setDetail(MAP_RENDER_LOCGRAPTHIC, 1);
-	map_setDetail(MAP_RENDER_OVERLAY, 0);
+	map_setDetail(MAP_RENDER_OVERLAY, 1);
 	
 	map_setDetail(MAP_RENDER_SLEVELS, 1);
 	map_setDetail(MAP_RENDER_SAVAIL, 1);
@@ -68,8 +68,8 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 		if (flags&MAP_RENDER_TRACKPOINTS) sceneRenderTrackPoints(&inst, trackRecord);
 	if (inst.rstats.rflags.locgraphic)
 		if (flags&MAP_RENDER_LOCGRAPTHIC) sceneRenderLocGraphic(&inst);
-	//if (inst.rstats.rflags.)
-	//	if (flags&MAP_RENDER_OVERLAY)	  sceneRenderOverlay(&inst);
+	if (inst.rstats.rflags.overlay)
+		if (flags&MAP_RENDER_OVERLAY)	  sceneRenderOverlay(&inst);
 	if (inst.rstats.rflags.compass)
 		if (flags&MAP_RENDER_COMPASS)	  sceneRenderCompass(&inst);
 	if (inst.rstats.rflags.poi)
@@ -98,4 +98,7 @@ void map_setDetail (const uint32_t detail, uint32_t state)
 		inst.rstats.rflags.map = state;
 	else if (detail == MAP_RENDER_LOCGRAPTHIC)
 		inst.rstats.rflags.locgraphic = state;
+	else if (detail == MAP_RENDER_OVERLAY)
+		inst.rstats.rflags.overlay = state;
+	
 }
