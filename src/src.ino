@@ -326,6 +326,7 @@ static inline void drawStrings (gpsdata_t *data, sat_stats_t *sats)
 	char tbuffer[64];
 
 
+	setBrush(inst.vfont, BRUSH_DISK);
 	setGlyphScale(inst.vfont, 0.8);
 	setBrushSize(inst.vfont, 2.0);
 	setBrushQuality(inst.vfont, 2);
@@ -371,6 +372,8 @@ static inline void drawStrings (gpsdata_t *data, sat_stats_t *sats)
 	snprintf(tbuffer, sizeof(tbuffer), "P: %.2f, G: %.2f", data->dop.position/100.0f, data->dop.geometric/100.0f);
 	drawString(inst.vfont, tbuffer, 5, 170);	
 #endif
+
+	if (inst.renderFlags == 4) return;
 
 	if (inst.runLog.enabled){
 		snprintf(tbuffer, sizeof(tbuffer), "%i", (int)inst.runLog.idx);
@@ -446,10 +449,9 @@ void drawPanel (gpsdata_t *data)
 			drawSatSignalLevels(data, sats);
 		if (inst.renderFlags == 0 || inst.renderFlags == 1)
 			drawSatSignalAvailability(data, sats);
-		if (inst.renderFlags == 0 || inst.renderFlags == 1  || inst.renderFlags == 2)
+		if (inst.renderFlags == 0 || inst.renderFlags == 1 || inst.renderFlags == 2)
 			drawSatWorld(data, sats);
-		
-		if (!inst.runLog.enabled)
+		if (inst.renderFlags != 4 && !inst.runLog.enabled)
 			drawSpeed(data);
 	}
 	
@@ -577,7 +579,7 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 {
 	gpsData = *opaque;
 
-#if 0
+#if 1
 	gpsData.navAvg.latitude = MY_LAT;
 	gpsData.navAvg.longitude = MY_LON;
 	gpsData.navAvg.altitude = MY_ALT;
@@ -636,7 +638,6 @@ void ISR_onceSecond_sig ()
 
 FLASHMEM void init_vfont ()
 {
-	
 	vfont_t *vfont = &vfontContext;
 
 	vfont_init(vfont);
@@ -664,7 +665,7 @@ static inline void drawMap (const pos_rec_t *loc, const float heading)
 	inst.rstats.rtime.trkpts = (micros() - t1)/1000.0f;
 
 	if (inst.renderFlags == 4)
-		map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC | MAP_RENDER_COMPASS);
+		map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC | MAP_RENDER_COMPASS | MAP_RENDER_OVERLAY);
 	else
 		map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC);
 }
@@ -723,7 +724,7 @@ FLASHMEM void init_isrTimers ()
 	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);		// in microseconds
 	onceSecondTimer.priority(180);
 
-	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*250*1000);		// in microseconds
+	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*125*1000);		// in microseconds
 	tilesLoadTimer.priority(210);
 
 #if ENABLE_TOUCH_FT5216	
@@ -736,16 +737,19 @@ FLASHMEM void setup ()
 {
 #if ENABLE_MTP
 	mtp_init();
-	
-	while (1)
-		mtp_task();
-	return;
 #endif
 		
 	Serial.begin(SERIAL_RATE);
 
 	init_display();
 	fio_init();
+
+#if ENABLE_MTP
+	while (1)
+		mtp_task();
+	return;
+#endif
+
 	cmd_init();
 	init_vfont();
 	init_debugStrings();
@@ -766,7 +770,6 @@ FLASHMEM void setup ()
 	if (MPU_CLOCK_FREQ > 60)
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 }
-
 
 #if ENABLE_ENCODERS
 void doEncoders (encodersrd_t *encoders)
