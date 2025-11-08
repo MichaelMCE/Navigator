@@ -19,7 +19,7 @@ static const typesPass_t typesPass[9] = {
 	{ 2, {0x36, 0x1C}},
 	{ 7, {0x25, 0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
 	{10, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x51}},
-	{ 5, {0x0B, 0x0F, 0x3C, 0x2B, 0x0A}},
+	{ 6, {0x0B, 0x0F, 0x3C, 0x2B, 0x0A, 0x49}},
 };
 
 
@@ -81,6 +81,7 @@ static inline uint16_t polylineToColour_mode2 (const uint8_t type)
 	if (type == 0x12) return COLOUR_PAL_ServiceRoadRestricted;
 	if (type == 0x13) return COLOUR_PAL_Steps;
 	if (type == 0x16) return COLOUR_PAL_FootPath;
+	if (type == 0x18) return COLOUR_PAL_Water;
 	if (type == 0x26) return COLOUR_PAL_Water;
 	if (type == 0x27) return COLOUR_PAL_AirportRunway;
 	
@@ -289,17 +290,17 @@ static inline uint16_t polygonToColour_mode2 (const uint8_t type)
 	if (type == 0x2D) return COLOUR_PAL_AerodromeAirfield;
 	if (type == 0x32) return COLOUR_PAL_Sea;
 	if (type == 0x33) return COLOUR_PAL_PedestrianArea;
-	if (type == 0x3C) return COLOUR_PAL_Water;
-	if (type == 0x3C) return COLOUR_PAL_Water;
 	if (type == 0x35) return COLOUR_PAL_Supermarket;
 	if (type == 0x36) return COLOUR_PAL_Church;
 	if (type == 0x37) return COLOUR_PAL_PlayingField;
 	if (type == 0x39) return COLOUR_PAL_Pier;	// and COLOUR_PAL_Mooring
+	if (type == 0x3C) return COLOUR_PAL_Water;
 	if (type == 0x3D) return COLOUR_PAL_Dam;
 	if (type == 0x3E) return COLOUR_PAL_RailwayPlatform;
 	if (type == 0x41) return COLOUR_PAL_Pitch;
 	if (type == 0x42) return COLOUR_PAL_Stadium;
 	if (type == 0x47) return COLOUR_PAL_Sand;
+	if (type == 0x49) return COLOUR_PAL_Farm;
 	if (type == 0x4F) return COLOUR_PAL_BrushScrub;
 	if (type == 0x51) return COLOUR_PAL_MarshWetland;
 	if (type == 0x52) return COLOUR_PAL_MixedForest;
@@ -340,10 +341,10 @@ static inline uint32_t polylineToThickness (const uint8_t roadClass)
 	case 0x0C: thickness = 2; break;
 	
 	case 0x13: thickness = -4; break;
-	case 0x15: thickness = -5; break;	//sea border
+	//case 0x15: thickness = -5; break;	//sea border
 	case 0x16: thickness = -4; break;
 	
-	case 0x18: thickness = 3; break;
+	case 0x18: thickness = -3; break;	// stream
 	case 0x1F: thickness = 1; break;
 
 	case 0x2A: thickness = 0; break;
@@ -604,6 +605,23 @@ static inline float fixed_atan2 (float y, float x)
   // Store result
   return tempRes.flVal; // res
 
+}
+
+static inline double calcDistM (double lat1, double lon1, double lat2, double lon2)
+{
+	const double R = 6378137.0;		// Earths radius
+	const double pi80 = M_PI / 180.0;
+	
+	lat1 *= pi80;
+	lon1 *= pi80;
+	lat2 *= pi80;
+	lon2 *= pi80;
+	double dlat = fabs(lat2 - lat1);
+	double dlon = fabs(lon2 - lon1);
+	double a = sin(dlat / 2.0) * sin(dlat / 2.0) + cos(lat1) * cos(lat2) * sin(dlon /2.0) * sin(dlon / 2.0);
+	double c = 2.0 * fixed_atan2(sqrt(a), sqrt(1.0 - a));
+	double d = R * c;
+	return d;
 }
 
 static inline float calcDistMf (float lat1, float lon1, float lat2, float lon2)
@@ -1091,13 +1109,120 @@ static inline void drawMapCenter (application_t *inst, const vectorPt2_t *center
 	drawPolylineSolid(x-x1, y-y1, x+x1, y+y1, 8, COLOUR_PAL_WHITE);
 	drawCircleFilled (x, y, 5.0f, COLOUR_PAL_BLUE);
 #endif
+}
 
+double sceneDrawLineLengthHori (application_t *inst, const int x, const int y, const double lengthM, const uint8_t colour)
+{
+	vectorPt4_t region;
+	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst), &region);
+	
+	double distance = calcDistMf(region.v1.lat, region.v1.lon, region.v1.lat, region.v2.lon);
+	double ppm = (double)VWIDTH / distance;
+	double len = lengthM * ppm;
 
+	drawPolylineSolid(x-(len/2.0), y, x+(len/2.0), y, 1.8f, colour);
+	return len;
+}
+
+double sceneDrawLineLengthVert (application_t *inst, const int x, const int y, const double lengthM, const uint8_t colour)
+{
+	vectorPt4_t region;
+	sceneMakeGPSWindow(&inst->viewport.location, sceneGetZoom(inst), &region);
+	
+	double distance = calcDistMf(region.v1.lat, region.v1.lon, region.v2.lat, region.v1.lon);
+	double ppm = (double)VHEIGHT / distance;
+	double len = (lengthM * ppm) / aspectCorrection;
+	
+	drawPolylineSolid(x, y-(len/2.0), x, y+(len/2.0), 1.8f, colour);
+	return len;
+}
+
+static inline double calcRulerRange (const double meters)
+{
+	//if (meters <= 1.0) return 0.1;
+	if (meters < 10.0) return 1.0;
+	if (meters < 100.0) return 10.0;
+	if (meters < 1000.0) return 100.0;
+	if (meters < 10000.0) return 1000.0;
+	if (meters < 100000.0) return 10000.0;
+
+	return 1000.0;
+}
+
+static inline void drawRuler (application_t *inst, const uint16_t colour)
+{
+	double width = 220;				// pixels width
+	const int thickness = 1;		// ruler thickness
+	const int barEndDepth = 10;		// marker height
+	
+	double m = width * inst->viewport.metersPerPixelH;			// width of target in meters
+	if (m < 1.0) m = 1.0;
+	double scale = calcRulerRange(m);
+
+	width -= (fmod(m, scale) / inst->viewport.metersPerPixelH);	// adjust for a round number
+	double value = width * inst->viewport.metersPerPixelH;		// scaled value
+	if (value < 0.001) value = 0.001;				// 1cm
+
+	int x1 = (VWIDTH - width) / 2;
+	int x2 = x1 + width-1;
+	int y = VHEIGHT - 20;
+
+	drawLine(x1, y - barEndDepth, x1, y + barEndDepth, colour);
+	drawLine(x2, y - barEndDepth, x2, y + barEndDepth, colour);
+	drawRectangleFilled(x1, y-thickness, x2, y+thickness, colour);
+
+	char buffer[12];
+	if (value <= 0.99999)
+		snprintf(buffer, sizeof(buffer), "%.0fcm", value*1000.0);
+	else if (value >= 10000.0)
+		snprintf(buffer, sizeof(buffer), "%.0fkm", value/1000.0);
+	else
+		snprintf(buffer, sizeof(buffer), "%.0fm", value);
+		
+	setBrush(inst->vfont, BRUSH_POINT);
+	setGlyphScale(inst->vfont, 0.8f);
+	setBrushSize(inst->vfont, 1.0);
+	setBrushStep(inst->vfont, 1.0);
+	drawString(inst->vfont, buffer, x1+8, y - thickness - 12);
 }
 
 static inline void overlayRender (application_t *inst)
 {
+	
+	drawRuler(inst, COLOUR_PAL_RED);
+	
+/*	double mul = 1.0;
+	const double length = 100.0 * mul;
+	
+	uint16_t colour = COLOUR_PAL_RED;
+	int x = VWIDTH/2;
+	int y = VHEIGHT-40;
+	
+	double len = sceneDrawLineLengthHori(inst, x, y, length, colour);
+	drawLine(x-(len/2.0), y-8, x-(len/2.0), y+8, colour);
+	drawLine(x+(len/2.0), y-8, x+(len/2.0), y+8, colour);
 
+	setGlyphScale(inst->vfont, 0.8f);
+	setBrush(inst->vfont, BRUSH_POINT);
+	setBrushSize(inst->vfont, 1.0);
+	setBrushStep(inst->vfont, 1.0);
+	setBrushQuality(inst->vfont, 2);
+	
+	char buffer[8];
+	snprintf(buffer, sizeof(buffer), "%.0f", length);
+	drawString(inst->vfont, buffer, (x+(len/2.0))-54, y-12);
+
+	x = VWIDTH-40;
+	y = VHEIGHT/2;
+	len = sceneDrawLineLengthVert(inst, x, y, length, colour);
+	drawLine(x-8, y-(len/2.0), x+8, y-(len/2.0), colour);
+	drawLine(x-8, y+(len/2.0), x+8, y+(len/2.0), colour);
+
+	setRenderFilter(inst->vfont, RENDEROP_ROTATE_STRING);
+	setRotationAngle(inst->vfont, 0.0f, 90.0f);
+	drawString(inst->vfont, buffer, x-16, y-(len/2.0)+8);
+	setRenderFilter(inst->vfont, RENDEROP_NONE);
+*/
 }
 
 #if 0
@@ -1230,6 +1355,8 @@ FLASHMEM void sceneInit (application_t *inst)
 	inst->rstats.rflags.trackPath = 1;
 	inst->rstats.rflags.trackLine = 0;
 	
+	inst->rstats.rflags.overlay = 1;
+	
 	tilesInit();
 }
 
@@ -1258,9 +1385,18 @@ uint32_t sceneGetSize (application_t *inst)
 	return 0;
 }
 
+static inline void calclateMetersPerPixel (application_t *inst)
+{
+	vectorPt4_t region;
+	sceneMakeGPSWindow(&inst->viewport.location, inst->viewport.zoom, &region);
+	double distance = calcDistM(region.v1.lat, region.v1.lon, region.v1.lat, region.v2.lon);
+	inst->viewport.metersPerPixelH = distance / (double)VWIDTH;
+}
+
 void sceneSetZoom (application_t *inst, const float zoomMeters)
 {
 	inst->viewport.zoom = zoomMeters;
+	calclateMetersPerPixel(inst);
 }
 
 float sceneGetZoom (application_t *inst)
@@ -1277,11 +1413,13 @@ void sceneSetLocation (application_t *inst, const vectorPt2_t *loc)
 {
 	inst->viewport.location = *loc;
 	createViewport(inst, loc, inst->viewport.zoom);
+	calclateMetersPerPixel(inst);
 }
 
 void sceneResetViewport (application_t *inst)
 {
 	createViewport(inst, &inst->viewport.location, inst->viewport.zoom);
+	calclateMetersPerPixel(inst);
 }
 
 vectorPt2_t sceneGetLocation (application_t *inst)
