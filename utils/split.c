@@ -828,7 +828,6 @@ static inline int loadBlock (const uint8_t *dir, polylines_t *polylines, const i
 	return polylinesAdded;
 }
 
-
 uint32_t generatePolyBlocks (polylines_t *const polylines, const mp_coverage_t *coverage, const uint8_t *destDir, const int quadBlock)
 {
 
@@ -991,108 +990,6 @@ static inline double courseTo (vectorPt2_t *vec1, vectorPt2_t *vec2)
 
 	if (a2 < 0.0f) a2 += TWO_PI;
 	return toDegrees(a2);
-}
-/*
-static inline const char *direction16 (const float course)
-{
-	static const char *directions[] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
-	int direction = (int)((course + 11.25f) / 22.5f);
-	return directions[direction % 16];
-}*/
-
-static inline const char *direction8 (const float course)
-{
-	static const char *directions[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-	int direction = (int)(((course + 11.25f) / 22.5f) / 2.0f);
-	return directions[direction % 8];
-}
-
-static inline uint32_t vectorDirection (const float course)
-{
-	int direction = (int)(((course + 11.25f) / 22.5f) / 2.0f);
-	return (direction%8);
-}
-
-int test ()
-{
-    // Defining clipper polygon vertices in clockwise order
-    // 1st Example with square clipper
-    //vector2_t window[4] = {{150,150}, {150,200}, {200,200}, {200,150}};
-    vector2_t window[4];
-
-
-    window[0].x = 100;
-    window[0].y = 200;
-
-    window[1].x = 200;
-    window[1].y = 200; 
-    
-    window[2].x = 200;
-    window[2].y = 100;
-    
-	window[3].x = 100;
-    window[3].y = 100;
-
- 
-    
-    // Defining polygon vertices in clockwise order
-    int vtotal = 4;
-    vector2_t vectors[20];
-    memset(vectors, 0, sizeof(vectors));
-
-#if 0    
-    vectors[0].x = 0;
-    vectors[0].y = 300;
-    
-    vectors[1].x = 300;
-    vectors[1].y = 300;
-    
-    vectors[2].x = 300;
-    vectors[2].y = 0;
-    
-    vectors[3].x = 0;
-    vectors[3].y = 0;
-#elif 0
-    vectors[0].x = 125;
-    vectors[0].y = 175;
-    
-    vectors[1].x = 175;
-    vectors[1].y = 175;
-    
-    vectors[2].x = 175;
-    vectors[2].y = 125;
-    
-    vectors[3].x = 125;
-    vectors[3].y = 125;
-#else
-    vectors[0].x = 1250;
-    vectors[0].y = 1750;
-    
-    vectors[1].x = 1750;
-    vectors[1].y = 1750;
-    
-    vectors[2].x = 1750;
-    vectors[2].y = 1250;
-    
-    vectors[3].x = 1250;
-    vectors[3].y = 1250;
-#endif
- 
-    // 2nd Example with triangle clipper
-    /*int clipper_size = 3;
-    int clipper_points[][2] = {{100,300}, {300,300},
-                                {200,100}};*/
- 
-    //Calling the clipping function
-    vectorsClip(vectors, &vtotal, window);
-
-	printf("vtotal %i\n", vtotal);
-
-    // Printing vertices of clipped polygon
-    for (int i = 0; i < vtotal; i++)
-		printf("%i: %f %f\n", i, vectors[i].x, vectors[i].y);
- 
-    return 0;
 }
 
 static inline void coordinateDecode64 (const int64_t source, double *_lat, double *_lon)
