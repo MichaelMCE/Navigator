@@ -143,7 +143,7 @@ FLASHMEM void palette_init ()
 
 	paletteSet(COLOUR_PAL_BrushScrub,       COLOUR_24TO16(0xcdf6ca));
 	paletteSet(COLOUR_PAL_Sand,             COLOUR_24TO16(0xfedf88));
-	paletteSet(COLOUR_PAL_MarshWetland,     COLOUR_24TO16(0xf1eee9));
+	paletteSet(COLOUR_PAL_MarshWetland,     COLOUR_24TO16(0xc9be59));
 	paletteSet(COLOUR_PAL_Dam,              COLOUR_24TO16(0xbababa));
 	paletteSet(COLOUR_PAL_RetailArea,       COLOUR_24TO16(0xf0d9d9));
 	paletteSet(COLOUR_PAL_Hospital,         COLOUR_24TO16(0xf0f0d8));
@@ -162,6 +162,7 @@ FLASHMEM void palette_init ()
 	paletteSet(COLOUR_PAL_Pier,             COLOUR_24TO16(0xf2efe9));
 	paletteSet(COLOUR_PAL_Barracks,         COLOUR_24TO16(0xff8f8f));
 	paletteSet(COLOUR_PAL_Zoo,              COLOUR_24TO16(0xa4f3a1));
+	paletteSet(COLOUR_PAL_Farm,             COLOUR_24TO16(0xdcbe91));
 	
 	paletteSet(COLOUR_PAL_Highway,          COLOUR_24TO16(0xeb989a));
 	paletteSet(COLOUR_PAL_Freeway,          COLOUR_24TO16(0x809bc0));

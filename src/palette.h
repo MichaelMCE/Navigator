@@ -184,7 +184,7 @@ enum _pal {
 	COLOUR_PAL_Pier,
 	COLOUR_PAL_Barracks,
 	COLOUR_PAL_Zoo,
-	
+	COLOUR_PAL_Farm,
 	
 	COLOUR_PAL_Highway,
 	COLOUR_PAL_Freeway,
