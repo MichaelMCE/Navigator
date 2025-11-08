@@ -50,15 +50,14 @@ void map_render (trackRecord_t *trackRecord, const pos_rec_t *location, const fl
 	position.lon = location->longitude;
 	position.lat = location->latitude;
 	
-	vectorPt2_t preLoc = sceneGetLocation(&inst);
 	sceneSetLocation(&inst, &position);
 	sceneSetHeading(&inst, heading);
 
 	if (flags&MAP_RENDER_VIEWPORT){
-		inst.distance = sceneCaleDistanceVecPt2(&position, &preLoc);
+		inst.distance = sceneCaleDistanceVecPt2(&position, &inst.tileLoadLoc);
 		if (inst.distance > SCENE_TILE_DISTANCE){
 			inst.loadTiles = SCENE_TILE_COUNT;
-			preLoc = position;
+			inst.tileLoadLoc = position;
 		}
 	}
 
