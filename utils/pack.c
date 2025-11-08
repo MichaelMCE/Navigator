@@ -16,11 +16,11 @@
 
 
 // source location
-#define POLY_SRC_PATH			((uint8_t*)"m:\\polys\\500")
+#define POLY_SRC_PATH			((uint8_t*)"m:\\polys\\250")
 #define SRC_PATH				POLY_SRC_PATH
 
 // destination location
-#define DES_PATH				((uint8_t*)"m:\\polys\\500_32")
+#define DES_PATH				((uint8_t*)"m:\\polys\\250_32")
 
 
 
