@@ -19,12 +19,11 @@ static const typesPass_t typesPass[12] = {
 	{ 2, {0x36, 0x1C}},
 	{ 6, {0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
 	{ 9, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x51}},
-	{ 1, {0x19}},
+	{ 4, {0x19, 0x09, 0x14, 0x2E}},
 	{10, {0x18, 0x25, 0x27, 0x0B, 0x3C, 0x2B, 0x0A, 0x49, 0x33, 0x42}},
 	{ 2, {0x05, 0x17}},
 	{ 2, {0x0F, 0x23}},
 };
-
 
 
 
@@ -277,7 +276,9 @@ static inline uint16_t polygonToColour_mode2 (const uint8_t type)
 	if (type == 0x0F) return COLOUR_PAL_Playground;
 	if (type == 0x12) return COLOUR_PAL_Quarry;
 	if (type == 0x13) return COLOUR_PAL_Building;
+	if (type == 0x14) return COLOUR_PAL_Picnic;
 	if (type == 0x15) return COLOUR_PAL_DeciduousForest;
+	if (type == 0x16) return COLOUR_PAL_Cliff;
 	if (type == 0x17) return COLOUR_PAL_Meadow;
 	if (type == 0x18) return COLOUR_PAL_GolfCourse;
 	if (type == 0x19) return COLOUR_PAL_SportsCentre;
@@ -292,20 +293,23 @@ static inline uint16_t polygonToColour_mode2 (const uint8_t type)
 	if (type == 0x2B) return COLOUR_PAL_HEATH;
 	if (type == 0x2C) return COLOUR_PAL_AirfieldApron;
 	if (type == 0x2D) return COLOUR_PAL_AerodromeAirfield;
+	if (type == 0x2E) return COLOUR_PAL_Beach;
 	if (type == 0x32) return COLOUR_PAL_Sea;
 	if (type == 0x33) return COLOUR_PAL_PedestrianArea;
+	if (type == 0x3C) return COLOUR_PAL_Water;
 	if (type == 0x35) return COLOUR_PAL_Supermarket;
 	if (type == 0x36) return COLOUR_PAL_Church;
 	if (type == 0x37) return COLOUR_PAL_PlayingField;
 	if (type == 0x39) return COLOUR_PAL_Pier;	// and COLOUR_PAL_Mooring
-	if (type == 0x3C) return COLOUR_PAL_Water;
 	if (type == 0x3D) return COLOUR_PAL_Dam;
 	if (type == 0x3E) return COLOUR_PAL_RailwayPlatform;
 	if (type == 0x41) return COLOUR_PAL_Pitch;
 	if (type == 0x42) return COLOUR_PAL_Stadium;
+	if (type == 0x43) return COLOUR_PAL_Scree;
 	if (type == 0x47) return COLOUR_PAL_Sand;
 	if (type == 0x49) return COLOUR_PAL_Farm;
 	if (type == 0x4F) return COLOUR_PAL_BrushScrub;
+	if (type == 0x50) return COLOUR_PAL_DeciduousForest;	// Coniferous forest
 	if (type == 0x51) return COLOUR_PAL_MarshWetland;
 	if (type == 0x52) return COLOUR_PAL_MixedForest;
 
