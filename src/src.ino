@@ -792,7 +792,7 @@ void doEncoders (encodersrd_t *encoders)
 
 		sceneSetZoom(&inst, zoomlevel);
 		sceneResetViewport(&inst);
-		inst.loadTiles = 100;
+		inst.loadTiles = 200;
 		renderSignal = 1;
 	}
 
