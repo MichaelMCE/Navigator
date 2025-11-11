@@ -115,7 +115,7 @@ size_t fio_read (fileio_t *fp, void *buffer, const size_t len)
 int fio_write (fileio_t *fp, void *buffer, const size_t len)
 {
 	int ret = fp->write(buffer, len);
-	printf(CS("fio_write: len %i, ret %i"), len, ret);
+	//printf(CS("fio_write: len %i, ret %i"), len, ret);
 
 	return (ret == (int)len);
 }
