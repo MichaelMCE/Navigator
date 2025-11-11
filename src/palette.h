@@ -186,6 +186,10 @@ enum _pal {
 	COLOUR_PAL_Zoo,
 	COLOUR_PAL_Farm,
 	COLOUR_PAL_Allotment,
+	COLOUR_PAL_Cliff,
+	COLOUR_PAL_Scree,
+	COLOUR_PAL_Beach,
+	COLOUR_PAL_Picnic,
 	
 	COLOUR_PAL_Highway,
 	COLOUR_PAL_Freeway,

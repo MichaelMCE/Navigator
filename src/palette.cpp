@@ -164,6 +164,10 @@ FLASHMEM void palette_init ()
 	paletteSet(COLOUR_PAL_Zoo,              COLOUR_24TO16(0xa4f3a1));
 	paletteSet(COLOUR_PAL_Farm,             COLOUR_24TO16(0xdcbe91));
 	paletteSet(COLOUR_PAL_Allotment,        COLOUR_24TO16(0xdcbe91));
+	paletteSet(COLOUR_PAL_Cliff,            COLOUR_24TO16(0xdddddd));
+	paletteSet(COLOUR_PAL_Scree,            COLOUR_24TO16(0xeeeeee));
+	paletteSet(COLOUR_PAL_Beach,            COLOUR_24TO16(0xFFF1BA));
+	paletteSet(COLOUR_PAL_Picnic,           COLOUR_24TO16(0xCCFF99));
 	
 	paletteSet(COLOUR_PAL_Highway,          COLOUR_24TO16(0xeb989a));
 	paletteSet(COLOUR_PAL_Freeway,          COLOUR_24TO16(0x809bc0));
