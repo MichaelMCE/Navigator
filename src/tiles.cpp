@@ -410,6 +410,8 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 {
 	int bx, by, blocksAcross, blocksDown;
 	getBlockCoverage(location, 2.0f, &bx, &by, &blocksAcross, &blocksDown);
+	
+	//printf(CS("coverage: %i %i, %i %i"), bx, by, blocksAcross, blocksDown);
 
 	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
 		return 0;
@@ -423,7 +425,7 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 	if (!tiles8[tileY])
 		tiles8[tileY] = (tile8_t**)extCalloc(tAcrossRowLength, sizeof(tile8_t*));
 
-	tile8_t *tile = tiles8[tileY][tileX];	
+	tile8_t *tile = tiles8[tileY][tileX];
 	if (tile){
 		if (tile->block && tile->block[y] && tile->block[y][x])
 			return 1;
@@ -432,7 +434,10 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 	block_t block;
 	block.size = 0;
 	int blkTotal = pkBlockLoad(&block, POLY_PATH, by, bx);
-	if (!blkTotal) memset(&block, 0, sizeof(block));
+	if (!blkTotal) return 0;
+
+	printf(CS("block: %i %i, %i"), bx, by, tileMemoryUsage());
+
 	if (!tile){
 		tile = (tile8_t*)extCalloc(1, sizeof(tile8_t));
 		tile8Set(by, bx, tile);
@@ -444,7 +449,6 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 		tile->block[y] = (block_t**)extCalloc(PACK_ACROSS, sizeof(block_t*));
 	if (!tile->block[y][x])
 		tile->block[y][x] = (block_t*)extMalloc(sizeof(block_t));
-
 	*tile->block[y][x] = block;
 
 	return 1;
@@ -507,6 +511,8 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 	if (!tilesClipRect(&bx, &by, &blocksAcross, &blocksDown))
 		return ct;
 
+	//printf(CS("coverage: %i %i, %i %i"), bx, by, blocksAcross, blocksDown);
+
 	block_t ext_block;
 	const int tAcrossRowLength = (tilesTotalAcross() / PACK_ACROSS) + 1;
 	
@@ -534,6 +540,9 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 #else							// if memory is cheap. faster tile reloads 
 			if (!blkTotal) memset(&ext_block, 0, sizeof(ext_block));
 #endif
+
+			printf(CS("block: %i %i, %i"), j, i, tileMemoryUsage());
+
 			const int y = i & PACK_MASK;
 			const int x = j & PACK_MASK;
 				
