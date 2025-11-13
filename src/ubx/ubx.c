@@ -524,13 +524,13 @@ static void configureGNSS (ubx_device_t *dev)
 	cfg_cfgblk_t *cfg = &gnss->cfgblk[0];
 	cfg->gnssId = GNSSID_GPS;
 	cfg->resTrkCh = 8;
-	cfg->maxTrkCh = 24;
+	cfg->maxTrkCh = 20;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[1];
 	cfg->gnssId = GNSSID_GLONASS;
 	cfg->resTrkCh = 8;
-	cfg->maxTrkCh = 24;
+	cfg->maxTrkCh = 20;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[2];
@@ -553,8 +553,8 @@ static void configureGNSS (ubx_device_t *dev)
 	
 	cfg = &gnss->cfgblk[5];
 	cfg->gnssId = GNSSID_QZSS;
-	cfg->resTrkCh = 1;
-	cfg->maxTrkCh = 8;
+	cfg->resTrkCh = 0;
+	cfg->maxTrkCh = 3;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[6];
@@ -617,7 +617,7 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 
-	nav.minElv = 5;
+	nav.minElv = 6;
 	nav.drLimit = 0;
 	nav.pDop = 25.0f * 10;
 	nav.tDop = 25.0f * 10;
