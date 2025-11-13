@@ -35,8 +35,18 @@ mp_coverage_t coverage = {
 
 
 
+#if (EXTMEM_SIZE == 8)
 EXTMEM static uint8_t pkMemAllocAddr[(int)(4.5f*1024*1024)];
 EXTMEM static uint8_t pkFileBuffer[400*1024];
+#elif (EXTMEM_SIZE == 16)
+EXTMEM static uint8_t pkMemAllocAddr[(int)(12*1024*1024)];
+EXTMEM static uint8_t pkFileBuffer[400*1024];
+#else
+EXTMEM static uint8_t *pkMemAllocAddr = NULL;
+EXTMEM static uint8_t *pkFileBuffer = NULL;
+#endif
+
+
 
 static const size_t extBaseAddr = (size_t)pkMemAllocAddr;
 static size_t extCurrentAddr = (size_t)extBaseAddr;
@@ -436,7 +446,7 @@ static int tiles8LoadByLocation (application_t *inst, vectorPt2_t *location)
 	int blkTotal = pkBlockLoad(&block, POLY_PATH, by, bx);
 	if (!blkTotal) return 0;
 
-	printf(CS("block: %i %i, %i"), bx, by, tileMemoryUsage());
+	//printf(CS("block: %i %i, %i"), bx, by, tileMemoryUsage());
 
 	if (!tile){
 		tile = (tile8_t*)extCalloc(1, sizeof(tile8_t));
@@ -541,7 +551,7 @@ static int tiles8LoadBySpan (application_t *inst, vectorPt2_t *location, const f
 			if (!blkTotal) memset(&ext_block, 0, sizeof(ext_block));
 #endif
 
-			printf(CS("block: %i %i, %i"), j, i, tileMemoryUsage());
+			//printf(CS("block: %i %i, %i"), j, i, tileMemoryUsage());
 
 			const int y = i & PACK_MASK;
 			const int x = j & PACK_MASK;
@@ -621,7 +631,7 @@ void sceneLoadTilesMax (application_t *inst, const int max)
 
 void sceneLoadTilesComplete (application_t *inst)
 {
-	sceneLoadTilesMax(inst, 200);
+	sceneLoadTilesMax(inst, 400);
 }
 
 FLASHMEM void tilesInit ()
