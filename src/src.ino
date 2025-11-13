@@ -612,6 +612,11 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 	appendSignal = 1;
 }
 
+void render_loadTiles ()
+{
+	inst.loadTiles = 200;
+}
+
 void render_signalUpdate ()
 {
 	renderSignal = 0xFF;
@@ -792,7 +797,7 @@ void doEncoders (encodersrd_t *encoders)
 
 		sceneSetZoom(&inst, zoomlevel);
 		sceneResetViewport(&inst);
-		inst.loadTiles = 200;
+		render_loadTiles();
 		renderSignal = 1;
 	}
 
