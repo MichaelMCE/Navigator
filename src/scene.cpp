@@ -266,52 +266,54 @@ static inline uint16_t polygonToColour_mode1 (const uint8_t type)
 
 static inline uint16_t polygonToColour_mode2 (const uint8_t type)
 {
-	if (type == 0x02) return COLOUR_PAL_Residential;
-	if (type == 0x04) return COLOUR_PAL_MilArea;
-	if (type == 0x05) return COLOUR_PAL_Parking;
-	if (type == 0x08) return COLOUR_PAL_RetailArea;
-	if (type == 0x0A) return COLOUR_PAL_School;
-	if (type == 0x0B) return COLOUR_PAL_Hospital;
-	if (type == 0x0C) return COLOUR_PAL_Industrail;
-	if (type == 0x0F) return COLOUR_PAL_Playground;
-	if (type == 0x12) return COLOUR_PAL_Quarry;
-	if (type == 0x13) return COLOUR_PAL_Building;
-	if (type == 0x14) return COLOUR_PAL_Picnic;
-	if (type == 0x15) return COLOUR_PAL_DeciduousForest;
-	if (type == 0x16) return COLOUR_PAL_Cliff;
-	if (type == 0x17) return COLOUR_PAL_Meadow;
-	if (type == 0x18) return COLOUR_PAL_GolfCourse;
-	if (type == 0x19) return COLOUR_PAL_SportsCentre;
-	if (type == 0x1A) return COLOUR_PAL_Cemetery;
-	if (type == 0x1C) return COLOUR_PAL_Barracks;
-	if (type == 0x1E) return COLOUR_PAL_Park;
-	if (type == 0x22) return COLOUR_PAL_Zoo;
-	if (type == 0x23) return COLOUR_PAL_Allotment;
-	if (type == 0x25) return COLOUR_PAL_PowerStation;
-	if (type == 0x26) return COLOUR_PAL_Administration;
-	if (type == 0x27) return COLOUR_PAL_Construction;
-	if (type == 0x2B) return COLOUR_PAL_HEATH;
-	if (type == 0x2C) return COLOUR_PAL_AirfieldApron;
-	if (type == 0x2D) return COLOUR_PAL_AerodromeAirfield;
-	if (type == 0x2E) return COLOUR_PAL_Beach;
-	if (type == 0x32) return COLOUR_PAL_Sea;
-	if (type == 0x33) return COLOUR_PAL_PedestrianArea;
-	if (type == 0x3C) return COLOUR_PAL_Water;
-	if (type == 0x35) return COLOUR_PAL_Supermarket;
-	if (type == 0x36) return COLOUR_PAL_Church;
-	if (type == 0x37) return COLOUR_PAL_PlayingField;
-	if (type == 0x39) return COLOUR_PAL_Pier;	// and COLOUR_PAL_Mooring
-	if (type == 0x3D) return COLOUR_PAL_Dam;
-	if (type == 0x3E) return COLOUR_PAL_RailwayPlatform;
-	if (type == 0x41) return COLOUR_PAL_Pitch;
-	if (type == 0x42) return COLOUR_PAL_Stadium;
-	if (type == 0x43) return COLOUR_PAL_Scree;
-	if (type == 0x47) return COLOUR_PAL_Sand;
-	if (type == 0x49) return COLOUR_PAL_Farm;
-	if (type == 0x4F) return COLOUR_PAL_BrushScrub;
-	if (type == 0x50) return COLOUR_PAL_DeciduousForest;	// Coniferous forest
-	if (type == 0x51) return COLOUR_PAL_MarshWetland;
-	if (type == 0x52) return COLOUR_PAL_MixedForest;
+	switch (type){
+	case 0x02: return COLOUR_PAL_Residential;
+	case 0x04: return COLOUR_PAL_MilArea;
+	case 0x05: return COLOUR_PAL_Parking;
+	case 0x08: return COLOUR_PAL_RetailArea;
+	case 0x0A: return COLOUR_PAL_School;
+	case 0x0B: return COLOUR_PAL_Hospital;
+	case 0x0C: return COLOUR_PAL_Industrail;
+	case 0x0F: return COLOUR_PAL_Playground;
+	case 0x12: return COLOUR_PAL_Quarry;
+	case 0x13: return COLOUR_PAL_Building;
+	case 0x14: return COLOUR_PAL_Picnic;
+	case 0x15: return COLOUR_PAL_DeciduousForest;
+	case 0x16: return COLOUR_PAL_Cliff;
+	case 0x17: return COLOUR_PAL_Meadow;
+	case 0x18: return COLOUR_PAL_GolfCourse;
+	case 0x19: return COLOUR_PAL_SportsCentre;
+	case 0x1A: return COLOUR_PAL_Cemetery;
+	case 0x1C: return COLOUR_PAL_Barracks;
+	case 0x1E: return COLOUR_PAL_Park;
+	case 0x22: return COLOUR_PAL_Zoo;
+	case 0x23: return COLOUR_PAL_Allotment;
+	case 0x25: return COLOUR_PAL_PowerStation;
+	case 0x26: return COLOUR_PAL_Administration;
+	case 0x27: return COLOUR_PAL_Construction;
+	case 0x2B: return COLOUR_PAL_HEATH;
+	case 0x2C: return COLOUR_PAL_AirfieldApron;
+	case 0x2D: return COLOUR_PAL_AerodromeAirfield;
+	case 0x2E: return COLOUR_PAL_Beach;
+	case 0x32: return COLOUR_PAL_Sea;
+	case 0x33: return COLOUR_PAL_PedestrianArea;
+	case 0x3C: return COLOUR_PAL_Water;
+	case 0x35: return COLOUR_PAL_Supermarket;
+	case 0x36: return COLOUR_PAL_Church;
+	case 0x37: return COLOUR_PAL_PlayingField;
+	case 0x39: return COLOUR_PAL_Pier;	// and COLOUR_PAL_Mooring
+	case 0x3D: return COLOUR_PAL_Dam;
+	case 0x3E: return COLOUR_PAL_RailwayPlatform;
+	case 0x41: return COLOUR_PAL_Pitch;
+	case 0x42: return COLOUR_PAL_Stadium;
+	case 0x43: return COLOUR_PAL_Scree;
+	case 0x47: return COLOUR_PAL_Sand;
+	case 0x49: return COLOUR_PAL_Farm;
+	case 0x4F: return COLOUR_PAL_BrushScrub;
+	case 0x50: return COLOUR_PAL_DeciduousForest;	// Coniferous forest
+	case 0x51: return COLOUR_PAL_MarshWetland;
+	case 0x52: return COLOUR_PAL_MixedForest;
+	}
 
 	//printf("polygonToColour: 0x%X\n", type);
 	//if (type >= 0x28 && type <= 0x4C) return COLOUR_PAL_WATER;
