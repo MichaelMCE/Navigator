@@ -47,6 +47,7 @@ void log_runAdvance (const int32_t advanceBy);
 void mpu_setClockFreq (const uint32_t freqMhz);
 
 void render_signalUpdate ();
+void render_loadTiles ();
 
 
 #if defined(__IMXRT1062__)
