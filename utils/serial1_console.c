@@ -829,6 +829,18 @@ void cmd_mpu (const char *cmdStr)
 	}
 }
 
+void cmd_tiles (const char *cmdStr)
+{
+	if (!strncmp("load", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_DETAIL, "loadTilesAll");
+		
+	}else if (!strncmp("flush", cmdStr, 5)){
+		serialSendCmd(hSerial, CMD_DETAIL, "tilesClean");
+	}
+
+	setReadResponseState(hSerial, 0, 1);	
+}
+
 static const cmdstr_t cmdstrs[] = {
 	{"hello",    cmd_hello,     ""},
 	{"help",     cmd_help,      ""},
@@ -851,6 +863,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"uload",    cmd_uload,     "filename.ubx. import a .ubx file in to receiver"},
 	{"ufetch",   cmd_ufetch,    "token:<yourtoken>. Downloads and saves locally .ubx file of latest offline AssistNow data from u-blox website"},
 	{"sos",      cmd_sos,       "create, clear, poll"},
+	{"tiles",    cmd_tiles,     "flush, load"},
 	{"runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
 	{"mpu",      cmd_mpu,       "reboot, freq:mhz. Set microcontroller frequency"},
 	
