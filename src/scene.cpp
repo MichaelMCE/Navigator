@@ -10,20 +10,24 @@ extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
 
 
 
-static const typesPass_t typesPass[12] = {
-	{10, {0x02, 0x0C, 0x07, 0x08, 0x1E, 0x26, 0x22, 0x4F, 0x2D, 0x32}},
+static typesPass_t typesPassAll[12] = {
+	{ 9, {0x02, 0x0C, 0x07, 0x08, 0x1E, 0x22, 0x4F, 0x2D, 0x32}},
 	{ 2, {0x06, 0x2C}},
-	{ 4, {0x16, 0x03, 0x04, 0x13}},
-	{ 3, {0x1A, 0x37, 0x39}},
+	{ 3, {0x16, 0x03, 0x13}},
+	{ 4, {0x1A, 0x37, 0x39, 0x2E}},
 	{ 2, {0x34, 0x3D}},
 	{ 2, {0x36, 0x1C}},
 	{ 6, {0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
-	{ 9, {0x35, 0x36, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x51}},
-	{ 4, {0x19, 0x09, 0x14, 0x2E}},
-	{10, {0x18, 0x25, 0x27, 0x0B, 0x3C, 0x2B, 0x0A, 0x49, 0x33, 0x42}},
-	{ 2, {0x05, 0x17}},
+	{ 8, {0x35, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x51}},
+	{ 6, {0x26, 0x19, 0x09, 0x14, 0x2B, 0x04}},
+	{ 8, {0x18, 0x27, 0x0B, 0x3C, 0x0A, 0x49, 0x33, 0x42}},
+	{ 3, {0x05, 0x25, 0x17}},
 	{ 2, {0x0F, 0x23}},
 };
+static typesPass_t typesPassWater[1] = {
+	{ 2, {0x3C, 0x32}}
+};
+static typesPass_t *typesPass = typesPassAll;
 
 
 
@@ -62,34 +66,33 @@ static inline float getCourse (const vectorPt2_t *vec1, const vectorPt2_t *vec2)
 }
 #endif
 
-
 static inline uint16_t polylineToColour_mode2 (const uint8_t type)
 {
-	if (type == 0x01) return COLOUR_PAL_Freeway;
-	if (type == 0x02) return COLOUR_PAL_PrincipledHighway;
-	if (type == 0x03) return COLOUR_PAL_Highway;
-	if (type == 0x04) return COLOUR_PAL_ArterialRoad;
-	if (type == 0x05) return COLOUR_PAL_CollectorRoad;
-	if (type == 0x06) return COLOUR_PAL_ResidentialStreet;
-	if (type == 0x07) return COLOUR_PAL_ResidentialStreet;
-	if (type == 0x08) return COLOUR_PAL_ServiceRoad;
-	if (type == 0x09) return COLOUR_PAL_LivingStreet;
-	if (type == 0x0A) return COLOUR_PAL_Cycleway;
-	if (type == 0x0B) return COLOUR_PAL_Path;
-	if (type == 0x0C) return COLOUR_PAL_Roundabout;
-	//if (type == 0x0D) return COLOUR_PAL_BLACK;
-	if (type == 0x0E) return COLOUR_PAL_CountryRoad;
-	//if (type == 0x0F) return COLOUR_PAL_BLACK;
-	if (type == 0x12) return COLOUR_PAL_ServiceRoadRestricted;
-	if (type == 0x13) return COLOUR_PAL_Steps;
-	if (type == 0x16) return COLOUR_PAL_FootPath;
-	if (type == 0x18) return COLOUR_PAL_Water;
-	if (type == 0x26) return COLOUR_PAL_Water;
-	if (type == 0x27) return COLOUR_PAL_AirportRunway;
+	switch (type){
+	case 0x01: return COLOUR_PAL_Freeway;
+	case 0x02: return COLOUR_PAL_PrincipledHighway;
+	case 0x03: return COLOUR_PAL_Highway;
+	case 0x04: return COLOUR_PAL_ArterialRoad;
+	case 0x05: return COLOUR_PAL_CollectorRoad;
+	case 0x06: return COLOUR_PAL_ResidentialStreet;
+	case 0x07: return COLOUR_PAL_ResidentialStreet;
+	case 0x08: return COLOUR_PAL_ServiceRoad;
+	case 0x09: return COLOUR_PAL_LivingStreet;
+	case 0x0A: return COLOUR_PAL_Cycleway;
+	case 0x0B: return COLOUR_PAL_Path;
+	case 0x0C: return COLOUR_PAL_Roundabout;
+	case 0x0E: return COLOUR_PAL_CountryRoad;
+	case 0x12: return COLOUR_PAL_ServiceRoadRestricted;
+	case 0x13: return COLOUR_PAL_Steps;
+	case 0x16: return COLOUR_PAL_FootPath;
+	case 0x18: return COLOUR_PAL_Water;
+	case 0x26: return COLOUR_PAL_Water;
+	case 0x27: return COLOUR_PAL_AirportRunway;
 	
+	//case 0x29: return COLOUR_PAL_Powerline;
+	}
 	
 	//printf("polylineToColour type %.2X\n", type);
-	
 	return COLOUR_PAL_BLACK;
 }
 
@@ -123,7 +126,6 @@ static inline uint16_t polylineToColour_mode0 (const uint8_t type)
 	case 0x13: return COLOUR_PAL_LIGHTBROWN;
 	//case 0x14: return COLOUR_24TO16(0x55EE55);
 	case 0x15: return COLOUR_PAL_DARKBLUE;
-	
 	case 0x16: return COLOUR_PAL_PL16;
 	case 0x17: return COLOUR_PAL_GREEN;
 	//case 0x18: return COLOUR_PAL_BLUE_SEA;
@@ -210,26 +212,20 @@ static inline uint16_t polygonToColour_mode0 (const uint8_t type)
 	case 0x3e: return COLOUR_PAL_WATER;   //		Medium lake (25-77 km2)   
 	case 0x3f: return COLOUR_PAL_WATER;   //		Medium lake (11-25 km2)   
 	case 0x40: return COLOUR_PAL_BLUE_SEA;   //		Small lake (0.25-11 km2)  
-	
 	//case 0x41: return COLOUR_PAL_BLUE_SEA;   //		Small lake (<0.25 km2)    	// small and large .mp's
 	case 0x41: return COLOUR_PAL_DARKGREEN;   //		playing field
 	case 0x42: return COLOUR_PAL_GREEN;   //		stadium
-	
 	case 0x43: return COLOUR_PAL_BLUE_SEA;   //		Major lake (1.1-3.3 tkm2) 
 	case 0x44: return COLOUR_PAL_BLUE_SEA;   //		Large lake (0.6-1.1 tkm2) 
-                                                    
 	case 0x45: return COLOUR_PAL_AQUA;   //			Blue-Unknown              
 	case 0x46: return COLOUR_PAL_BLUE_SEA;   //		Major river (>1 km)       
 	case 0x47: return COLOUR_PAL_BLUE_SEA;   //		Large river (200 m-1 km)  
 	case 0x48: return COLOUR_PAL_AQUA;   //			Medium river (40-200 m)   
 	case 0x49: return COLOUR_PAL_AQUA;   //			Small river (<40 m)       
-                                                    
 	//case 0x4a: return 0x0000;   //				Map selection area        
 	//case 0x4b: return 0x0000;   //				Map coverage area         
 	//case 0x3a: return 0x0000;   //				Map selection area        
-                                                    
 	case 0x4c: return COLOUR_PAL_BLUE_SEA;   //		Intermittent water        
-                                                    
 	case 0x4d: return COLOUR_PAL_CYAN;   //			Glacier                   
 	case 0x4e: return COLOUR_PAL_DARKGREEN;   //	Orchard/plantation        
 	case 0x4f: return COLOUR_PAL_PG_4F;   //		Scrub                     
@@ -316,8 +312,6 @@ static inline uint16_t polygonToColour_mode2 (const uint8_t type)
 	}
 
 	//printf("polygonToColour: 0x%X\n", type);
-	//if (type >= 0x28 && type <= 0x4C) return COLOUR_PAL_WATER;
-	
 	return COLOUR_PAL_BLACK;
 }
 
@@ -348,25 +342,20 @@ static inline uint32_t polylineToThickness (const uint8_t roadClass)
 	case 0x09: thickness = 2; break;
 	case 0x0A: thickness = -4; break;
 	case 0x0B: thickness = -4; break;
-	case 0x0C: thickness = 2; break;
-	
+	case 0x0C: thickness = 0; break;
+	case 0x0E: thickness = 1; break;
+	case 0x12: thickness = 1; break;
 	case 0x13: thickness = -4; break;
 	//case 0x15: thickness = -5; break;	//sea border
 	case 0x16: thickness = -4; break;
-	
 	case 0x18: thickness = -3; break;	// stream
 	case 0x1F: thickness = 1; break;
-
-	case 0x2A: thickness = 0; break;
-	case 0x2B: thickness = 2; break;
-
-	case 0x12: thickness = 1; break;
-	case 0x0E: thickness = 1; break;
-	
 	case 0x26: thickness = 3; break;
 	case 0x27: thickness = 1; break;
-	default:
-		printf("polylineToThickness: 0x%X\n", roadClass);
+	case 0x2A: thickness = 0; break;
+	case 0x2B: thickness = 2; break;
+	//default:
+	//	printf("polylineToThickness: 0x%X\n", roadClass);
 	}
 	
 	//thickness *= 4;
@@ -511,36 +500,34 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 	int bx, by, blocksAcross, blocksDown;
 	tilesGetBlockCoverage(loc, spanMeters, &bx, &by, &blocksAcross, &blocksDown);
 
+	const float zoom = inst->viewport.zoom;
+	if (zoom < 5000.0f)
+		typesPass = typesPassAll;
+	else
+		typesPass = typesPassWater;	
+	
 	for (int i = by; i < by+blocksDown; i++){
 		for (int j = bx; j < bx+blocksAcross; j++){
 			block_t *block = tilesBlock8Get(j, i);
 			if (!block) continue;
 			block->lastRendered = inst->renderPassCt;
 
-			//if (spanMeters < 18000.0f){
-				//if (spanMeters < 15000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 0);
-				//if (spanMeters < 6000.0f){
-					blockDrawFills(inst, block, center, spanMeters, 8);
-					blockDrawFills(inst, block, center, spanMeters, 9);
-					blockDrawFills(inst, block, center, spanMeters, 10);
-					blockDrawFills(inst, block, center, spanMeters, 11);
-					blockDrawFills(inst, block, center, spanMeters, 2);
-				//}
-				//if (spanMeters < 17000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 3);
-				//if (spanMeters < 2000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 1);
-				//if (spanMeters < 5000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 4);
-			//}
-			blockDrawFills(inst, block, center, spanMeters, 6);
-			//if (spanMeters < 18000.0f){
-				//if (spanMeters < 2500.0f)
-					blockDrawFills(inst, block, center, spanMeters, 5);
-				//if (spanMeters < 5000.0f)
-					blockDrawFills(inst, block, center, spanMeters, 7);
-			//}
+			blockDrawFills(inst, block, center, spanMeters, 0);
+			if (zoom < 2500.0f)
+				blockDrawFills(inst, block, center, spanMeters, 8);
+			if (zoom < 5000.0f)
+				blockDrawFills(inst, block, center, spanMeters, 9);
+			if (zoom < 2500.0f){
+				blockDrawFills(inst, block, center, spanMeters, 10);
+				blockDrawFills(inst, block, center, spanMeters, 11);
+				blockDrawFills(inst, block, center, spanMeters, 2);
+				blockDrawFills(inst, block, center, spanMeters, 3);
+				blockDrawFills(inst, block, center, spanMeters, 1);
+				blockDrawFills(inst, block, center, spanMeters, 4);
+				blockDrawFills(inst, block, center, spanMeters, 6);
+				blockDrawFills(inst, block, center, spanMeters, 5);
+				blockDrawFills(inst, block, center, spanMeters, 7);
+			}
 		}
 	}
 }
@@ -877,7 +864,7 @@ void blockDrawPaths (application_t *inst, block_t *block, const vectorPt2_t *cen
 		if (pass){
 			if (type != pass)
 				continue;
-		}else if (type <= 0x0C || /*type == 0x18 || type == 0x1F ||*/ /*type == 0x15 ||*/ type == 0x16){		// roads, stream and river
+		}else if (type <= 0x0C || type == 0x13 || /*type == 0x18 || type == 0x1F ||*/ /*type == 0x15 ||*/ type == 0x16){		// roads, stream and river
 			continue;
 		}
 		
@@ -913,6 +900,9 @@ void blockDrawPaths (application_t *inst, block_t *block, const vectorPt2_t *cen
 
 void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *center, const float spanMeters, const int drawPolyLine)
 {
+	const float zoom = inst->viewport.zoom;
+	if (zoom > 10000.0f) return;
+	
 	int bx, by, blocksAcross, blocksDown;
 	tilesGetBlockCoverage(loc, spanMeters, &bx, &by, &blocksAcross, &blocksDown);
 
@@ -923,36 +913,33 @@ void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 
 			block->lastRendered = inst->renderPassCt;
 
-			//if (spanMeters < 2000.0f)
+			if (zoom <= 1750.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x16, drawPolyLine);
-			//if (spanMeters < 6000.0f)
+			if (zoom <= 3000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x0B, drawPolyLine);
-			//if (spanMeters < 5000.0f)
+			if (zoom <= 1750.0f){
 				blockDrawPaths(inst, block, center, spanMeters, 0x0A, drawPolyLine);
-
-			//if (spanMeters < 16000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x09, drawPolyLine);
-
-			//if (spanMeters < 4000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x08, drawPolyLine);
-			//if (spanMeters < 2500.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x06, drawPolyLine);
-			//if (spanMeters < 2000.0f)
+			}
+			if (zoom <= 2750.0f){
 				blockDrawPaths(inst, block, center, spanMeters, 0x07, drawPolyLine);
-			//if (spanMeters < 15000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x05, drawPolyLine);
-			//if (spanMeters < 35000.0f)
+			}
+			if (zoom <= 3000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x04, drawPolyLine);
-
-			//if (spanMeters < 50000.0f)
+			if (zoom <= 5000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x03, drawPolyLine);
-	
-			blockDrawPaths(inst, block, center, spanMeters, 0x02, drawPolyLine);
-			blockDrawPaths(inst, block, center, spanMeters, 0x01, drawPolyLine);
-
-			//if (spanMeters < 10000.0f)
+			if (zoom <= 8000.0f)
+				blockDrawPaths(inst, block, center, spanMeters, 0x02, drawPolyLine);
+			if (zoom <= 10000.0f)
+				blockDrawPaths(inst, block, center, spanMeters, 0x01, drawPolyLine);
+			if (zoom <= 3000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x0C, drawPolyLine);
-			//if (spanMeters < 18000.0f)
+			if (zoom <= 1000.0f)
+				blockDrawPaths(inst, block, center, spanMeters, 0x13, drawPolyLine);
+			if (zoom <= 3000.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x00, drawPolyLine);
 		}
 	}

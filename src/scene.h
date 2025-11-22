@@ -9,7 +9,7 @@
 
 
 #define SCENE_ZOOM_MIN				15.0f
-#define SCENE_ZOOM_MAX				2500.0f
+#define SCENE_ZOOM_MAX				3000.0f
 #define SCENE_ZOOM_STEP				25.0f
 
 #define SCENE_TILE_DISTANCE			80.0f		// perform a tile load check after N meters travelled
