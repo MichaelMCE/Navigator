@@ -22,8 +22,8 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_ILI9806		0		// Mk4
-#define USE_FLEXTFT_RM68120		1		// Mk3
+#define USE_FLEXTFT_ILI9806		1		// Mk4
+#define USE_FLEXTFT_RM68120		0		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
 
