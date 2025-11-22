@@ -178,7 +178,7 @@ FLASHMEM void palette_init ()
 	paletteSet(COLOUR_PAL_CollectorRoad,    COLOUR_24TO16(0xfefeb3));
 	paletteSet(COLOUR_PAL_ServiceRoad,      COLOUR_24TO16(0xfefefe));
 	paletteSet(COLOUR_PAL_LivingStreet ,    COLOUR_24TO16(0xbababa));
-	paletteSet(COLOUR_PAL_Roundabout,       COLOUR_24TO16(0xfefefe));
+	paletteSet(COLOUR_PAL_Roundabout,       COLOUR_24TO16(0xff8f8f));
 	paletteSet(COLOUR_PAL_Path,             COLOUR_24TO16(0x30b520));
 	paletteSet(COLOUR_PAL_CountryRoad,      COLOUR_24TO16(0xfefeb3));
 	paletteSet(COLOUR_PAL_FootPath,         COLOUR_24TO16(0xbababa));
