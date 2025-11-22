@@ -36,14 +36,6 @@ static const mp_coverage_t coverage = {
 		2.775421/*2.77542*/,	// ° width
 		1.233208/*1.23322*/		// ° height
 };
-#elif 0
-//planet_-8.403,53.98_-4.268,55.434-garmin-osm
-// 315mb
-static const mp_coverage_t coverage = {
-		{{55.434, -8.403}, {53.98, -4.268}},
-		4.135,		// ° width
-		1.454		// ° height
-};
 
 #else 
 
@@ -87,7 +79,7 @@ size_t polypack (const int fileX, const int fileY)
 	const int h = PACK_DOWN;
 
 
-	void *buffer = calloc(256, 1024);		// should be enough for any file
+	void *buffer = calloc(512, 1024);		// should be enough for any file
 	if (!buffer) return 0;
 	
 	snprintf(file_des, sizeof(file_des), "%s\\%03i_%03i.pk32", DES_PATH, fileY, fileX);
