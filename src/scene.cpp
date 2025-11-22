@@ -11,16 +11,16 @@ extern uint8_t renderBuffer[VWIDTH*VHEIGHT];
 
 
 static typesPass_t typesPassAll[12] = {
-	{ 9, {0x02, 0x0C, 0x07, 0x08, 0x1E, 0x22, 0x4F, 0x2D, 0x32}},
+	{ 7, {0x02, 0x0C, 0x07, 0x08, 0x1E, 0x22, 0x2D}},
 	{ 2, {0x06, 0x2C}},
-	{ 3, {0x16, 0x03, 0x13}},
+	{ 2, {0x16, 0x03}},
 	{ 4, {0x1A, 0x37, 0x39, 0x2E}},
 	{ 2, {0x34, 0x3D}},
-	{ 2, {0x36, 0x1C}},
+	{ 3, {0x36, 0x3C, 0x1C}},
 	{ 6, {0x1F, 0x50, 0x15, 0x12, 0x52, 0x41}},
-	{ 8, {0x35, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x51}},
+	{ 9, {0x35, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x51, 0x13}},
 	{ 6, {0x26, 0x19, 0x09, 0x14, 0x2B, 0x04}},
-	{ 8, {0x18, 0x27, 0x0B, 0x3C, 0x0A, 0x49, 0x33, 0x42}},
+	{ 9, {0x18, 0x27, 0x32, 0x0B, 0x4F, 0x0A, 0x49, 0x33, 0x42}},
 	{ 3, {0x05, 0x25, 0x17}},
 	{ 2, {0x0F, 0x23}},
 };
@@ -501,32 +501,43 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 	tilesGetBlockCoverage(loc, spanMeters, &bx, &by, &blocksAcross, &blocksDown);
 
 	const float zoom = inst->viewport.zoom;
-	if (zoom < 5000.0f)
+	if (zoom < 5000.0f){
 		typesPass = typesPassAll;
-	else
-		typesPass = typesPassWater;	
 	
-	for (int i = by; i < by+blocksDown; i++){
-		for (int j = bx; j < bx+blocksAcross; j++){
-			block_t *block = tilesBlock8Get(j, i);
-			if (!block) continue;
-			block->lastRendered = inst->renderPassCt;
-
-			blockDrawFills(inst, block, center, spanMeters, 0);
-			if (zoom < 2500.0f)
-				blockDrawFills(inst, block, center, spanMeters, 8);
-			if (zoom < 5000.0f)
-				blockDrawFills(inst, block, center, spanMeters, 9);
-			if (zoom < 2500.0f){
-				blockDrawFills(inst, block, center, spanMeters, 10);
-				blockDrawFills(inst, block, center, spanMeters, 11);
-				blockDrawFills(inst, block, center, spanMeters, 2);
-				blockDrawFills(inst, block, center, spanMeters, 3);
-				blockDrawFills(inst, block, center, spanMeters, 1);
-				blockDrawFills(inst, block, center, spanMeters, 4);
-				blockDrawFills(inst, block, center, spanMeters, 6);
-				blockDrawFills(inst, block, center, spanMeters, 5);
-				blockDrawFills(inst, block, center, spanMeters, 7);
+		for (int i = by; i < by+blocksDown; i++){
+			for (int j = bx; j < bx+blocksAcross; j++){
+				block_t *block = tilesBlock8Get(j, i);
+				if (!block) continue;
+				//block->lastRendered = inst->renderPassCt;
+	
+				blockDrawFills(inst, block, center, spanMeters, 0);
+				if (zoom < 2500.0f)
+					blockDrawFills(inst, block, center, spanMeters, 8);
+				if (zoom < 5000.0f)
+					blockDrawFills(inst, block, center, spanMeters, 9);
+				if (zoom < 2500.0f){
+					blockDrawFills(inst, block, center, spanMeters, 10);
+					blockDrawFills(inst, block, center, spanMeters, 11);
+					blockDrawFills(inst, block, center, spanMeters, 2);
+					blockDrawFills(inst, block, center, spanMeters, 3);
+					blockDrawFills(inst, block, center, spanMeters, 1);
+					blockDrawFills(inst, block, center, spanMeters, 4);
+					blockDrawFills(inst, block, center, spanMeters, 6);
+				}
+				if (zoom < 5000.0f)
+					blockDrawFills(inst, block, center, spanMeters, 5);
+				if (zoom < 2500.0f)
+					blockDrawFills(inst, block, center, spanMeters, 7);
+			}
+		}
+	}else{
+		typesPass = typesPassWater;
+	
+		for (int i = by; i < by+blocksDown; i++){
+			for (int j = bx; j < bx+blocksAcross; j++){
+				block_t *block = tilesBlock8Get(j, i);
+				if (!block) continue;
+				blockDrawFills(inst, block, center, spanMeters, 0);
 			}
 		}
 	}
