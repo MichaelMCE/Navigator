@@ -781,16 +781,10 @@ void doEncoders (encodersrd_t *encoders)
 {
 	if (encoders->encoder[2].positionChange != 0){
 		float zoomlevel = sceneGetZoom(&inst);
-		float mul = 1.0f;
-		if (zoomlevel >= 500.0f) mul = 2.5f;
-		if (zoomlevel >= 700.0f) mul = 3.0f;
-		if (zoomlevel >= 1200.0f) mul = 4.5f;
-		if (zoomlevel >= 1500.0f) mul = 5.0f;
-
 		if (encoders->encoder[2].positionChange > 0)
-			zoomlevel += (SCENE_ZOOM_STEP * mul);
+			zoomlevel += (zoomlevel * 0.1f);
 		else
-			zoomlevel -= (SCENE_ZOOM_STEP * mul);
+			zoomlevel -= (zoomlevel * 0.1f);
 
 		if (zoomlevel < SCENE_ZOOM_MIN) zoomlevel = SCENE_ZOOM_MIN;
 		else if (zoomlevel > SCENE_ZOOM_MAX) zoomlevel = SCENE_ZOOM_MAX;
