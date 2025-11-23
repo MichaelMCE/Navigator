@@ -21,13 +21,14 @@
 #include "ubx.h"
 #include "ubxcb.h"
 #include "../gps.h"
+#include "../cmd.h"
 
 
 #define ALERT_DISABLED		0
 #define ALERT_BEFORE		1
 #define ALERT_AFTER			2
 #define ALERT_SINGLE		4
-
+#define UBX_BUFFER_SIZE		2048
 
 
 
@@ -206,7 +207,7 @@ static int payloadHandlerFunc (ubx_func_t *handler, const uint8_t *payload, cons
 	//return 0;
 }
 
-static void ubxPayloadDispatch (uint8_t msg_class, uint8_t msg_id, uint16_t msg_len, const uint8_t *payload)
+static void ubx_dispatchMsg (uint8_t msg_class, uint8_t msg_id, uint16_t msg_len, const uint8_t *payload)
 {
 	ubx_func_t *handler = payloadHandlerFuncGet(msg_class, msg_id);
 	if (handler){
@@ -233,36 +234,6 @@ static void ubxPayloadDispatch (uint8_t msg_class, uint8_t msg_id, uint16_t msg_
 	}else{
 		//printf("ubxPayloadDispatch: unknown class/id: %.2X/%.2X\r\n", msg_class, msg_id);	
 	}
-}
-
-int ubxBufferFrameProcess (uint8_t *buffer, const int32_t bufferSize)
-{
-	const uint8_t msg_class = buffer[0];
-	const uint8_t msg_id = buffer[1];
-	const uint16_t msg_len = (buffer[3]<<8) | buffer[2];
-	const uint16_t msg_crc = (buffer[3+msg_len+1]<<8) | buffer[3+msg_len+2];
-
-	int frameEnd = 4+msg_len+2; 
-	if (frameEnd > bufferSize){
-		//printf("multipart frame: %i %i\r\n", (int)frameEnd, (int)bufferSize);
-		return -1;
-	}
-
-	uint8_t c1 = 0;
-	uint8_t c2 = 0;
-	const uint16_t crc = calcChkSum(buffer, msg_len+4, &c1, &c2);
-	if (msg_crc != crc){
-		//printf("class: %.2X/%.2X\r\n", msg_class, msg_id);
-		//printf("len: %i\r\n", (int)msg_len);
-		//printf("crc mismatch: %X, %X\r\n", msg_crc, crc);
-		return 0;
-	}	
-
-	//we have a valid frame
-	ubxPayloadDispatch(msg_class, msg_id, msg_len, &buffer[4]);
-	userData.rates.msgCt++;
-	
-	return msg_len+4+2;
 }
 
 static inline int writeBin (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize)
@@ -360,9 +331,9 @@ static inline void ubx_msgEnableAll (ubx_device_t *dev)
 	ubx_send(dev, buffer, sizeof(buffer));
 }
 
+#if 0
 static inline void disableUnknowns (ubx_device_t *dev)
 {
-#if 0
 	ubx_msgDisable(dev, 0x03, 0x09);
 	ubx_msgDisable(dev, 0x03, 0x11);
 	ubx_msgDisable(dev, 0x09, 0x13);
@@ -389,99 +360,95 @@ static inline void disableUnknowns (ubx_device_t *dev)
 	ubx_msgDisable(dev, UBX_MON, 0x25);
 	ubx_msgDisable(dev, UBX_MON, 0x26);
 	ubx_msgDisable(dev, UBX_MON, 0x2B);
+}
 #endif
-}
 
-int searchSync (uint8_t *buffer, uint32_t len)
-{
-	if (len > 1){
-		for (int i = 0; i < len-1; i++){
-			if (buffer[i] == MSG_UBX_B1 && buffer[i+1] == MSG_UBX_B2)
-				return i;
-		}
-	}
-	return -1;
-}
+/*
+################################################################################
+################################################################################
+################################################################################
+*/
 
-int searchFrame (uint8_t *buffer, const int32_t bufferSize)
+
+static int ubx_processMsg (uint8_t *buffer, const int32_t bufferSize)
 {
-	//const uint8_t msg_class = buffer[0];
-	//const uint8_t msg_id = buffer[1];
+	const  uint8_t msg_class = buffer[0];
+	const  uint8_t msg_id = buffer[1];
 	const uint16_t msg_len = (buffer[3]<<8) | buffer[2];
-	const uint16_t msg_crc = (buffer[3+msg_len+1]<<8) | buffer[3+msg_len+2];
 
-	int frameEnd = 4+msg_len+2; 
-	if (frameEnd > bufferSize)
-		return 0;
-	
-	uint8_t c1 = 0;
-	uint8_t c2 = 0;
-	const uint16_t crc = calcChkSum(buffer, msg_len+4, &c1, &c2);
-	if (msg_crc != crc)
-		return -(msg_len+4+2);
-	
+	ubx_dispatchMsg(msg_class, msg_id, msg_len, &buffer[4]);
+	userData.rates.msgCt++;
+
 	return msg_len+4+2;
 }
 
-uint32_t gps_ubxMsgRun (ubx_device_t *dev, uint8_t *inBuffer, uint32_t bufferSize, int32_t *writePos, uint8_t *serBuffer, uint8_t serLen)
+static int ubx_processPayload (uint8_t *packet, const uint16_t length)
 {
-	uint32_t writeLength = 0;
-	uint32_t bytesRead = 0;
-	static uint8_t readBuffer[8] = {0}; // Should be no larger than the smallest [message+control bytes]
-
-
-	if (*writePos > bufferSize){
-		*writePos = 0;
-		memset(inBuffer, 0, bufferSize);
-	}
+	uint8_t a = 0;
+	uint8_t b = 0;
+	uint16_t i = 0;
 	
-	memcpy(readBuffer, serBuffer, serLen);
-	bytesRead = serLen;
-	if (bytesRead > 0){
-		userData.rates.rx += bytesRead;
+	for ( i = 2; i < (length+6); i++){
+		a += packet[i];
+		b += a;
+	}
 
-		for (int i = 0; i < bytesRead; i++)
-			inBuffer[(*writePos)++] = readBuffer[i];
+	if ((a != packet[i+0]) || (b != packet[i+1])){
+		printf(CS("checksum failure. len:%i"), length);
+		return 1;
+	}
 
-		writeLength = *writePos;
-		if (writeLength < 6) return 0;
-		
-		// check if there is a complete message
-		int foundSync = searchSync(inBuffer, writeLength);
-		if (foundSync < 0){
-			//printf("sync not found %i %i\r\n", foundSync, writeLength);
-			//bufferDump(inBuffer, writeLength);
-			return 0;
-		}
+	ubx_processMsg(&packet[2], length);
+	return length+8;
+}
 
-		// advance past sync bytes
-		foundSync += 2;
+int ubx_processBlock (const uint8_t *data, int length)
+{
+	static uint8_t ubx_buffer[UBX_BUFFER_SIZE];
+	static int ubx_index = 0;
+	static int ubx_fill = 0;
 
-		int foundFrame = searchFrame(&inBuffer[foundSync], writeLength-foundSync);
-		if (foundFrame > 0){
-			int process = ubxBufferFrameProcess(&inBuffer[foundSync], writeLength-foundSync);
+	if ((ubx_fill + length) > UBX_BUFFER_SIZE)
+		return 0;
 
-			if (foundSync+foundFrame < writeLength){
-				for (int i = 0; i < sizeof(readBuffer); i++)
-					inBuffer[i] = inBuffer[foundSync+foundFrame+i];
+	memcpy(&ubx_buffer[ubx_fill], data, length);
+	ubx_fill += length;
 
-				*writePos = writeLength - (foundSync+foundFrame);
-				memset(inBuffer+sizeof(readBuffer), 0, bufferSize-sizeof(readBuffer));
-			}else{
-				memset(inBuffer, 0, bufferSize);
-				*writePos = 0;
-			}
-			return (process > 0);
+	while(((ubx_fill - ubx_index) > 2) && (ubx_buffer[ubx_index+0] != MSG_UBX_B1) && (ubx_buffer[ubx_index+1] != MSG_UBX_B2))
+		ubx_index++;
 
-		}else if (foundFrame < 0){
-			//printf("mismatch crc %i, %i %i\r\n", -foundFrame, *writePos, foundSync);
-			//bufferDump(inBuffer, 32);
-			memset(inBuffer, 0, bufferSize);
-			*writePos = 0;
+	while((ubx_fill - ubx_index) >= 8){
+		length = (ubx_fill - ubx_index);
+
+		if ((ubx_buffer[ubx_index + 0] == MSG_UBX_B1) && (ubx_buffer[ubx_index + 1] == MSG_UBX_B2)){
+			uint16_t msg_length = ((uint16_t)ubx_buffer[ubx_index+4] << 0) + ((uint16_t)ubx_buffer[ubx_index+5] << 8);
+
+			if ((msg_length+8) > UBX_BUFFER_SIZE)
+				ubx_index++;
+			else if ((msg_length+8) > length)
+				break;
+			else
+				ubx_index += ubx_processPayload(&ubx_buffer[ubx_index], msg_length);
+		}else{
+			ubx_index++;
 		}
 	}
-	return 0;
+
+	length = (ubx_fill - ubx_index);
+	if (length && ubx_index){
+		memcpy(ubx_buffer, &ubx_buffer[ubx_index], length);
+		ubx_index = 0;
+		ubx_fill = length;
+	}
+
+	return ubx_index;
 }
+
+/*
+################################################################################
+################################################################################
+################################################################################
+*/
 
 static inline void ubx_rst_hotStart (ubx_device_t *dev)
 {

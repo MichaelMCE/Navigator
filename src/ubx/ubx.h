@@ -1437,13 +1437,11 @@ void ubx_sos_clear (ubx_device_t *dev);
 void ubx_sos_backup (ubx_device_t *dev);
 
 void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
-
-
 int ubx_msgPollName (ubx_device_t *dev, const char *name);
 void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID);
-
-
 int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize);
+
+int ubx_processBlock (const uint8_t *data, int length);
 
 void gps_requestUpdate ();
 
