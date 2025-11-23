@@ -25,7 +25,7 @@ static typesPass_t typesPassAll[12] = {
 	{ 2, {0x0F, 0x23}},
 };
 static typesPass_t typesPassWater[1] = {
-	{ 2, {0x3C, 0x32}}
+	{ 3, {0x3C, 0x32}}
 };
 static typesPass_t *typesPass = typesPassAll;
 
