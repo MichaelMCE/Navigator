@@ -18,9 +18,6 @@ ubx_device_t dev = {0};
 extern const uint32_t baudRates[];
 static uint8_t bufferReadX[32768];
 static uint8_t bufferWriteX[1024];
-const uint32_t bufferSize = 1024;
-static uint8_t buffer[bufferSize+16];
-static int32_t bOffset = 0;
 static uint8_t serBuffer[8];
 
 
@@ -169,7 +166,7 @@ void serial_Event1 ()
 	if (gnssReceiver_PassthroughEnabled)
 		return;
 	
-    while (Serial1.available()) {
+    while (Serial1.available()){
         serBuffer[len++] = Serial1.read();
         
         if (len == 8){
@@ -177,8 +174,7 @@ void serial_Event1 ()
 				Serial.write(serBuffer, len);
        			Serial.flush();
        		}*/
-        	
-			gps_ubxMsgRun(&dev, buffer, bufferSize, &bOffset, serBuffer, len);
+			ubx_processBlock(serBuffer, len);
 			len = 0;
 		}
     }

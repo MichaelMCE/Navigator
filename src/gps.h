@@ -150,7 +150,6 @@ void addDebugLine (const uint8_t *str);
 int gps_serialWrite (uint8_t *buffer, uint32_t bufferSize);
 void gps_configurePorts (ubx_device_t *dev);
 void gps_configure (ubx_device_t *dev);
-uint32_t gps_ubxMsgRun (ubx_device_t *dev, uint8_t *inBuffer, uint32_t bufferSize, int32_t *writePos, uint8_t *serBuffer, uint8_t serLen);
 
 void gps_printVersions ();
 void gps_printStatus ();
