@@ -700,7 +700,10 @@ void cmd_receiver (const char *cmdStr)
 
 	}else if (!strncmp("setpos:", cmdStr, 7)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
-				
+
+	}else if (!strncmp("rate", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+						
 	}else if (!strncmp("version", cmdStr, 7)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 	
