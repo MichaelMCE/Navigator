@@ -195,14 +195,14 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	int rowGPS = 190;
 	int rowGLO = 240;
 	int rowGAL = 290;
-	int rowBEI = rowGLO;
-	int rowQZS = 340;
+	int rowBEI = 340;
+	int rowQZS = 390;
 #else
 	int rowGPS = 160;
 	int rowGLO = 195;
 	int rowGAL = 230;
-	int rowBEI = rowGLO;
-	int rowQZS = 265;
+	int rowBEI = 265;
+	int rowQZS = 300;
 #endif
 
 
@@ -857,7 +857,9 @@ void printCmdStats (runState_t *stats)
 	cmdSendResponse("");
 	printf(CS("zoom:%.0f, temp:%.1f, nothing:%llu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
 	printf(CS("map:%.2f, strings:%i, poi:%.2f, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.poi, stats->rtime.trkpts);
-	printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
+	//printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
+	printf(CS("epoch:%i, rx:%i"), gpsData.rates.epochPerRead, receiver_getRx());
+	receiver_resetRxTx();
 }
 
 FASTRUN void mpu_setClockFreq (const uint32_t freqMhz)
