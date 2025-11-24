@@ -22,8 +22,8 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_ILI9806		1		// Mk4
-#define USE_FLEXTFT_RM68120		0		// Mk3
+#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_RM68120		1		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
 
@@ -93,12 +93,12 @@
 #define TFT_WIDTH				800
 #define TFT_HEIGHT				480
 #define CFG_STRING				"800x480*2 RM68120 TFT Display"
-#define TFT_SPEED				80
+#define TFT_SPEED				40
 #define TFT_INTENSITY			55		// PWM value from 0 to 255
-#define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
+#define STRIP_RENDERER_HEIGHT	32		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
-#define MPU_CLOCK_FREQ			816
+#define MPU_CLOCK_FREQ			720
 #define ENABLE_ENCODERS			1
 #define EXTMEM_SIZE				16
 
