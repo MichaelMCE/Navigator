@@ -315,7 +315,7 @@ FLASHMEM int nav_posecef (const uint8_t *payload, uint16_t msg_len, void *opaque
 }
 
 static int recPos = 0;
-static pos_rec_t posRecLLH[54];
+static pos_rec_t posRecLLH[62];	// bin size of at least 2 seconds (functional rate * 2)
 
 static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 {
@@ -329,14 +329,14 @@ static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
 	posRecLLH[recPos].longitude = pos->longitude;
 	posRecLLH[recPos].latitude  = pos->latitude;
 	posRecLLH[recPos].altitude  = pos->altitude;
-	if (++recPos >= 54) recPos = 0;
+	if (++recPos >= 62) recPos = 0;
 
 	double lon = 0.0;
 	double lat = 0.0;
 	float alt = 0.0f;
 	int ptsSumed = 0;
 	
-	for (int i = 0; i < 54; i++){
+	for (int i = 0; i < 62; i++){
 		lon += posRecLLH[i].longitude;
 		lat += posRecLLH[i].latitude;
 		alt += posRecLLH[i].altitude;
@@ -373,12 +373,12 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	gps->date.day = pvt->day;
 
 	// proto 19+
-	//gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
-	//gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
+	gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
+	gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
 
 	// proto 18
-	gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
-	gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
+	//gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
+	//gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
 
 #if 0
 	gps->iTow = pvt->iTow;	
