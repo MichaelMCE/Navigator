@@ -103,8 +103,8 @@ typedef struct {
 	
 	struct{
 		uint32_t msgCt;	
-		uint32_t rx;
 		uint32_t tx;
+		uint32_t rx;
 		
 		int16_t epoch;
 		int16_t epochPerRead;
@@ -160,6 +160,8 @@ void gps_hotStart ();
 void gps_resetOdo ();
 void gps_startOdo ();
 void gps_stopOdo ();
+
+void gps_setRate (const uint8_t rate);
 
 void gps_sosCreateBackup ();
 void gps_sosClearFlash ();

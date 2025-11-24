@@ -18,7 +18,7 @@ ubx_device_t dev = {0};
 extern const uint32_t baudRates[];
 static uint8_t bufferReadX[32768];
 static uint8_t bufferWriteX[1024];
-static uint8_t serBuffer[8];
+
 
 
 void gps_pollInf (const uint8_t protocolID)
@@ -84,6 +84,11 @@ void gps_startOdo ()
 void gps_stopOdo ()
 {
 	ubx_odo_stop(&dev);
+}
+
+void gps_setRate (const uint8_t rate)
+{
+	ubx_setRate(&dev, rate);
 }
 
 int gps_writeUbx (void *buffer, const uint32_t bufferSize)
@@ -161,6 +166,7 @@ void gps_init ()
 #if 1
 void serial_Event1 ()
 {
+	static uint8_t serBuffer[16];
 	static uint8_t len = 0;
 
 	if (gnssReceiver_PassthroughEnabled)
@@ -169,7 +175,7 @@ void serial_Event1 ()
     while (Serial1.available()){
         serBuffer[len++] = Serial1.read();
         
-        if (len == 8){
+        if (len == 16){
         	/*if (Serial.dtr()){
 				Serial.write(serBuffer, len);
        			Serial.flush();
