@@ -21,7 +21,7 @@
 #include "ubx.h"
 #include "ubxcb.h"
 #include "../gps.h"
-#include "../cmd.h"
+//#include "../cmd.h"
 
 
 #define ALERT_DISABLED		0
@@ -35,6 +35,7 @@
 static ubx_msg_t ubxRegTable = {0};
 static gpsdata_t userData = {0};
 const uint32_t baudRates[] = {9600, 9600*2, 9600*4, 9600*6, 115200, 115200*2, 115200*4, 115200*8, 0};
+
 
 
 
@@ -394,7 +395,7 @@ static int ubx_processPayload (uint8_t *packet, const uint16_t length)
 	}
 
 	if ((a != packet[i+0]) || (b != packet[i+1])){
-		printf(CS("checksum failure. len:%i"), length);
+		//printf(CS("checksum failure. len:%i"), length);
 		return 1;
 	}
 
@@ -402,11 +403,30 @@ static int ubx_processPayload (uint8_t *packet, const uint16_t length)
 	return length+8;
 }
 
+int receiver_getTx ()
+{
+	return userData.rates.tx;
+}
+
+int receiver_getRx ()
+{
+	return userData.rates.rx;
+}
+
+void receiver_resetRxTx ()
+{
+	userData.rates.rx = 0;
+	userData.rates.tx = 0;
+}
+
 int ubx_processBlock (const uint8_t *data, int length)
 {
 	static uint8_t ubx_buffer[UBX_BUFFER_SIZE];
 	static int ubx_index = 0;
 	static int ubx_fill = 0;
+
+	
+	userData.rates.rx += length;
 
 	if ((ubx_fill + length) > UBX_BUFFER_SIZE)
 		return 0;
@@ -480,7 +500,32 @@ static inline void ubx_rst_coldStart (ubx_device_t *dev)
 	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_RST, &rst, sizeof(rst));	
 }
 
-static void configureGNSS (ubx_device_t *dev)
+static void configureGNSS_M10 (ubx_device_t *dev)
+{
+	 // GPS:L1C/A,SBAS:L1C/A,GAL:E1,BDS:B1C,GLO:L1,QZSS:L1C/A,L1S
+	const uint8_t M10GNSS[] = {
+		0x01,0x01,0x00,0x00, 	  // transactionless write to RAM
+		// 4byte Key ID, 1byte value
+		CFG_SIGNAL_GPS_L1CA_ENA,  0x01,
+		CFG_SIGNAL_SBAS_L1CA_ENA, 0x00,
+		CFG_SIGNAL_GAL_E1_ENA,    0x01,
+		CFG_SIGNAL_BDS_B1_ENA,    0x00,
+		CFG_SIGNAL_QZSS_L1CA_ENA, 0x01,
+		CFG_SIGNAL_QZSS_L1S_ENA,  0x01,
+		CFG_SIGNAL_GLO_L1_ENA,    0x01,
+		CFG_SIGNAL_GPS_ENA,       0x01,
+		CFG_SIGNAL_SBAS_ENA,      0x00,
+		CFG_SIGNAL_GAL_ENA,       0x01,
+		CFG_SIGNAL_BDS_ENA,       0x01,
+		CFG_SIGNAL_QZSS_ENA,      0x01,
+		CFG_SIGNAL_GLO_ENA,       0x01,
+		CFG_SIGNAL_BDS_B1C_ENA,   0x01
+	};
+
+	ubx_sendEx(dev, 500, UBX_CFG, UBX_CFG_VALSET, M10GNSS, sizeof(M10GNSS));
+}
+
+static void configureGNSS_M8 (ubx_device_t *dev)
 {
 
 	const int cfgBlks = 7;
@@ -491,25 +536,25 @@ static void configureGNSS (ubx_device_t *dev)
 	cfg_cfgblk_t *cfg = &gnss->cfgblk[0];
 	cfg->gnssId = GNSSID_GPS;
 	cfg->resTrkCh = 8;
-	cfg->maxTrkCh = 20;
+	cfg->maxTrkCh = 16;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[1];
 	cfg->gnssId = GNSSID_GLONASS;
 	cfg->resTrkCh = 8;
-	cfg->maxTrkCh = 20;
+	cfg->maxTrkCh = 12;
 	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[2];
 	cfg->gnssId = GNSSID_GALILEO;
-	cfg->resTrkCh = 6;
-	cfg->maxTrkCh = 10;
+	cfg->resTrkCh = 8;
+	cfg->maxTrkCh = 12;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 
 	cfg = &gnss->cfgblk[3];
 	cfg->gnssId = GNSSID_BEIDOU;
 	cfg->resTrkCh = 6;
-	cfg->maxTrkCh = 20;
+	cfg->maxTrkCh = 12;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[4];
@@ -522,7 +567,7 @@ static void configureGNSS (ubx_device_t *dev)
 	cfg->gnssId = GNSSID_QZSS;
 	cfg->resTrkCh = 0;
 	cfg->maxTrkCh = 3;
-	cfg->flags = GNSS_CFGBLK_ENABLED | GNSS_CFGBLK_SIGENABLED;
+	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 	
 	cfg = &gnss->cfgblk[6];
 	cfg->gnssId = GNSSID_SBAS;
@@ -532,7 +577,7 @@ static void configureGNSS (ubx_device_t *dev)
 
 	gnss->msgVer = 0;
 	gnss->numTrkChHw = 72;
-	gnss->numTrkChUse = 32;
+	gnss->numTrkChUse = 49;//32;
 	gnss->numConfigBlocks = cfgBlks;
 
 	ubx_sendEx(dev, 100, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
@@ -559,15 +604,25 @@ void gps_configurePorts (ubx_device_t *dev)
 	configurePorts(dev);
 }
 
-static void configureRate (ubx_device_t *dev)
+void setRate (ubx_device_t *dev, const uint8_t updateRate)
 {
 	cfg_rate_t rate = {0};
 	
-	rate.measRate = 57;		// ms. 53ms = ~18-19hz
+	rate.measRate = updateRate;		// ms. 53ms = ~18-19hz
 	rate.navRate = 1;		// 1 measurement per navigation
 	rate.timeRef = CFG_TIMEREF_UTC;
 	
 	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_RATE, &rate, sizeof(rate));
+}
+
+void ubx_setRate (ubx_device_t *dev, const uint8_t rate)
+{
+	setRate(dev, rate);
+}
+
+static void configureRate (ubx_device_t *dev)
+{
+	setRate(dev, 34);
 }
 
 static void configureNav5 (ubx_device_t *dev)
@@ -702,10 +757,7 @@ static void ubx_msgInfDisableAll (ubx_device_t *dev)
 
 static void configureInf (ubx_device_t *dev)
 {
-	//ubx_msgInfPoll(dev, INF_PROTO_UBX);
-	//ubx_msgInfPoll(dev, INF_PROTO_NEMA);
 	ubx_msgInfDisableAll(dev);
-	//ubx_msgInfEnable(dev, INF_PROTO_UBX, INF_MSG_WARNING|INF_MSG_NOTICE|INF_MSG_DEBUG);
 }
 
 FLASHMEM void ubx_odo_reset (ubx_device_t *dev)
@@ -780,7 +832,7 @@ static void configureGeofence (ubx_device_t *dev)
 	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_GEOFENCE, geo, glen);
 }
 
-void setHNR (ubx_device_t *dev, uint8_t rate)
+static void setHNR (ubx_device_t *dev, const uint8_t rate)
 {
 	cfg_hnr_t hnr = {0};
 
@@ -790,7 +842,7 @@ void setHNR (ubx_device_t *dev, uint8_t rate)
 
 static void configureHNR (ubx_device_t *dev)
 {
-	setHNR(dev, 17);	// set rate to 17hz
+	setHNR(dev, 28);
 }
 
 FLASHMEM void ubx_printVersions (ubx_device_t *dev)
@@ -943,7 +995,8 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	if (1) configurePorts(dev);
 	if (1) configureInf(dev);
 	if (1) configureRate(dev);
-	if (1) configureGNSS(dev);		// will auto generate a warmStart
+	if (1) configureGNSS_M8(dev);
+	if (1) configureGNSS_M10(dev);
 	if (1) configureNav5(dev);
 	if (1) configureNavX5(dev);
 	if (1) configureHNR(dev);
@@ -959,18 +1012,17 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
 		
 	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT, 3);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP, 18);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT, 4);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP, 28);
 	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO, 10);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF, 18);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT, 20);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF, 28);
+	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT, 29);
 
 	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_EOE);
 	//ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_GEOFENCE, 60);
 	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GEOFENCE);
 	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
 	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAVX5);
-	
 	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_SVINFO);
 	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_STATUS);
 	//ubx_msgPoll(dev, UBX_AID, UBX_AID_EPH);
@@ -982,4 +1034,3 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
 	ubx_msgPoll(dev, UBX_CFG, UBX_NAV_SAT);
 }
-

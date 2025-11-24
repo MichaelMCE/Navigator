@@ -239,6 +239,22 @@ UBX
 #define UBX_SEC_SIGN			0x01
 #define UBX_SEC_UNIQID			0x03
 
+#define CFG_SIGNAL_GPS_ENA			0x1F,0x00,0x31,0x10			// 0x1031001f L - GPS enable
+#define CFG_SIGNAL_GPS_L1CA_ENA		0x01,0x00,0x31,0x10			// 0x10310001 L - GPS L1C/A
+#define CFG_SIGNAL_SBAS_ENA			0x20,0x00,0x31,0x10			// 0x10310020 L - SBAS enable
+#define CFG_SIGNAL_SBAS_L1CA_ENA	0x05,0x00,0x31,0x10			// 0x10310005 L - SBAS L1C/A
+#define CFG_SIGNAL_GAL_ENA			0x21,0x00,0x31,0x10			// 0x10310021 L - Galileo enable
+#define CFG_SIGNAL_GAL_E1_ENA		0x07,0x00,0x31,0x10			// 0x10310007 L - Galileo E1
+#define CFG_SIGNAL_BDS_ENA			0x22,0x00,0x31,0x10			// 0x10310022 L - BeiDou Enable
+#define CFG_SIGNAL_BDS_B1_ENA		0x0D,0x00,0x31,0x10			// 0x1031000d L - BeiDou B1I
+#define CFG_SIGNAL_BDS_B1C_ENA		0x0F,0x00,0x31,0x10			// 0x1031000f L - BeiDou B1C
+#define CFG_SIGNAL_QZSS_ENA			0x24,0x00,0x31,0x10			// 0x10310024 L - QZSS enable
+#define CFG_SIGNAL_QZSS_L1CA_ENA	0x12,0x00,0x31,0x10			// 0x10310012 L - QZSS L1C/A
+#define CFG_SIGNAL_QZSS_L1S_ENA		0x14,0x00,0x31,0x10			// 0x10310014 L - QZSS L1S
+#define CFG_SIGNAL_GLO_ENA			0x25,0x00,0x31,0x10			// 0x10310025 L - GLONASS enable
+#define CFG_SIGNAL_GLO_L1_ENA		0x18,0x00,0x31,0x10			// 0x10310018 L - GLONASS L1
+
+
 
 // convert position (lat/lon) between dec and float
 #define UBX2FLT(n)				((int32_t)(n)/10000000.0)
@@ -1435,6 +1451,13 @@ void ubx_odo_stop (ubx_device_t *dev);
 void ubx_sos_poll (ubx_device_t *dev);
 void ubx_sos_clear (ubx_device_t *dev);
 void ubx_sos_backup (ubx_device_t *dev);
+
+void ubx_setRate (ubx_device_t *dev, const uint8_t rate);
+
+// tmp
+void receiver_resetRxTx ();
+int receiver_getRx ();
+int receiver_getTx ();
 
 void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 int ubx_msgPollName (ubx_device_t *dev, const char *name);
