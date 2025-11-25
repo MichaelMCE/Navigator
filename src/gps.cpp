@@ -175,7 +175,7 @@ void serial_Event1 ()
     while (Serial1.available()){
         serBuffer[len++] = Serial1.read();
         
-        if (len == 16){
+        if (len == sizeof(serBuffer)){
         	/*if (Serial.dtr()){
 				Serial.write(serBuffer, len);
        			Serial.flush();

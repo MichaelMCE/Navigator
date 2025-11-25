@@ -13,7 +13,7 @@
 #define SERIAL_RATE				(230400)
 #define DEBUG_LINES				(24)
 #define DEBUG_LINE_LEN			(42)
-
+#define LOCATION_BINSIZE		(60)		// bin size of at least 2 seconds (functional rate * 2)
 
 #define COM_BAUD_9600			0
 #define COM_BAUD_19200			1
@@ -126,13 +126,16 @@ typedef struct {
 	uint8_t stub[3];
 }sat_status_t;
 
+
 typedef struct {
 	uint8_t numSvs;
-
 	sat_status_t sv[72];
+	
+	struct {
+		int writePos;
+		pos_rec_t sum[LOCATION_BINSIZE];
+	}location;
 }sat_stats_t;
-
-
 
 
 void gps_init ();
