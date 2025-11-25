@@ -59,7 +59,6 @@ trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
 
-static int32_t assistNowAutoLoad = 0;
 
 
 
@@ -164,7 +163,6 @@ static void drawSatSignalAvailabilitySvId (sat_stats_t *sats, const uint8_t gnss
 	int vSpace = 4;
 #endif
 
-	
 	int x = 0;
 	int y = 0;
 
@@ -196,13 +194,11 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	int rowGLO = 240;
 	int rowGAL = 290;
 	int rowBEI = 340;
-	int rowQZS = 390;
 #else
 	int rowGPS = 160;
 	int rowGLO = 195;
 	int rowGAL = 230;
 	int rowBEI = 265;
-	int rowQZS = 300;
 #endif
 
 
@@ -210,7 +206,6 @@ void drawSatSignalAvailability (gpsdata_t *data, sat_stats_t *sats)
 	drawSatSignalAvailabilitySvId(sats, GNSSID_GLONASS, rowGLO, COLOUR_PAL_RED);
 	drawSatSignalAvailabilitySvId(sats, GNSSID_GALILEO, rowGAL, COLOUR_PAL_BLUE);
 	drawSatSignalAvailabilitySvId(sats, GNSSID_BEIDOU, rowBEI, COLOUR_PAL_GOLD);
-	drawSatSignalAvailabilitySvId(sats, GNSSID_QZSS, rowQZS, COLOUR_PAL_CHERRYBLOSSOM);
 }
 
 void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
@@ -218,7 +213,7 @@ void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
 	if (!inst.rstats.rflags.satlevels)
 		return;
 	
-	#define SDISPLAY_MAX 32
+	#define SDISPLAY_MAX 30
 
 #if (VHEIGHT > 320)
 	float barScale = 2.0f;
@@ -244,8 +239,7 @@ void drawSatSignalLevels (gpsdata_t *data, sat_stats_t *sats)
 			colour = COLOUR_PAL_GOLD;
 		else if (sats->sv[i].gnssId == GNSSID_QZSS)
 			colour = COLOUR_PAL_CHERRYBLOSSOM;
-
-					
+	
 		drawRectangleFilled(x, y-((float)sats->sv[i].cno*barScale), x+barPitch-1, y, colour);
 		x += barPitch + 2;
 	}
@@ -275,7 +269,6 @@ void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 	
 	float cx = (VWIDTH  - radius) - 3.0f;
 	float cy = (VHEIGHT - radius) - 3.0f;
-	uint8_t colour;
 	
 	for (float r = 2.0f; r <= radius; r += 25.0f)
 		drawCircle(cx, cy, r, COLOUR_PAL_REDISH);
@@ -283,12 +276,21 @@ void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 	for (int i = 0; i < sats->numSvs; i++){
 		if (!sats->sv[i].svId) continue;
 
-		if (sats->sv[i].gnssId == GNSSID_SBAS)
+		uint8_t colour = COLOUR_PAL_MAGENTA;
+		if (sats->sv[i].gnssId == GNSSID_QZSS){
+			colour = COLOUR_PAL_CHERRYBLOSSOM;
+		}else if (sats->sv[i].gnssId == GNSSID_SBAS){
 			colour = COLOUR_PAL_CYAN;
-		else if (sats->sv[i].flags&SAT_FLAGS_SVUSED)
-			colour = COLOUR_PAL_DARKGREEN;
-		else
-			colour = COLOUR_PAL_MAGENTA;
+		}else if (sats->sv[i].flags&SAT_FLAGS_SVUSED){
+			if (sats->sv[i].gnssId == GNSSID_GPS)
+				colour = COLOUR_PAL_DARKGREEN;
+			else if (sats->sv[i].gnssId == GNSSID_GLONASS)
+				colour = COLOUR_PAL_RED;
+			else if (sats->sv[i].gnssId == GNSSID_GALILEO)
+				colour = COLOUR_PAL_BLUE;
+			else if (sats->sv[i].gnssId == GNSSID_BEIDOU)
+				colour = COLOUR_PAL_GOLD;
+		}
 
 		if (sats->sv[i].elev >= 0){
 			float elv = (90.0f - (float)sats->sv[i].elev) * multiplier;
@@ -585,10 +587,20 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 	gpsData.navAvg.altitude = MY_ALT;
 #endif
 
-	if (!assistNowAutoLoad)
-		assistNowAutoLoad = gpsData.dateConfirmed && gpsData.timeConfirmed;
+	if (!trackRecord.firstFix){
+		inst.lastFix.latitude = MY_LAT;
+		inst.lastFix.longitude = MY_LON;
+		inst.lastFix.altitude = MY_ALT;
+	}
+
+	if (!inst.assistNowAutoLoad)
+		inst.assistNowAutoLoad = gpsData.dateConfirmed && gpsData.timeConfirmed;
+		
 	if (opaque->fix.type == PVT_FIXTYPE_NOFIX)
 		return;
+	else
+		inst.lastFix = gpsData.navAvg;
+
  	if (trackRecord.acquDisabled)
  		return;
 
@@ -655,7 +667,7 @@ FLASHMEM void init_vfont ()
 	setGlyphScale(vfont, 0.8);
 }
 
-static inline void drawMap (const pos_rec_t *loc, const float heading)
+static void drawMap (const pos_rec_t *loc, const float heading)
 {
 	uint32_t t0 = micros();
 	map_render(&trackRecord, loc, heading, MAP_RENDER_VIEWPORT);
@@ -677,7 +689,13 @@ static inline void drawMap (const pos_rec_t *loc, const float heading)
 
 void drawScreen (gpsdata_t *data)
 {
-	if (inst.runLog.enabled){
+	if (!inst.runLog.enabled){
+		//if (!trackRecord.firstFix)
+		//	drawMap(&data->navAvg, data->misc.heading);
+		//else
+			drawMap(&inst.lastFix, data->misc.heading);
+
+	}else{
 		if (trackRecord.marker){
 			trackPoint_t *trkPt = &trackRecord.trackPoints[inst.runLog.idx];
 
@@ -694,8 +712,6 @@ void drawScreen (gpsdata_t *data)
 			if (inst.runLog.idx >= trackRecord.marker-1)
 				inst.runLog.idx = 0;
 		}
-	}else{
-		drawMap(&data->navAvg, data->misc.heading);
 	}
 	
 	if (inst.renderFlags == 5){
@@ -924,9 +940,9 @@ FASTRUN void loop ()
 
 		// load auto.ubx once we have a valid date, but not too quickly as not always taken
 		// perform once per boot only
-		if (assistNowAutoLoad == 1){
+		if (inst.assistNowAutoLoad == 1){
 			if (recordSignal > 15){
-				assistNowAutoLoad = 2;
+				inst.assistNowAutoLoad = 2;
 				gps_loadOfflineAssist(0);
 			}
 		}
