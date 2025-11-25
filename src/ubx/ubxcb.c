@@ -26,14 +26,6 @@
 
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-float sceneCalcDistancePosRecPt2 (const pos_rec_t *pt1, const pos_rec_t *pt2);
-#ifdef __cplusplus
-}
-#endif
-
 
 
 PROGMEM static const char *GNSSIDs[8]		= {"GPS", "SBAS", "Galileo", "BeiDou", "IMES", "QZSS", "GLONASS", ""};
@@ -56,12 +48,41 @@ PROGMEM static const char *protoId[16]		= {"UBX", "NEMA", "", "RAW", "", "RTCM3"
 PROGMEM static const char *updResponseAck[4]= {"Not acknowledged", "Acknowledged"};
 PROGMEM static const char *updResponseRes[4]= {"Unknown", "Failed restoring from backup", "Restored from backup", "Not restored (No backup)"};
 
-
-
-
 static sat_stats_t stats;
 
 
+
+static inline void navLocationAddAndSum (gpsdata_t *gps, pos_rec_t *pos)
+{
+	if (pos->longitude == 0.000 && pos->latitude == 0.000)
+		return;
+	
+	gps->nav.longitude = pos->longitude;
+	gps->nav.latitude = pos->latitude;
+	gps->nav.altitude = pos->altitude;
+
+	stats.location.sum[stats.location.writePos].longitude = pos->longitude;
+	stats.location.sum[stats.location.writePos].latitude  = pos->latitude;
+	stats.location.sum[stats.location.writePos].altitude  = pos->altitude;
+	if (++stats.location.writePos >= LOCATION_BINSIZE) stats.location.writePos = 0;
+
+	double lon = 0.0;
+	double lat = 0.0;
+	float alt = 0.0f;
+	int ptsSumed = 0;
+	
+	for (int i = 0; i < LOCATION_BINSIZE; i++){
+		lon += stats.location.sum[i].longitude;
+		lat += stats.location.sum[i].latitude;
+		alt += stats.location.sum[i].altitude;
+		ptsSumed++;
+	}
+	
+	gps->navAvg.longitude = lon / (double)ptsSumed;
+	gps->navAvg.latitude = lat / (double)ptsSumed;
+	gps->navAvg.altitude = alt / (float)ptsSumed;
+	gps->rates.epoch++;
+}
 
 const char *getFixName (const uint8_t type)
 {
@@ -314,41 +335,6 @@ FLASHMEM int nav_posecef (const uint8_t *payload, uint16_t msg_len, void *opaque
 	return CBFREQ_HIGH;
 }
 
-static int recPos = 0;
-static pos_rec_t posRecLLH[62];	// bin size of at least 2 seconds (functional rate * 2)
-
-static inline void navAddSum (gpsdata_t *gps, pos_rec_t *pos)
-{
-	if (pos->longitude == 0.000 && pos->latitude == 0.000)
-		return;
-	
-	gps->nav.longitude = pos->longitude;
-	gps->nav.latitude = pos->latitude;
-	gps->nav.altitude = pos->altitude;
-
-	posRecLLH[recPos].longitude = pos->longitude;
-	posRecLLH[recPos].latitude  = pos->latitude;
-	posRecLLH[recPos].altitude  = pos->altitude;
-	if (++recPos >= 62) recPos = 0;
-
-	double lon = 0.0;
-	double lat = 0.0;
-	float alt = 0.0f;
-	int ptsSumed = 0;
-	
-	for (int i = 0; i < 62; i++){
-		lon += posRecLLH[i].longitude;
-		lat += posRecLLH[i].latitude;
-		alt += posRecLLH[i].altitude;
-		ptsSumed++;
-	}
-	
-	gps->navAvg.longitude = lon / (double)ptsSumed;
-	gps->navAvg.latitude = lat / (double)ptsSumed;
-	gps->navAvg.altitude = alt / (float)ptsSumed;
-	gps->rates.epoch++;
-}
-
 FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {
 	//printf(CS("nav_pvt %i"), msg_len);
@@ -580,29 +566,9 @@ FLASHMEM int nav_posllh (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	pos.longitude = dec32dbl7(posllh->lon);
 	pos.latitude = dec32dbl7(posllh->lat);
 	pos.altitude = dec32flt3(posllh->hMSL);
-	
-	navAddSum(gps, &pos);
+	navLocationAddAndSum(gps, &pos);
 
 /*
-	gps->nav.longitude = dec32dbl7(posllh->lon);
-	gps->nav.latitude = dec32dbl7(posllh->lat);
-	gps->nav.altitude = dec32flt3(posllh->hMSL);
-
-	posRecLLH[recPos].longitude = gps->nav.longitude;
-	posRecLLH[recPos].latitude  = gps->nav.latitude;
-	posRecLLH[recPos].altitude  = gps->nav.altitude;
-	if (++recPos >= 32) recPos = 0;
-
-	double lat = 0.0;
-	double lon = 0.0;
-	float alt = 0.0f;
-	
-	for (int i = 0; i < 32; i++){
-		lon = (lon + posRecLLH[i].longitude) / 2.0;
-		lat = (lat + posRecLLH[i].latitude) / 2.0;
-		alt = (alt + posRecLLH[i].altitude) / 2.0f;
-	}
-	
 	gps->navAvg.longitude = lon;
 	gps->navAvg.latitude  = lat;
 	gps->navAvg.altitude  = alt;
