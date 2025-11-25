@@ -132,7 +132,8 @@ typedef struct {
 	vfont_t *vfont;
 	poi_t poi;
 	mp_coverage_t coverage;
-	
+	pos_rec_t lastFix;
+		
 	struct {
 		vectorPt2_t location;
 		vectorPt4_t window;
@@ -154,7 +155,7 @@ typedef struct {
 	uint8_t colourScheme;
 	uint8_t loadTiles;
 	uint8_t freeTiles;
-	uint8_t stub[1];
+	uint8_t assistNowAutoLoad;
 	
 	vectorPt2_t	tileLoadLoc;	// tiles for loading were last checked at this location
 	float distance;				// dstance traveled, in meters, since last tile update
