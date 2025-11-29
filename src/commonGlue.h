@@ -22,6 +22,7 @@
 #include "cmd.h"
 #include "tiles.h"
 #include "poi.h"
+#include "UI/ui.h"
 
 #if ENABLE_MTP
 #include "mtp.h"
