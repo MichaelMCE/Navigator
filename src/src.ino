@@ -59,10 +59,126 @@ trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
 
+EXTMEM static ui_panel_t panel = {0};
 
 
 
 
+
+
+
+void buttons_cb (uint8_t id, void *opaque, uint32_t flags)
+{
+	printf(CS("buttons_cb: id:%i"), id);
+}
+
+void ui_enable (void *opaque)
+{
+	ui_widget_t *obj = (ui_widget_t*)opaque;
+	obj->isEnabled = UI_WIDGET_ENABLED;
+}
+
+void ui_disable (void *opaque)
+{
+	ui_widget_t *obj = (ui_widget_t*)opaque;
+	obj->isEnabled = UI_WIDGET_DISABLED;
+}
+
+FLASHMEM void ui_panelBuild (ui_button_t *buttons)
+{
+
+	memset(&panel, 0, sizeof(panel));
+	panel.rect.x = 45;
+	panel.rect.y = 100;
+	panel.rect.width = 100;
+	panel.rect.height = 300;
+	ui_enable(&panel);
+	
+	
+	// Start log recording
+	ui_button_t *button = &panel.buttons[0];
+	button->label.text = "Start";
+	button->label.colour = COLOUR_PAL_GREEN;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+	
+	button->rect.x = 10;
+	button->rect.y = 10;
+	button->rect.width = 90;
+	button->rect.height = 32;
+	
+	button->offset.x = 2;
+	button->offset.y = 2;
+
+	button->widget.id = UI_ID_BUTTON_START;
+	button->callback.func = buttons_cb;
+	ui_enable(button);
+	
+	
+	// Stop recording
+	button = &panel.buttons[1];
+	button->label.text = "Stop";
+	button->label.colour = COLOUR_PAL_RED;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+	
+	button->rect.x = 10;
+	button->rect.y = 10;
+	button->rect.width = 90;
+	button->rect.height = 32;
+	
+	button->offset.x = 2;
+	button->offset.y = 2;
+	
+	button->widget.id = UI_ID_BUTTON_STOP;
+	button->callback.func = buttons_cb;
+	ui_disable(button);
+	
+	
+	// Pause recording
+	button = &panel.buttons[2];
+	button->label.text = "Pause";
+	button->label.colour = COLOUR_PAL_BLUE;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+	
+	button->rect.x = 10;
+	button->rect.y = 10;
+	button->rect.width = 90;
+	button->rect.height = 32;
+	
+	button->offset.x = 2;
+	button->offset.y = 2;
+	
+	button->widget.id = UI_ID_BUTTON_PAUSE;
+	button->callback.func = buttons_cb;
+	ui_disable(button);
+
+
+	// Hotstart receiver
+	button = &panel.buttons[3];
+	button->label.text = "Hotstart";
+	button->label.colour = COLOUR_PAL_BLACK;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+	
+	button->rect.x = 10;
+	button->rect.y = 60;
+	button->rect.width = 90;
+	button->rect.height = 32;
+	
+	button->offset.x = 2;
+	button->offset.y = 2;
+	
+	button->widget.id = UI_ID_BUTTON_HOTSTART;
+	button->callback.func = buttons_cb;
+	ui_enable(button);
+	
+}
 
 static inline double calcDistM (double lat1, double lon1, double lat2, double lon2)
 {
@@ -615,8 +731,6 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
 		
 		dategps_t date;
 		timegps_t time;
-
-		//cmdSendResponse("date time:");
 		getDateTime(&date, &time);
 		gps_resetOdo();
 	}
