@@ -149,7 +149,7 @@ typedef struct {
 	struct {
 		uint8_t pathThickness;
 		uint8_t spotRadius;
-		uint8_t stun[2];
+		uint8_t stub[2];
 	}scheme;
 	
 	uint8_t colourScheme;
