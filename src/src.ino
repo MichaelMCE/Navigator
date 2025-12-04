@@ -33,7 +33,6 @@ volatile static int serialConnected = 0;
 
 
 #if (VWIDTH > 480)
-//EXTMEM uint8_t renderBuffer[VWIDTH * VHEIGHT];
 DMAMEM uint8_t renderBuffer[VWIDTH * VHEIGHT];
 #else
 uint8_t renderBuffer[VWIDTH * VHEIGHT];
@@ -59,44 +58,288 @@ trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
 
-EXTMEM static ui_panel_t panel = {0};
+
+
+static ui_button_t button_config;
+static ui_button_t panel_mapCtrl_buttons[5];
+static ui_panel_t panel_mapCtrl;
+static ui_widget_t *widgetObjs[] = {WIDGET(&panel_mapCtrl), WIDGET(&button_config)};
+
+static uint32_t opFuncs[OP_QUEUE_LENGTH];	// FIFO
+static uint32_t opPosition = 0;
+static uint32_t opState = OP_IDLE;
 
 
 
+FLASHMEM int ui_isEnabled (void *opaque, const uint8_t child_id)
+{
+	ui_widget_t *obj = WIDGET(opaque);
 
+	
+	if (!child_id){
+		return obj->isEnabled;
+		
+	}else if (obj == NULL && child_id){
+		for (int i = 0; i < (int)(sizeof(widgetObjs) / sizeof(ui_widget_t*)); i++){
+			obj = widgetObjs[i];
+			if (obj->id == child_id){
+				return obj->isEnabled;
+			}else{
+				for (int j = 0; j < obj->children.total; j++){
+					ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,j);
+					if (widget->id == child_id)
+						return widget->isEnabled;
+				}
+			}
+		}
+	}else{
+		for (int i = 0; i < obj->children.total; i++){
+			ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,i);
+			
+			if (widget->id == child_id)
+				return widget->isEnabled;
+		}
+	}
+	return UI_WIDGET_DISABLED;
+}
 
+FLASHMEM int ui_enable (void *opaque, const uint8_t child_id)
+{
+	ui_widget_t *obj = WIDGET(opaque);
 
+	
+	if (!child_id){
+		obj->isEnabled = UI_WIDGET_ENABLED;
+		return 1;
+		
+	}else if (obj == NULL && child_id){
+		for (int i = 0; i < (int)(sizeof(widgetObjs) / sizeof(ui_widget_t*)); i++){
+			obj = widgetObjs[i];
+			if (obj->id == child_id){
+				obj->isEnabled = UI_WIDGET_ENABLED;
+				return 1;
+			}else{
+				for (int j = 0; j < obj->children.total; j++){
+					ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,j);
+					if (widget->id == child_id){
+						widget->isEnabled = UI_WIDGET_ENABLED;
+						return 1;
+					}
+				}
+			}
+		}
+	}else{
+		for (int i = 0; i < obj->children.total; i++){
+			ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,i);
+			
+			if (widget->id == child_id){
+				widget->isEnabled = UI_WIDGET_ENABLED;
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
 
-void buttons_cb (uint8_t id, void *opaque, uint32_t flags)
+FLASHMEM int ui_disable (void *opaque, const uint8_t child_id)
+{
+	ui_widget_t *obj = WIDGET(opaque);
+
+	if (!child_id){
+		obj->isEnabled = UI_WIDGET_DISABLED;
+		return 1;
+		
+	}else if (obj == NULL && child_id){
+		for (int i = 0; i < (int)(sizeof(widgetObjs) / sizeof(ui_widget_t*)); i++){
+			obj = widgetObjs[i];
+			if (obj->id == child_id){
+				obj->isEnabled = UI_WIDGET_DISABLED;
+				return 1;
+			}else{
+				for (int j = 0; j < obj->children.total; j++){
+					ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,j);
+					if (widget->id == child_id){
+						widget->isEnabled = UI_WIDGET_DISABLED;
+						return 1;
+					}
+				}
+			}
+		}
+	}else{
+		for (int i = 0; i < obj->children.total; i++){
+			ui_widget_t *widget = CHILD_WIDGET_OBJ(obj,i);
+			
+			if (widget->id == child_id){
+				widget->isEnabled = UI_WIDGET_DISABLED;
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+void buttons_cb (void *opaque, uint8_t id, uint32_t flags)
 {
 	printf(CS("buttons_cb: id:%i"), id);
 }
 
-void ui_enable (void *opaque)
+// FIFO
+static uint32_t op_push (const uint32_t op_code)
 {
-	ui_widget_t *obj = (ui_widget_t*)opaque;
-	obj->isEnabled = UI_WIDGET_ENABLED;
+	if (opPosition < OP_QUEUE_LENGTH-1){
+		opFuncs[opPosition++] = op_code;
+		return opPosition;
+	}
+	return 0;
 }
 
-void ui_disable (void *opaque)
+static inline uint32_t op_pop ()
 {
-	ui_widget_t *obj = (ui_widget_t*)opaque;
-	obj->isEnabled = UI_WIDGET_DISABLED;
+	if (opPosition){
+		opPosition--;
+
+		uint32_t opFunc = opFuncs[0];
+		for (int i = 0; i < OP_QUEUE_LENGTH-1; i++)
+			opFuncs[i] = opFuncs[i+1];
+
+		return opFunc;
+	}
+	return 0;
 }
 
-FLASHMEM void ui_panelBuild (ui_button_t *buttons)
+static inline void op_go ()
+{
+	opState = OP_READY;
+}
+
+static inline void op_halt ()
+{
+	opState = OP_IDLE;
+}
+
+static inline uint32_t op_state ()
+{
+	return opState;
+}
+
+FLASHMEM static inline void op_execute (const uint32_t op_code)
+{
+	switch (op_code){
+	case 0:
+		op_halt();
+		return;
+		
+	case OP_FUNC_LOG_START:
+		log_start();
+		return;
+		
+	case OP_FUNC_LOG_STOP:
+		log_stop();
+		return;
+		
+	case OP_FUNC_LOG_PAUSE:
+		if (log_isActive())
+			log_pause();
+		return;
+		
+	case OP_FUNC_LOG_RESET:
+		log_reset();
+		return;
+		
+	case OP_FUNC_HOTSTART:
+		gps_hotStart();
+		return;
+		
+	case OP_FUNC_CONFIG:
+		return;
+	};
+}
+
+FLASHMEM void panel_mapCtrl_cb (void *opaque, uint8_t id, uint32_t flags)
+{
+	printf(CS("panel_mapCtrl_cb: id:%i"), id);
+
+	ui_panel_t *panel = (ui_panel_t*)opaque;
+
+	switch (id){
+	case UI_ID_BUTTON_START:
+		ui_disable(panel, UI_ID_BUTTON_START);
+		ui_enable(panel, UI_ID_BUTTON_PAUSE);
+		ui_enable(panel, UI_ID_BUTTON_STOP);
+		ui_enable(panel, UI_ID_BUTTON_RESET);
+		op_push(OP_FUNC_LOG_START);
+		op_go();
+		render_signalUpdate();
+		return;
+		
+	case UI_ID_BUTTON_STOP:
+		ui_enable(panel, UI_ID_BUTTON_START);
+		ui_disable(panel, UI_ID_BUTTON_PAUSE);
+		ui_disable(panel, UI_ID_BUTTON_STOP);
+		op_push(OP_FUNC_LOG_STOP);
+		op_go();
+		render_signalUpdate();
+		return;
+		
+	case UI_ID_BUTTON_PAUSE: 
+		ui_enable(panel, UI_ID_BUTTON_START);
+		ui_disable(panel, UI_ID_BUTTON_PAUSE);
+		ui_enable(panel, UI_ID_BUTTON_STOP);
+		op_push(OP_FUNC_LOG_PAUSE);
+		op_go();
+		render_signalUpdate();
+		return;
+
+	case UI_ID_BUTTON_RESET:
+		op_push(OP_FUNC_LOG_RESET);
+		op_go();
+		render_signalUpdate();
+		return;
+		
+	case UI_ID_BUTTON_HOTSTART:
+		op_push(OP_FUNC_HOTSTART);
+		op_go();
+		render_signalUpdate();
+		return;
+
+	case UI_ID_BUTTON_CONFIG:	// toggle mapCtrl panel
+		if (ui_isEnabled(NULL, UI_ID_PANEL_MAPCTRL)){
+			ui_disable(NULL, UI_ID_PANEL_MAPCTRL);
+			ui_enable(NULL, UI_ID_BUTTON_CONFIG);
+		}else{
+			ui_enable(NULL, UI_ID_PANEL_MAPCTRL);
+			ui_disable(NULL, UI_ID_BUTTON_CONFIG);
+		}
+		op_push(OP_FUNC_CONFIG);
+		op_go();
+		render_signalUpdate();
+		return;
+	}
+}
+
+FLASHMEM void ui_panelBuild ()
 {
 
-	memset(&panel, 0, sizeof(panel));
-	panel.rect.x = 45;
-	panel.rect.y = 100;
-	panel.rect.width = 100;
-	panel.rect.height = 300;
-	ui_enable(&panel);
+	ui_panel_t *panel = &panel_mapCtrl;
+	memset(panel, 0, sizeof(*panel));
 	
-	
+	panel->widget.type = UI_WIDGET_PANEL;
+	panel->widget.id = UI_ID_PANEL_MAPCTRL;
+	panel->widget.children.total = 5;
+	panel->widget.children.widgets = WIDGET(panel_mapCtrl_buttons);
+	panel->widget.parent = NULL;
+	panel->rect.x = 45;
+	panel->rect.y = 100;
+	panel->rect.width = 100;
+	panel->rect.height = 300;
+	panel->callback.func = panel_mapCtrl_cb;
+	ui_enable(panel, 0);
+
 	// Start log recording
-	ui_button_t *button = &panel.buttons[0];
+	ui_button_t *button = CHILD_WIDGET_BUTTON(panel,0);
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_START;
+	button->widget.parent = WIDGET(panel);
 	button->label.text = "Start";
 	button->label.colour = COLOUR_PAL_GREEN;
 	button->label.scale = 10;
@@ -111,13 +354,15 @@ FLASHMEM void ui_panelBuild (ui_button_t *buttons)
 	button->offset.x = 2;
 	button->offset.y = 2;
 
-	button->widget.id = UI_ID_BUTTON_START;
 	button->callback.func = buttons_cb;
-	ui_enable(button);
+	ui_enable(button, 0);
 	
 	
 	// Stop recording
-	button = &panel.buttons[1];
+	button = CHILD_WIDGET_BUTTON(panel,1);
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_STOP;
+	button->widget.parent = WIDGET(panel);
 	button->label.text = "Stop";
 	button->label.colour = COLOUR_PAL_RED;
 	button->label.scale = 10;
@@ -132,13 +377,15 @@ FLASHMEM void ui_panelBuild (ui_button_t *buttons)
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->widget.id = UI_ID_BUTTON_STOP;
 	button->callback.func = buttons_cb;
-	ui_disable(button);
+	ui_disable(button, 0);
 	
 	
 	// Pause recording
-	button = &panel.buttons[2];
+	button = CHILD_WIDGET_BUTTON(panel,2);
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_PAUSE;
+	button->widget.parent = WIDGET(panel);
 	button->label.text = "Pause";
 	button->label.colour = COLOUR_PAL_BLUE;
 	button->label.scale = 10;
@@ -153,13 +400,38 @@ FLASHMEM void ui_panelBuild (ui_button_t *buttons)
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->widget.id = UI_ID_BUTTON_PAUSE;
 	button->callback.func = buttons_cb;
-	ui_disable(button);
+	ui_disable(button, 0);
+
+
+	// Reset recording
+	button = CHILD_WIDGET_BUTTON(panel,3);
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_RESET;
+	button->widget.parent = WIDGET(panel);
+	button->label.text = "Reset";
+	button->label.colour = COLOUR_PAL_BLACK;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+	
+	button->rect.x = 10;
+	button->rect.y = 40;
+	button->rect.width = 90;
+	button->rect.height = 32;
+	
+	button->offset.x = 2;
+	button->offset.y = 2;
+	
+	button->callback.func = buttons_cb;
+	ui_disable(button, 0);
 
 
 	// Hotstart receiver
-	button = &panel.buttons[3];
+	button = CHILD_WIDGET_BUTTON(panel,4);
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_HOTSTART;
+	button->widget.parent = WIDGET(panel);
 	button->label.text = "Hotstart";
 	button->label.colour = COLOUR_PAL_BLACK;
 	button->label.scale = 10;
@@ -167,17 +439,49 @@ FLASHMEM void ui_panelBuild (ui_button_t *buttons)
 	button->label.quality = 2;
 	
 	button->rect.x = 10;
-	button->rect.y = 60;
+	button->rect.y = 70;
 	button->rect.width = 90;
 	button->rect.height = 32;
 	
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->widget.id = UI_ID_BUTTON_HOTSTART;
 	button->callback.func = buttons_cb;
-	ui_enable(button);
+	ui_enable(button, 0);
+
+}
+
+FLASHMEM void uiBuild ()
+{
+	ui_panelBuild();
 	
+	
+	// mapCtrl/config toggle button
+	ui_button_t *button = &button_config;
+	memset(button, 0, sizeof(*button));
+
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_CONFIG;
+	button->widget.children.total = 0;
+	button->widget.children.widgets = NULL;
+	button->widget.parent = NULL;
+
+	button->rect.x = 56;
+	button->rect.y = VHEIGHT-48;
+	button->rect.width = 96;
+	button->rect.height = 32;
+
+	button->label.text = "Config";
+	button->label.colour = COLOUR_PAL_BLACK;
+	button->label.scale = 10;
+	button->label.size = 20;
+	button->label.quality = 2;
+
+	button->offset.x = 0;
+	button->offset.y = 0;
+	
+	button->callback.func = buttons_cb;
+	ui_enable(button, 0);	
 }
 
 static inline double calcDistM (double lat1, double lon1, double lat2, double lon2)
@@ -274,7 +578,7 @@ static void drawSatSignalAvailabilitySvId (sat_stats_t *sats, const uint8_t gnss
 	int boxHeight = 12;
 	int boxWidth = 16;
 	
-	int xStart = -10;
+	int xStart = -20;
 	int hSpace = 2;
 	int vSpace = 4;
 #endif
@@ -721,13 +1025,13 @@ void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused)
  		return;
 
 	// begin recording from first fix
-	if (!trackRecord.firstFix){
+	if (!trackRecord.firstFix && !trackRecord.recordActive){
 		trackRecord.firstFix = 1;
 		
 		date_adjustTime4BST(&gpsData);
 		recordCreatePathname(&trackRecord, &gpsData);
 		//printf(CS("FirstFix. Filename: %s"), trackRecord.filename);
-		trackRecord.recordActive = 1;
+		log_start();
 		
 		dategps_t date;
 		timegps_t time;
@@ -901,6 +1205,8 @@ FLASHMEM void setup ()
 #if ENABLE_ENCODERS
 	encoders_init();
 #endif
+
+	uiBuild();
 
 	if (MPU_CLOCK_FREQ > 60)
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
@@ -1089,6 +1395,10 @@ FASTRUN void loop ()
 	if (inst.cmdTaskRunMode){
 		inst.cmdTaskRunMode = cmd_task(inst.heartbeatPulse);
 		inst.heartbeatPulse = 0;
+	}
+
+	if (op_state() == OP_READY){
+		op_execute(op_pop());
 	}
 
 	inst.rstats.nothingCount++;
