@@ -35,6 +35,11 @@ void doReboot ();
 void log_setRecordState (const int state);
 void log_setAcquisitionState (const int state);
 void log_reset ();
+int log_isActive ();
+void log_pause ();
+void log_stop ();
+void log_start ();
+
 int log_load (const char *filename);
 
 void log_runStep (const uint8_t step);
