@@ -665,8 +665,8 @@ static void configureNavX5 (ubx_device_t *dev)
 	nav.mask1  = NAVX5_MASK1_MINMAX | NAVX5_MASK1_MINCNO | NAVX5_MASK1_INITIAL3DFIX;
 	nav.mask1 |= NAVX5_MASK1_WKNROLL | NAVX5_MASK1_ACKAID | NAVX5_MASK1_PPP | NAVX5_MASK1_AOP;
 	nav.mask2 = NAVX5_MASK2_ADR;
-	nav.minSVs = 6;
-	nav.maxSVs = 32;
+	nav.minSVs = 8;
+	nav.maxSVs = 16;
 	nav.minCNO = 6;
 	nav.iniFix3D = 0;
 	nav.ackAiding = 0;

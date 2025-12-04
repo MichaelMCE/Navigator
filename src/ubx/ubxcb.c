@@ -359,12 +359,12 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	gps->date.day = pvt->day;
 
 	// proto 19+
-	gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
-	gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
+	//gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
+	//gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
 
 	// proto 18
-	//gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
-	//gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
+	gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
+	gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
 
 #if 0
 	gps->iTow = pvt->iTow;	
