@@ -100,3 +100,25 @@ void log_reset ()
 	inst.rstats.trkptsTotal = 0;
 	inst.rstats.trkptsToWrite = 0;
 }
+
+void log_start ()
+{
+	trackRecord.recordActive = 1;
+	trackRecord.acquDisabled = 0;
+}
+
+void log_stop ()
+{
+	trackRecord.recordActive = 0;
+	trackRecord.acquDisabled = 0;
+}
+
+void log_pause ()
+{
+	trackRecord.acquDisabled = 1;
+}
+
+int log_isActive ()
+{
+	return trackRecord.recordActive;
+}
