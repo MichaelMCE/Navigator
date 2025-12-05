@@ -23,8 +23,8 @@ enum _ui_ids {
 #define UI_WIDGET_BUTTON			20
 
 #define WIDGET(w)					((ui_widget_t*)(w))
-#define CHILD_WIDGET_BUTTON(o,n)	((ui_button_t*)&WIDGET(o)->children.widgets[(n)]);
 #define CHILD_WIDGET_OBJ(o,n)		((ui_widget_t*)&WIDGET(o)->children.widgets[(n)]);
+#define CHILD_WIDGET_BUTTON(o,n)	((ui_button_t*)&WIDGET(o)->children.widgets[(n)]);
 
 
 
@@ -65,12 +65,12 @@ typedef struct {
 		uint8_t scale;			// vFont scale * 10
 		uint8_t size;			// vFont size * 10
 		uint8_t quality;		// vFont quality
-		uint32_t renderFlags;	// vFont flags
+		//uint32_t renderFlags;	// vFont flags
 	}label;
 	
 	struct {
 		uint8_t *pixels;		// array of COLOUR_PAL_
-		uint16_t width;		// clipped to rect.width/height
+		uint16_t width;			// clipped to rect.width/height
 		uint16_t height;
 	}image;
 	
