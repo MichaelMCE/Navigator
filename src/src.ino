@@ -63,12 +63,68 @@ extern int gnssReceiver_PassthroughEnabled;
 static ui_button_t button_config;
 static ui_button_t panel_mapCtrl_buttons[5];
 static ui_panel_t panel_mapCtrl;
-static ui_widget_t *widgetObjs[] = {WIDGET(&panel_mapCtrl), WIDGET(&button_config)};
+static ui_widget_t *widgetObjs[2] = {WIDGET(&panel_mapCtrl), WIDGET(&button_config)};
 
 static uint32_t opFuncs[OP_QUEUE_LENGTH];	// FIFO
 static uint32_t opPosition = 0;
 static uint32_t opState = OP_IDLE;
 
+
+
+static void ui_draw_button (ui_button_t *button, const int32_t x, const int32_t y)
+{
+	drawRectangle(x, y, x+button->rect.width-1, y+button->rect.height-1, COLOUR_PAL_BLACK);
+
+	setBrush(inst.vfont, BRUSH_DISK);
+	setGlyphScale(inst.vfont, button->label.scale/10.0f);
+	setBrushSize(inst.vfont, button->label.size/10.0f);
+	setBrushQuality(inst.vfont, button->label.quality);
+	setBrushColour(inst.vfont, button->label.colour);
+
+	drawString(inst.vfont, button->label.text, x+button->offset.x, y+button->offset.y);
+}
+
+static void ui_draw_panel (ui_panel_t *panel, const int32_t x, const int32_t y)
+{
+	drawRectangle(x, y, x+panel->rect.width-1, y+panel->rect.height-1, COLOUR_PAL_BLACK);
+}
+
+static void ui_render (ui_widget_t *widgets[], const uint8_t total, const int32_t x, const int32_t y)
+{
+	for (int i = 0; i < total; i++){
+		ui_widget_t *widget = widgets[i];
+		if (widget->isEnabled){
+			int32_t childX = x;
+			int32_t childY = y;
+			
+			if (widget->type == UI_WIDGET_PANEL){
+				ui_panel_t *obj = (ui_panel_t*)widget;
+				childX += obj->rect.x;
+				childY += obj->rect.y;
+				ui_draw_panel(obj, childX, childY);
+				
+			}else if (widget->type == UI_WIDGET_BUTTON){
+				ui_button_t *obj = (ui_button_t*)widget;
+				childX += obj->rect.x;
+				childY += obj->rect.y;
+				ui_draw_button(obj, childX, childY);
+			}
+
+			if (widget->children.total){
+				ui_widget_t *objs[widget->children.total];
+				for (int j = 0; j < widget->children.total; j++)
+					objs[j] = CHILD_WIDGET_OBJ(objs,j);
+
+				ui_render(objs, widget->children.total, childX, childY);
+			}
+		}
+	}
+}
+
+static void uiDraw ()
+{
+	ui_render(widgetObjs, sizeof(widgetObjs) / sizeof(ui_widget_t*), 0, 0);
+}
 
 
 FLASHMEM int ui_isEnabled (void *opaque, const uint8_t child_id)
@@ -178,11 +234,6 @@ FLASHMEM int ui_disable (void *opaque, const uint8_t child_id)
 	return 0;
 }
 
-void buttons_cb (void *opaque, uint8_t id, uint32_t flags)
-{
-	printf(CS("buttons_cb: id:%i"), id);
-}
-
 // FIFO
 static uint32_t op_push (const uint32_t op_code)
 {
@@ -197,11 +248,11 @@ static inline uint32_t op_pop ()
 {
 	if (opPosition){
 		opPosition--;
-
 		uint32_t opFunc = opFuncs[0];
-		for (int i = 0; i < OP_QUEUE_LENGTH-1; i++)
-			opFuncs[i] = opFuncs[i+1];
-
+		if (opPosition){
+			for (int i = 0; i < OP_QUEUE_LENGTH-1; i++)
+				opFuncs[i] = opFuncs[i+1];
+		}
 		return opFunc;
 	}
 	return 0;
@@ -255,9 +306,30 @@ FLASHMEM static inline void op_execute (const uint32_t op_code)
 	};
 }
 
-FLASHMEM void panel_mapCtrl_cb (void *opaque, uint8_t id, uint32_t flags)
+FLASHMEM void uiButtons_cb (void *opaque, uint8_t id, uint32_t flags)
 {
-	printf(CS("panel_mapCtrl_cb: id:%i"), id);
+	printf(CS("uiButtons_cb: id:%i"), id);
+	
+	switch (id){
+	case UI_ID_BUTTON_CONFIG:	// toggle mapCtrl panel
+		if (ui_isEnabled(NULL, UI_ID_PANEL_MAPCTRL)){
+			ui_disable(NULL, UI_ID_PANEL_MAPCTRL);
+			ui_enable(NULL, UI_ID_BUTTON_CONFIG);
+		}else{
+			ui_enable(NULL, UI_ID_PANEL_MAPCTRL);
+			ui_disable(NULL, UI_ID_BUTTON_CONFIG);
+		}
+		op_push(OP_FUNC_CONFIG);
+		op_go();
+		render_signalUpdate();
+		return;
+	}
+	
+}
+
+FLASHMEM void uiPanelMapCtrl_cb (void *opaque, uint8_t id, uint32_t flags)
+{
+	printf(CS("uiPanelMapCtrl_cb: id:%i"), id);
 
 	ui_panel_t *panel = (ui_panel_t*)opaque;
 
@@ -332,7 +404,7 @@ FLASHMEM void ui_panelBuild ()
 	panel->rect.y = 100;
 	panel->rect.width = 100;
 	panel->rect.height = 300;
-	panel->callback.func = panel_mapCtrl_cb;
+	panel->callback.func = uiPanelMapCtrl_cb;
 	ui_enable(panel, 0);
 
 	// Start log recording
@@ -354,7 +426,7 @@ FLASHMEM void ui_panelBuild ()
 	button->offset.x = 2;
 	button->offset.y = 2;
 
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_enable(button, 0);
 	
 	
@@ -377,7 +449,7 @@ FLASHMEM void ui_panelBuild ()
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_disable(button, 0);
 	
 	
@@ -400,7 +472,7 @@ FLASHMEM void ui_panelBuild ()
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_disable(button, 0);
 
 
@@ -423,7 +495,7 @@ FLASHMEM void ui_panelBuild ()
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_disable(button, 0);
 
 
@@ -446,7 +518,7 @@ FLASHMEM void ui_panelBuild ()
 	button->offset.x = 2;
 	button->offset.y = 2;
 	
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_enable(button, 0);
 
 }
@@ -480,7 +552,7 @@ FLASHMEM void uiBuild ()
 	button->offset.x = 0;
 	button->offset.y = 0;
 	
-	button->callback.func = buttons_cb;
+	button->callback.func = uiButtons_cb;
 	ui_enable(button, 0);	
 }
 
@@ -1371,6 +1443,8 @@ FASTRUN void loop ()
 			inst.freeTiles = 0;
 			//tilesUnload(inst.renderPassCt);
 		}
+
+		uiDraw();
 	}
 
 	if (tilesLoadSig){
