@@ -209,6 +209,8 @@ enum _pal {
 	COLOUR_PAL_Cycleway,
 	COLOUR_PAL_AirportRunway,
 	COLOUR_PAL_Mooring,
+	
+	COLOUR_PAL_SAT_Orange,
 
 
 	COLOUR_PAL_TOTAL,

@@ -188,4 +188,5 @@ FLASHMEM void palette_init ()
 	paletteSet(COLOUR_PAL_AirportRunway,    COLOUR_24TO16(0xbbbbcc));
 	paletteSet(COLOUR_PAL_Mooring,          COLOUR_24TO16(0xf2efe9));
 	
+	paletteSet(COLOUR_PAL_SAT_Orange,		0xE321);
 }
