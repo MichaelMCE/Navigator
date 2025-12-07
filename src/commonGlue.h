@@ -22,7 +22,7 @@
 #include "cmd.h"
 #include "tiles.h"
 #include "poi.h"
-#include "UI/ui.h"
+#include "ui/ui.h"
 
 #if ENABLE_MTP
 #include "mtp.h"
@@ -31,7 +31,7 @@
 
 
 
-void doReboot ();
+void mpu_reboot ();
 void log_setRecordState (const int state);
 void log_setAcquisitionState (const int state);
 void log_reset ();
