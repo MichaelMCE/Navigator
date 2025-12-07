@@ -369,7 +369,7 @@ FLASHMEM static void cmd_log (char *msg, const int cmdlen)
 FLASHMEM static void cmd_reset (char *msg, const int cmdlen)
 {
 	if (!strncmp(msg, "reset", 5))
-		doReboot();
+		mpu_reboot();
 }
 
 FLASHMEM static void cmd_hello (char *msg, const int cmdlen)
