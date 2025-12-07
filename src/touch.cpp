@@ -53,8 +53,8 @@ static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const int isRel
 			return;
 		}
 
-		int ret = uiInput(touch->points[0].x, touch->points[0].y, TOUCH_DOWN);
-		printf(CS("uiInput exit: %i"), ret);
+		uiInput(touch->points[0].x, touch->points[0].y, TOUCH_DOWN);
+		//printf(CS("uiInput exit: %i"), ret);
 
 		//if (++inst.renderFlags == 6)
 		//	inst.renderFlags = 0;
