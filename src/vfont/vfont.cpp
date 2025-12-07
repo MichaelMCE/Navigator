@@ -703,18 +703,18 @@ int setBrush (vfont_t *ctx, const int brush)
 // calculate glyph stride
 static inline void brushCalcAdvance (vfont_t *ctx)
 {
-	ctx->brush.advanceMult = (ctx->brush.size * ctx->brush.step) / 100.0f;
+	ctx->brush.advanceMult = (fabs(ctx->brush.size) * ctx->brush.step) / 100.0f;
 }
 
 float setBrushSize (vfont_t *ctx, const float size)
 {
-	if (size >= 0.5f){
+	//if (size >= 0.5f){
 		float old = ctx->brush.size;
 		ctx->brush.size = size;
 		brushCalcAdvance(ctx);
 		return old;
-	}
-	return ctx->brush.size;
+	//}
+	//return ctx->brush.size;
 }
 
 // 0.5 to 100.0
@@ -828,12 +828,12 @@ FLASHMEM void vfont_init (vfont_t *ctx)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
-	setAspect(ctx, 1.0, 1.0);
-	setGlyphPadding(ctx, -1.0);
-	setGlyphScale(ctx, 1.0);
+	setAspect(ctx, 1.0f, 1.0f);
+	setGlyphPadding(ctx, -1.0f);
+	setGlyphScale(ctx, 1.0f);
 	setBrush(ctx, BRUSH_POINT);
-	setBrushSize(ctx, 1.0);
-	setBrushStep(ctx, 1.0);
+	setBrushSize(ctx, 1.0f);
+	setBrushStep(ctx, 1.0f);
 	setBrushQuality(ctx, 2);
 	setBrushColour(ctx, COLOUR_PAL_RED);
 	setRenderFilter(ctx, RENDEROP_NONE);
