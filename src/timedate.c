@@ -10,6 +10,9 @@
 
 
 
+
+
+
 void date_formatDateTime (gpsdata_t *gps, char *buffer, const uint32_t len)
 {
 	snprintf(buffer, len, "%.02i%.02i%.02i_%.02i%.02i%.02i",
