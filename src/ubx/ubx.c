@@ -65,13 +65,13 @@ FLASHMEM void msgPostLowCb (void *opaque, const intptr_t unused)
 // once per second, is called through mon_io
 FLASHMEM void msgPostMedCb (void *opaque, const intptr_t unused)
 {
-	msgPostMed(opaque, unused);
+	receiver_cb(opaque, unused);
 }
 
 FLASHMEM void gps_requestUpdate ()
 {
 	userData.rates.epochPerRead = userData.rates.epoch;
-	msgPostMed(&userData, 0);
+	receiver_cb(&userData, 0);
 	userData.rates.epoch = 0;
 }
 
