@@ -28,7 +28,9 @@ typedef struct {
 	uint32_t stub:28;
 	
 	char filename[32];
+	char date[16];
 }trackRecord_t;
+
 
 
 int fpRecord_init (trackRecord_t *trackRecord);

@@ -19,6 +19,8 @@ FLASHMEM int fpRecord_init (trackRecord_t *trackRecord)
 	trackRecord->firstFix = 0;
 	trackRecord->writeDisabled = 0;
 	trackRecord->acquDisabled = 0;
+	trackRecord->filename[0] = 0;
+	trackRecord->date[0] = 0;
 
 	if (!SD.exists(TRACKPTS_DIR))
 		fio_mkdir(TRACKPTS_DIR);
