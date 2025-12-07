@@ -565,7 +565,7 @@ static void configureGNSS_M8 (ubx_device_t *dev)
 	
 	cfg = &gnss->cfgblk[5];
 	cfg->gnssId = GNSSID_QZSS;
-	cfg->resTrkCh = 0;
+	cfg->resTrkCh = 1;
 	cfg->maxTrkCh = 3;
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 	
@@ -576,8 +576,10 @@ static void configureGNSS_M8 (ubx_device_t *dev)
 	cfg->flags = GNSS_CFGBLK_DISABLED | GNSS_CFGBLK_SIGENABLED;
 
 	gnss->msgVer = 0;
-	gnss->numTrkChHw = 72;
-	gnss->numTrkChUse = 49;//32;
+	//gnss->numTrkChHw = 72;
+	//gnss->numTrkChUse = 49;
+	gnss->numTrkChHw = 32;
+	gnss->numTrkChUse = 32;
 	gnss->numConfigBlocks = cfgBlks;
 
 	ubx_sendEx(dev, 100, UBX_CFG, UBX_CFG_GNSS, gnss, glen);
@@ -622,7 +624,8 @@ void ubx_setRate (ubx_device_t *dev, const uint8_t rate)
 
 static void configureRate (ubx_device_t *dev)
 {
-	setRate(dev, 34);
+	//setRate(dev, 34);
+	setRate(dev, 57);
 }
 
 static void configureNav5 (ubx_device_t *dev)
@@ -665,8 +668,8 @@ static void configureNavX5 (ubx_device_t *dev)
 	nav.mask1  = NAVX5_MASK1_MINMAX | NAVX5_MASK1_MINCNO | NAVX5_MASK1_INITIAL3DFIX;
 	nav.mask1 |= NAVX5_MASK1_WKNROLL | NAVX5_MASK1_ACKAID | NAVX5_MASK1_PPP | NAVX5_MASK1_AOP;
 	nav.mask2 = NAVX5_MASK2_ADR;
-	nav.minSVs = 8;
-	nav.maxSVs = 16;
+	nav.minSVs = 4;
+	nav.maxSVs = 32;
 	nav.minCNO = 6;
 	nav.iniFix3D = 0;
 	nav.ackAiding = 0;
@@ -996,7 +999,7 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	if (1) configureInf(dev);
 	if (1) configureRate(dev);
 	if (1) configureGNSS_M8(dev);
-	if (1) configureGNSS_M10(dev);
+	if (0) configureGNSS_M10(dev);
 	if (1) configureNav5(dev);
 	if (1) configureNavX5(dev);
 	if (1) configureHNR(dev);
