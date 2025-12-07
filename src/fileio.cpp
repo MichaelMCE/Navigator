@@ -6,6 +6,9 @@
 #include "fileio.h"
 #include "record.h"
 #include "cmd.h"
+#include "timedate.h"
+
+
 
 
 
@@ -17,7 +20,7 @@ void dateTime_cb (uint16_t *date, uint16_t *time, uint8_t *ms10)
 	timegps_t timegps;
 
 	//printf("dateTime_cb:\n");
-	getDateTime(&dategps, &timegps);
+	date_getAdjustedTime(NULL, &dategps, &timegps);
 	
 	// Return date using FS_DATE macro to format fields.
 	*date = FS_DATE(dategps.year, dategps.month, dategps.day);
