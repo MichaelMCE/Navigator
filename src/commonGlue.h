@@ -39,7 +39,6 @@ int log_isActive ();
 void log_pause ();
 void log_stop ();
 void log_start ();
-
 int log_load (const char *filename);
 
 void log_runStep (const uint8_t step);
@@ -53,7 +52,9 @@ void log_runAdvance (const int32_t advanceBy);
 void mpu_setClockFreq (const uint32_t freqMhz);
 
 void render_signalUpdate ();
-void render_loadTiles ();
+void render_signalTiles ();
+
+int uiInput (const int32_t x, const int32_t y, const uint32_t flags);
 
 
 #if defined(__IMXRT1062__)
