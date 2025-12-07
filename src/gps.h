@@ -147,7 +147,7 @@ extern "C" {
 #endif
 
 
-void msgPostMed (const gpsdata_t *const opaque, const intptr_t unused);
+void receiver_cb (const gpsdata_t *const opaque, const intptr_t unused);
 void addDebugLine (const uint8_t *str);
 
 int gps_serialWrite (uint8_t *buffer, uint32_t bufferSize);
