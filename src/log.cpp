@@ -110,7 +110,8 @@ void log_start ()
 void log_stop ()
 {
 	trackRecord.recordActive = 0;
-	trackRecord.acquDisabled = 0;
+	trackRecord.acquDisabled = 1;
+	trackRecord.firstFix = 0;
 }
 
 void log_pause ()
