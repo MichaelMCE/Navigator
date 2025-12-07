@@ -712,8 +712,8 @@ static inline void drawTrackPath (application_t *inst, trackPoint_t *points, con
 			if (!((y >= VHEIGHT && preY >= VHEIGHT) || (y < 0 && preY < 0))){
 				if (!((x >= VWIDTH && preX >= VWIDTH) || (x < 0 && preX < 0))){
 					const float distance = calcDistMetersTrkPt(tp, &points[j-1]);
-					if (distance >= 0.20f/* && distance < 50.0f*/){
-						if (distance < 11.0f){
+					if (distance >= 0.20f){
+						if (distance < 20.0f){
 							drawPolylineSolid(preX, preY, x, y, lineThickness, col[altCol]);
 						}else{
 							tp = &points[j+2];
