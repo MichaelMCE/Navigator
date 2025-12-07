@@ -70,6 +70,10 @@ void touch_startTimer ();
 
 
 
+#define TOUCH_DOWN		1
+
+
+
 #endif
 
 

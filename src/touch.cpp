@@ -46,13 +46,19 @@ static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const int isRel
 {
 	if (!isReleased){
 		//printf(CS("Touch down: %i %i"), touch->points[0].x, touch->points[0].y);
-
-		if (gnssReceiver_PassthroughEnabled)
+		
+		if (gnssReceiver_PassthroughEnabled){
 			gnssReceiver_PassthroughEnabled = 0;
+			render_signalUpdate();
+			return;
+		}
 
-		if (++inst.renderFlags == 6)
-			inst.renderFlags = 0;
-		render_signalUpdate();
+		int ret = uiInput(touch->points[0].x, touch->points[0].y, TOUCH_DOWN);
+		printf(CS("uiInput exit: %i"), ret);
+
+		//if (++inst.renderFlags == 6)
+		//	inst.renderFlags = 0;
+		//render_signalUpdate();
 	}else{
 		//printf(CS("Touch released"));
 	}
