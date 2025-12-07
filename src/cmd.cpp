@@ -263,7 +263,7 @@ FLASHMEM static void cmd_zoom (char *msg, const int cmdlen)
 		sceneSetZoom(&inst, zoomlevel);
 		sceneResetViewport(&inst);
 		sceneLoadTiles(&inst);
-		render_loadTiles();
+		render_signalTiles();
 		render_signalUpdate();
 	}
 }
@@ -299,7 +299,7 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "tilesClean", 10)){
 		tilesUnloadAll(&inst);
-		render_loadTiles();
+		render_signalTiles();
 		render_signalUpdate();
 
 	}else if (!strncmp(msg, "locgraphic:", 11)){	
@@ -408,8 +408,9 @@ FLASHMEM static void cmd_touch (char *filename, const int cmdlen)
 		printf(CS("Touching: %s ..."), filename);
 		serialFlush();
 			
-		dategps_t gdate; timegps_t gtime;
-		getDateTime(&gdate, &gtime);
+		dategps_t gdate;
+		timegps_t gtime;
+		date_getAdjustedTime(NULL, &gdate, &gtime);
 			
 		fio_setDir(TRACKPTS_DIR);
 		if (fio_setModifyTime(filename, &gdate, &gtime))
