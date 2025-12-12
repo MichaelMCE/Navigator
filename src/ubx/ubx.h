@@ -16,6 +16,10 @@
 
 
 
+#define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
+
+
+
 /*
 UBX
 • Every Frame starts with a 2-byte Preamble consisting of two synchronization characters: 0xB5 0x62.
@@ -29,7 +33,6 @@ UBX
 	The checksum is calculated over the Message, starting and including the CLASS field, up until, but excluding,
 
 */
-
 
 
 #define MSG_UBX_B1				0xB5
@@ -1427,9 +1430,7 @@ typedef struct {
 
 
 typedef struct{
-	union{
-		int stub;
-	}u;
+	uint8_t stub[4];
 }ubx_device_t;
 
 
