@@ -10,7 +10,7 @@
 
 
 
-#define SERIAL_RATE				(230400)
+#define SERIAL_RATE				(460800)
 #define DEBUG_LINES				(24)
 #define DEBUG_LINE_LEN			(42)
 #define LOCATION_BINSIZE		(60)		// bin size of at least 2 seconds (functional rate * 2)
@@ -24,7 +24,7 @@
 #define COM_BAUD_460800			6
 #define COM_BAUD_921600			7
 
-#define COM_BAUD				COM_BAUD_230400
+#define COM_BAUD				COM_BAUD_460800
 #define COM_BAUD_FWDEFAULT		COM_BAUD_9600
 #define COM_BAUD_LASTSAVED		COM_BAUD_115200
 #define BAUDRATE(n)				(baudRates[(n)])
@@ -135,6 +135,8 @@ typedef struct {
 		int writePos;
 		pos_rec_t sum[LOCATION_BINSIZE];
 	}location;
+
+	uint32_t nav_status_msss;						// milliseconds since Startup / Reset
 }sat_stats_t;
 
 
@@ -160,6 +162,9 @@ void gps_coldStart ();
 void gps_warmStart ();
 void gps_hotStart ();
 
+void gps_reinit ();
+void gps_reconnect ();
+
 void gps_resetOdo ();
 void gps_startOdo ();
 void gps_stopOdo ();
@@ -169,6 +174,8 @@ void gps_setRate (const uint8_t rate);
 void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
+
+
 
 void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 void gps_loadOfflineAssist (const int printInfo);
@@ -183,6 +190,8 @@ const char *getFixName (const uint8_t type);
 void ms_delay (const uint32_t timeMs);
 
 void getDateTime (dategps_t *date, timegps_t *time);
+
+int isSerialConsoleConnected ();
 
 #ifdef __cplusplus
 }

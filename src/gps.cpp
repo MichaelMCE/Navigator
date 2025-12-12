@@ -12,14 +12,16 @@
 
 
 int gnssReceiver_PassthroughEnabled = 0;
-
-
 ubx_device_t dev = {0};
 extern const uint32_t baudRates[];
 static uint8_t bufferReadX[32768];
 static uint8_t bufferWriteX[1024];
 
 
+int isSerialConsoleConnected ()
+{
+	return (int)Serial.dtr();
+}
 
 void gps_pollInf (const uint8_t protocolID)
 {
@@ -69,6 +71,11 @@ void gps_warmStart ()
 void gps_hotStart ()
 {
 	ubx_hotStart(&dev);
+}
+
+void gps_reinit ()
+{
+	gps_configure(&dev);
 }
 
 void gps_resetOdo ()
@@ -121,6 +128,18 @@ FLASHMEM static void reciever_baudReset (ubx_device_t *dev)
 		Serial1.end();
 		delay(200);
 	}
+}
+
+FLASHMEM void gps_reconnect ()
+{
+	reciever_baudReset(&dev);
+	delay(100);
+	Serial1.begin(SERIAL_RATE);
+	delay(100);
+	Serial1.clear();
+	gps_configure(&dev);
+	delay(100);
+	gps_configurePorts(&dev);
 }
 
 FLASHMEM static void gps_setup (ubx_device_t *dev)
