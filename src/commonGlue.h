@@ -53,6 +53,7 @@ void mpu_setClockFreq (const uint32_t freqMhz);
 
 void render_signalUpdate ();
 void render_signalTiles ();
+void render_cycleMode ();
 
 int uiInput (const int32_t x, const int32_t y, const uint32_t flags);
 
