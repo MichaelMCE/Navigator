@@ -334,7 +334,6 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 {
 	char tbuffer[64];
 
-
 	setBrush(inst.vfont, BRUSH_DISK);
 	setGlyphScale(inst.vfont, 0.8);
 	setBrushSize(inst.vfont, 2.0);
@@ -378,8 +377,10 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	drawString(inst.vfont, tbuffer, 5, 145);
 	
 #if (VHEIGHT > 320)
-	snprintf(tbuffer, sizeof(tbuffer), "P: %.2f, G: %.2f", data->dop.position/100.0f, data->dop.geometric/100.0f);
-	drawString(inst.vfont, tbuffer, 5, 170);	
+	//snprintf(tbuffer, sizeof(tbuffer), "P: %.2f, G: %.2f", data->dop.position/100.0f, data->dop.geometric/100.0f);
+	snprintf(tbuffer, sizeof(tbuffer), "msSS: %i", (int)(sats->nav_status_msss/1000));
+	drawString(inst.vfont, tbuffer, 5, 170);
+	
 #endif
 
 	if (inst.renderFlags == 4) return;
@@ -443,6 +444,11 @@ static inline void drawLogStatus (int x, int y, int boxDepth)
 	if (!trackRecord.writeDisabled)
 		drawRectangleFilled(x+1, y+1, x+boxDepth-1, y+boxDepth-1, COLOUR_PAL_DARKGREEN);
 	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);
+
+	x += 36;
+	if (isSerialConsoleConnected())
+		drawRectangleFilled(x+1, y+1, x+boxDepth-1, y+boxDepth-1, COLOUR_PAL_DARKGREEN);
+	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);	
 }
 
 static void drawMapOverlay (gpsdata_t *data)
@@ -624,6 +630,13 @@ void receiver_cb (const gpsdata_t *const opaque, const intptr_t unused)
 	}
 }
 
+void render_cycleMode ()
+{
+	if (++inst.renderFlags == 6)
+		inst.renderFlags = 0;
+	render_signalUpdate();
+}
+		
 void render_signalTiles ()
 {
 	inst.loadTiles = 200;
@@ -808,7 +821,8 @@ FLASHMEM void setup ()
 	encoders_init();
 #endif
 
-	uiBuild();
+	//delay(2000);
+	ui_init();
 
 	if (MPU_CLOCK_FREQ > 60)
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
