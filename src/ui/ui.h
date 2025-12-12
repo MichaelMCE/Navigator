@@ -9,13 +9,36 @@
 
 enum _ui_ids {
 	UI_IDBASE				=		100,
-	UI_ID_PANEL_MAPCTRL		= 		101,
-	UI_ID_BUTTON_START		=		102,
-	UI_ID_BUTTON_STOP		=		103,
-	UI_ID_BUTTON_PAUSE		=		104,
-	UI_ID_BUTTON_HOTSTART,
+	UI_ID_PANEL_MAPCTRL,
+	UI_ID_PANEL_RECEIVER,
+	UI_ID_PANEL_MPU,
+	UI_ID_PANEL_DISPLAY,
+
+	UI_ID_BUTTON_empty,
+	
+	UI_ID_BUTTON_START,
+	UI_ID_BUTTON_STOP,
+	UI_ID_BUTTON_PAUSE,
 	UI_ID_BUTTON_RESET,
+	UI_ID_BUTTON_DISPLAY,
+	UI_ID_BUTTON_RECEIVER,
+	UI_ID_BUTTON_MPU,
+		
+	UI_ID_BUTTON_MODE,
+	UI_ID_BUTTON_OFF,
+		
 	UI_ID_BUTTON_REBOOT,
+	UI_ID_BUTTON_FREQ528,
+	UI_ID_BUTTON_FREQ600,
+	UI_ID_BUTTON_FREQ720,
+	UI_ID_BUTTON_FREQ816,
+	
+	UI_ID_BUTTON_HOTSTART,
+	UI_ID_BUTTON_WARMSTART,
+	UI_ID_BUTTON_COLDSTART,
+	UI_ID_BUTTON_REINIT,
+	UI_ID_BUTTON_RECONNECT,
+	
 	UI_ID_BUTTON_CONFIG
 };
 
@@ -26,7 +49,6 @@ enum _ui_ids {
 #define WIDGET(w)					((ui_widget_t*)(w))
 #define CHILDREN(w)					((ui_widget_t**)&(w))
 #define CHILD_WIDGET_OBJ(o,n)		((ui_widget_t*)WIDGET(o)->children.widgets[(n)]);
-#define CHILD_WIDGET_BUTTON(o,n)	((ui_button_t*)WIDGET(o)->children.widgets[(n)]);
 
 
 
@@ -46,19 +68,36 @@ typedef struct _ui_widget_t {
 }ui_widget_t;
 
 
+typedef int (*ui_widget_cb_t) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags);
+
+
+
+typedef struct {
+	void *opaque;
+	ui_widget_cb_t func;
+}ui_callback_t;
+
+typedef struct {		// location and size within parent (local to parent)
+	uint16_t x;
+	uint16_t y;
+	uint16_t width;		// includes touch hit test
+	uint16_t height;
+}ui_rect_t;
+
 typedef struct {
 	ui_widget_t widget;
+	ui_rect_t rect;
+	ui_callback_t callback;
+}ui_all_t;
 
-	struct {				// location and size within parent (local to parent)
-		uint16_t x;
-		uint16_t y;
-		uint16_t width;		// includes touch hit test
-		uint16_t height;
-	}rect;
-		
+typedef struct {
+	ui_widget_t widget;
+	ui_rect_t rect;
+	ui_callback_t callback;
+	
 	struct {
-		int16_t x;			// offset of string/image from within .rect
-		int16_t y;			// can be negative. is not hit-tested
+		int16_t x;				// offset of string/image from within .rect
+		int16_t y;				// can be negative. is not hit-tested
 	}offset;
 
 	struct {
@@ -68,7 +107,7 @@ typedef struct {
 		uint8_t quality;		// vFont quality
 		uint8_t stub;
 
-		float size;			// vFont size * 10
+		float size;				// vFont size * 10
 
 		//uint32_t renderFlags;	// vFont flags
 	}label;
@@ -78,30 +117,17 @@ typedef struct {
 		uint16_t width;			// clipped to rect.width/height
 		uint16_t height;
 	}image;
-	
-	struct {
-		void *opaque;
-		int (*func) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags);
-	}callback;
 }ui_button_t;
 
 typedef struct {
 	ui_widget_t widget;
+	ui_rect_t rect;
+	ui_callback_t callback;
 
-	struct {				// location and size of panel
-		uint16_t x;
-		uint16_t y;
-		uint16_t width;		// includes touch hit test
-		uint16_t height;
-	}rect;
-	
-	struct {
-		void *opaque;
-		int (*func) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags);
-	}callback;
 }ui_panel_t;
 
 
+void ui_init ();
 
 // returns 1 if successful, 0 if you're an idiot
 int ui_enable (void *opaque, const uint8_t child_id);
@@ -123,8 +149,22 @@ enum _opcodes {
 	OP_FUNC_LOG_STOP,
 	OP_FUNC_LOG_PAUSE,
 	OP_FUNC_LOG_RESET,
-	OP_FUNC_HOTSTART,
+	
+	OP_FUNC_MODE,
+	OP_FUNC_OFF,
+	
 	OP_FUNC_REBOOT,
+	OP_FUNC_FREQ528,
+	OP_FUNC_FREQ600,
+	OP_FUNC_FREQ720,
+	OP_FUNC_FREQ816,
+	
+	OP_FUNC_HOTSTART,
+	OP_FUNC_WARMSTART,
+	OP_FUNC_COLDSTART,
+	OP_FUNC_REINIT,
+	OP_FUNC_RECONNECT,
+	
 	OP_FUNC_CONFIG
 };
 
