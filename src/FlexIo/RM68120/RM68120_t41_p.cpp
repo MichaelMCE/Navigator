@@ -976,24 +976,25 @@ FASTRUN void RM68120_t41_p::FlexIO_Config_SnglBeat ()
 FASTRUN void RM68120_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_t *value, const uint32_t length)
 {
 	//FlexIO_Config_SnglBeat();
+	__disable_irq();
 	
 	//delayNanoseconds(10);
     CSLow();
-	delayNanoseconds(5);
+	//delayNanoseconds(5);
     DCLow();
-	delayNanoseconds(5);
+	delayNanoseconds(40);
 
     p->SHIFTBUF[0] = cmd;
 	while (0 == (p->SHIFTSTAT & (1 << 0))){
 		
 	}
 
-	delayNanoseconds(5);
+	delayNanoseconds(20);
     DCHigh();
-	delayNanoseconds(5);
+	delayNanoseconds(20);
     
     if (length){
-    	delayNanoseconds(5);
+    	delayNanoseconds(20);
 
 		for (uint32_t i = 0; i < length; i++){
 			delayNanoseconds(7);
@@ -1004,9 +1005,10 @@ FASTRUN void RM68120_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
     		asm("dsb");
 		}
 	}
-	asm("dsb");
-	delayNanoseconds(5);
+	//asm("dsb");
+	//delayNanoseconds(5);
     CSHigh();
+    __enable_irq();
 	//delayNanoseconds(10);
 }
 
