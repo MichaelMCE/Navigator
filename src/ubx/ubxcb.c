@@ -86,7 +86,10 @@ static inline void navLocationAddAndSum (gpsdata_t *gps, pos_rec_t *pos)
 
 const char *getFixName (const uint8_t type)
 {
-	return navFixType[type];
+	if (type < 6)
+		return navFixType[type];
+	else
+		return "invalid type";
 }
 
 sat_stats_t *getSats ()
@@ -358,13 +361,15 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	gps->date.month = pvt->month;
 	gps->date.day = pvt->day;
 
-	// proto 19+
-	//gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
-	//gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
-
-	// proto 18
-	gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
-	gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
+	if (RECEIVER_M10){
+	 	//proto 19+
+		gps->dateConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDDATE) != 0;
+		gps->timeConfirmed = (pvt->flags2&PVT_FLAGS2_CONFIRMEDTIME) != 0;
+	}else{
+		// proto 18
+		gps->dateConfirmed = (pvt->valid&PVT_VALID_VALIDDATE) != 0;
+		gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
+	}
 
 #if 0
 	gps->iTow = pvt->iTow;	
@@ -600,37 +605,35 @@ FLASHMEM int nav_posllh (const uint8_t *payload, uint16_t msg_len, void *opaque)
 
 FLASHMEM int nav_status (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {
-#if 1
 	const nav_status_t*status = (nav_status_t*)payload;
-	
-	printf(CS("\nnav_status %i"), msg_len);
-	printf(CS(" iTow:    %u"), (unsigned int)status->iTow);
-	if (status->gpsFix < 6)
+	stats.nav_status_msss = status->msss;
+
+	if (0 && isSerialConsoleConnected()){
+		printf(CS("\nnav_status %i"), msg_len);
+		printf(CS(" iTow:    %u"), (unsigned int)status->iTow);
 		printf(CS(" gpsFix: %s"), getFixName(status->gpsFix));
 		
-	printf(CS(" flags:   0x%X"), status->flags);
-	if (status->flags&STATUS_FLAGS_GPSFIXOK)
-		printf(CS("  %s"), navStatus[0]);
-	if (status->flags&STATUS_FLAGS_DIFFSOLN)
-		printf(CS("  %s"), navStatus[1]);
-	if (status->flags&STATUS_FLAGS_WKNSET)
-		printf(CS("  %s"), navStatus[2]);
-	if (status->flags&STATUS_FLAGS_TOWSET)
-		printf(CS("  %s"), navStatus[3]);	
+		printf(CS(" flags:   0x%X"), status->flags);
+		if (status->flags&STATUS_FLAGS_GPSFIXOK)
+			printf(CS("  %s"), navStatus[0]);
+		if (status->flags&STATUS_FLAGS_DIFFSOLN)
+			printf(CS("  %s"), navStatus[1]);
+		if (status->flags&STATUS_FLAGS_WKNSET)
+			printf(CS("  %s"), navStatus[2]);
+		if (status->flags&STATUS_FLAGS_TOWSET)
+			printf(CS("  %s"), navStatus[3]);	
 	
-	printf(CS(" fixStat: %X"), status->fixStat);
-	printf(CS(" flags2:  %X"), status->flags2);
-	printf(CS("   psmState: %s"), psmState[status->flags2&STATUS_FLAGS2_PSMSTATE]);
-	printf(CS("   spoofDetState: %s"), spoofDetState[(status->flags2&STATUS_FLAGS2_SPOOFDETSTATE)>>3]);
-	printf(CS(" TTFF:    %u"), (unsigned int)status->ttff);
-	printf(CS(" msSS:    %u"), (unsigned int)status->msss);
+		printf(CS(" fixStat: %X"), status->fixStat);
+		printf(CS(" flags2:  %X"), status->flags2);
+		printf(CS("   psmState: %s"), psmState[status->flags2&STATUS_FLAGS2_PSMSTATE]);
+		printf(CS("   spoofDetState: %s"), spoofDetState[(status->flags2&STATUS_FLAGS2_SPOOFDETSTATE)>>3]);
+		printf(CS(" TTFF:    %u"), (unsigned int)status->ttff);
+		printf(CS(" msSS:    %u"), (unsigned int)status->msss);
 	
-	
-	gpsdata_t *gps = (gpsdata_t*)opaque;
-	printf(CS("timedateConfirmed: %i"), (gps->dateConfirmed && gps->timeConfirmed));
-	
+		gpsdata_t *gps = (gpsdata_t*)opaque;
+		printf(CS("timedateConfirmed: %i"), (gps->dateConfirmed && gps->timeConfirmed));
+	}
 
-#endif
 	return CBFREQ_NONE;
 }
 
@@ -798,7 +801,7 @@ FLASHMEM int cfg_rate (const uint8_t *payload, uint16_t msg_len, void *opaque)
 
 	snprintf(str, sizeof(str), " mRate %i, nRate %i, tRef %s", rate->measRate, rate->navRate, tStd);
 	addDebugLine((uint8_t*)str);
-	
+	addDebugLine((uint8_t*)" ");
 	return CBFREQ_NONE;	
 }
 
