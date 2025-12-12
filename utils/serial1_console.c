@@ -32,7 +32,8 @@
 #define UBLOX_OFFLINE_SERVER_2			2
 #define UBLOX_OFFLINE_SERVER_3			3
 
-static const char *ubloxUrl = "http://offline-live%i.services.u-blox.com/GetOfflineData.ashx?token=%s;gnss=gps,glo;alm=gps,glo,qzss;period=1;resolution=1";
+//static const char *ubloxUrl = "http://offline-live%i.services.u-blox.com/GetOfflineData.ashx?token=%s;gnss=gps,glo,gal,bds;alm=gps,glo,gal,bds;period=1;resolution=1";
+static const char *ubloxUrl = "http://offline-live%i.services.u-blox.com/GetOfflineData.ashx?token=%s;gnss=gps,gal,bds;alm=gps,gal,bds;period=1;resolution=1";
 static const uint32_t baudRates[] = {9600, 9600*2, 9600*4, 9600*6, 115200, 115200*2, 115200*4, 115200*8, 0};
 
 static HANDLE hSerial;
@@ -50,7 +51,7 @@ static int exitSig = 0;
 #define COM_BAUD_230400			5
 #define COM_BAUD_460800			6
 #define COM_BAUD_921600			7
-#define COM_BAUD				COM_BAUD_230400
+#define COM_BAUD				COM_BAUD_460800
 #define COM_BAUD_FWDEFAULT		COM_BAUD_9600
 #define COM_BAUD_LASTSAVED		COM_BAUD_115200
 #define BAUDRATE(n)				(baudRates[(n)])
