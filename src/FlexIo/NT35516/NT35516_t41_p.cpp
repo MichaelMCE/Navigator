@@ -264,10 +264,12 @@ FASTRUN void NT35516_t41_p::setAddrWindow (uint16_t x1, uint16_t y1, uint16_t x2
 FASTRUN void NT35516_t41_p::pushPixels16bit (uint16_t *pixels, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
 
-#if 0
-	digitalWriteFast(36, HIGH);
+	//flexIO_Config_snglBeat();
+
+#if 1
+	//digitalWriteFast(36, HIGH);
 	setAddrWindow(x1, y1, x2, y2);
-	digitalWriteFast(36, HIGH);
+	//digitalWriteFast(36, HIGH);
 
 	const int area = ((x2-x1)+1) * ((y2-y1)+1);
 	
@@ -280,7 +282,7 @@ FASTRUN void NT35516_t41_p::pushPixels16bit (uint16_t *pixels, uint16_t x1, uint
 
 	digitalWriteFast(36, HIGH);
 	sglBeatWR_nPrm_16(NT35516_RAMWR, (uint16_t*)pixels, area);
-	digitalWriteFast(36, HIGH);
+	digitalWriteFast(36, LOW);
 	//sglBeatWR_nPrm_16(0x3c00, (uint16_t*)pixels, area);
 
 #else
@@ -292,21 +294,26 @@ FASTRUN void NT35516_t41_p::pushPixels16bit (uint16_t *pixels, uint16_t x1, uint
 	const int width = (x2 - x1) + 1;
 	const int height = (y2 - y1) + 1;
 	
+	//digitalWriteFast(36, HIGH);
+	
 	// refresh line by line
 	for (int i = 0; i < height; i++){
 		setAddrWindow(x1, y1+i, x2, y1+i);
-		digitalWriteFast(36, HIGH);
-		
+		//digitalWriteFast(36, HIGH);
 		sglBeatWR_nPrm_16(NT35516_RAMWR, &pixels[i * width], width);
+		//digitalWriteFast(36, LOW);
+		//delayNanoseconds(10);
 
 		// seems to help stablize the controler before next row
-		digitalWriteFast(36, HIGH);
+		/*digitalWriteFast(36, HIGH);
 		sendCmd16Arg8(0, 0);
 		sendCmd16Arg8(0, 0);
 		sendCmd16Arg8(0, 0);
 		sendCmd16Arg8(0, 0);
-		digitalWriteFast(36, HIGH);
+		digitalWriteFast(36, HIGH);*/
 	}
+	
+	//digitalWriteFast(36, LOW);
 #endif
 }
 
@@ -345,6 +352,9 @@ FASTRUN void NT35516_t41_p::flexIO_init ()
 	p = &pFlex->port();
 	/* Pointer to the hardware structure in the FlexIO channel */
 	hw = &pFlex->hardware();
+
+    /* Set clock */
+    pFlex->setClockSettings(3, 1, 0); // (480 MHz source, 1+1, 1+0) >> 480/2/1 >> 240Mhz
 
 	/* Pins setup */
 	pinMode(19, OUTPUT); // FlexIO3:0 D0
@@ -402,7 +412,7 @@ FASTRUN void NT35516_t41_p::flexIO_init ()
 
 
 	/* Set clock */
-	pFlex->setClockSettings(3, 1, 0); // (480 MHz source, 1+1, 1+0) >> 480/2/1 >> 240Mhz
+//	pFlex->setClockSettings(3, 1, 0); // (480 MHz source, 1+1, 1+0) >> 480/2/1 >> 240Mhz
 
 	/* Set up pin mux */
 	pFlex->setIOPinToFlexMode(36);
@@ -427,11 +437,13 @@ FASTRUN void NT35516_t41_p::flexIO_init ()
 	pFlex->setIOPinToFlexMode(26);
 	pFlex->setIOPinToFlexMode(27);
 #endif
-	/* Enable the clock */
-	hw->clock_gate_register |= hw->clock_gate_mask;
-	/* Enable the FlexIO with fast access */
-	p->CTRL = FLEXIO_CTRL_FLEXEN;
-   
+
+
+
+    /* Enable the clock */
+    hw->clock_gate_register |= hw->clock_gate_mask;
+    p->CTRL = FLEXIO_CTRL_FLEXEN;
+
 }
 
 FASTRUN void NT35516_t41_p::flexIO_Config_snglBeat ()
@@ -461,7 +473,7 @@ FASTRUN void NT35516_t41_p::flexIO_Config_snglBeat ()
 	p->TIMCMP[0] = 
 		(((1 * 2) - 1) << 8)									/* TIMCMP[15:8] = number of beats x 2 “ 1 */
 	  | ((_baud_div/2) - 1);									/* TIMCMP[7:0] = baud rate divider / 2 “ 1 */
-	
+
 	p->TIMCFG[0] = 
 		FLEXIO_TIMCFG_TIMOUT(0)									/* Timer output logic one when enabled and not affected by reset */
 	  | FLEXIO_TIMCFG_TIMDEC(0)									/* Timer decrement on FlexIO clock, shift clock equals timer output */
@@ -484,43 +496,44 @@ FASTRUN void NT35516_t41_p::flexIO_Config_snglBeat ()
 	p->CTRL |= FLEXIO_CTRL_FLEXEN;
 
 }
-#include <USBHost_t36.h>
+
+//#include <USBHost_t36.h>
 FASTRUN void NT35516_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, uint16_t *value, const uint32_t length)
 {
 	//NVIC_DISABLE_IRQ(IRQ_USBHS);
 	//NVIC_DISABLE_IRQ(IRQ_USBPHY0);
-	__disable_irq();
+	//__disable_irq();
 	
 	//delayNanoseconds(20);
 	CSLow();
-	//delayNanoseconds(20);
+	delayNanoseconds(50);
 	DCLow();
-	delayNanoseconds(40);
+	delayNanoseconds(50);
 	
 
 	p->SHIFTBUF[0] = cmd;
-	while (0 == (p->SHIFTSTAT & (1 << 0))){
-	}
+	//while (0 == (p->SHIFTSTAT & (1 << 0))){}
+	delayNanoseconds(50);
 	
-	delayNanoseconds(20);
 	DCHigh();
-	delayNanoseconds(20);
+	delayNanoseconds(50);
 	
 	if (length){
-		delayNanoseconds(20);
+		//delayNanoseconds(20);
 
 		for (uint32_t i = 0; i < length; i++){
-			p->SHIFTBUF[0] = *value++;
-	  		while (0 == (p->SHIFTSTAT & (3 << 0))){
-			}
+			p->SHIFTBUF[0] = *value;
+	  		//while (0 == (p->SHIFTSTAT & (3 << 0))){}
+			delayNanoseconds(45);
+			value++;
 		}
 	}
 
-	//delayNanoseconds(20);
+	//delayNanoseconds(10);
 	CSHigh();
-	//delayNanoseconds(20);
+	delayNanoseconds(50);
 
-	__enable_irq();
+	//__enable_irq();
 	//NVIC_ENABLE_IRQ(IRQ_USBPHY0);
 	//NVIC_ENABLE_IRQ(IRQ_USBHS);
 }

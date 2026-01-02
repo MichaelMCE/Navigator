@@ -60,7 +60,6 @@ class NT35516_t41_p {
     void setBacklight (const uint8_t value);
     
     void pushPixels16bit (uint16_t * pcolors, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-    void pushPixels16bitAsync (const uint16_t * pcolors, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
 
     uint8_t _rotation = 0;
     const uint8_t MADCTL[4] = MADCTL_ARRAY;
