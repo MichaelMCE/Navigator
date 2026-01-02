@@ -11,8 +11,12 @@ enum _ui_ids {
 	UI_IDBASE				=		100,
 	UI_ID_PANEL_MAPCTRL,
 	UI_ID_PANEL_RECEIVER,
+	UI_ID_PANEL_RECEIVER_RESTART,
 	UI_ID_PANEL_MPU,
 	UI_ID_PANEL_DISPLAY,
+	UI_ID_PANEL_GNSS,
+	UI_ID_PANEL_LOGCTRL,
+	UI_ID_PANEL_LOGS,
 
 	UI_ID_BUTTON_empty,
 	
@@ -20,6 +24,8 @@ enum _ui_ids {
 	UI_ID_BUTTON_STOP,
 	UI_ID_BUTTON_PAUSE,
 	UI_ID_BUTTON_RESET,
+	
+	UI_ID_BUTTON_LOGS,
 	UI_ID_BUTTON_DISPLAY,
 	UI_ID_BUTTON_RECEIVER,
 	UI_ID_BUTTON_MPU,
@@ -36,15 +42,42 @@ enum _ui_ids {
 	UI_ID_BUTTON_HOTSTART,
 	UI_ID_BUTTON_WARMSTART,
 	UI_ID_BUTTON_COLDSTART,
+	
+	UI_ID_BUTTON_GPS_RESTART,
 	UI_ID_BUTTON_REINIT,
 	UI_ID_BUTTON_RECONNECT,
+	UI_ID_BUTTON_STATUS,
+	UI_ID_BUTTON_VERSION,
+	UI_ID_BUTTON_GNSS,
 	
-	UI_ID_BUTTON_CONFIG
+	UI_ID_BUTTON_GPS,
+	UI_ID_BUTTON_GALILEO,
+	UI_ID_BUTTON_BEIDOU,
+	UI_ID_BUTTON_GLONASS,
+	UI_ID_BUTTON_SBAS,
+	UI_ID_BUTTON_QZSS,
+	UI_ID_BUTTON_IMES,
+
+	UI_ID_BUTTON_CONFIG,
+	UI_ID_BUTTON_OVERLAYDETAIL,
+	UI_ID_BUTTON_LOGCTRL,
+	UI_ID_BUTTON_ZOOM_IN,
+	UI_ID_BUTTON_ZOOM_OUT,
+	UI_ID_BUTTON_REFRESH,
+	UI_ID_BUTTON_UP,
+	UI_ID_BUTTON_DOWN,
+	UI_ID_BUTTON_LOAD
 };
 
 
 #define UI_WIDGET_PANEL				10
 #define UI_WIDGET_BUTTON			20
+
+#define UI_WIDGET_FLAG_HASPANEL		0x0001
+
+#define UI_WIDGET_MSG_INPUT			0x01
+#define UI_WIDGET_MSG_RENDER		0x02
+
 
 #define WIDGET(w)					((ui_widget_t*)(w))
 #define CHILDREN(w)					((ui_widget_t**)&(w))
@@ -55,8 +88,10 @@ enum _ui_ids {
 typedef struct _ui_widget_t {
 	uint8_t id;
 	uint8_t type;				// UI_WIDGET_
+	
 	uint16_t isEnabled:1;
-	uint16_t stub:15;
+	uint16_t stub:7;
+	uint16_t flags:8;			// is a button that'll open a menu panel;
 	
 	struct {
 		uint8_t total;
@@ -68,7 +103,7 @@ typedef struct _ui_widget_t {
 }ui_widget_t;
 
 
-typedef int (*ui_widget_cb_t) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags);
+typedef int (*ui_widget_cb_t) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2);
 
 
 
@@ -138,6 +173,8 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t flags);
 
 FLASHMEM void uiBuild ();
 
+void uiLogs_clear ();
+
 
 
 
@@ -162,18 +199,34 @@ enum _opcodes {
 	OP_FUNC_HOTSTART,
 	OP_FUNC_WARMSTART,
 	OP_FUNC_COLDSTART,
+	
 	OP_FUNC_REINIT,
 	OP_FUNC_RECONNECT,
+	OP_FUNC_STATUS,
+	OP_FUNC_VERSION,
 	
-	OP_FUNC_CONFIG
+	OP_FUNC_ZOOMOUT,
+	OP_FUNC_ZOOMIN,
+	OP_FUNC_ZOOMRESET,
+
+	OP_FUNC_LOG_OPEN,		// ui panel
+	OP_FUNC_LOG_CLOSE,
+	OP_FUNC_LOG_LOAD,		// import log file
+	
+	OP_FUNC_CONFIG,
+	OP_FUNC_OVERLAYDETAIL,
 };
 
-#define OP_QUEUE_LENGTH		16
+#define OP_QUEUE_LENGTH		32
 
 
 uint32_t op_state ();
 uint32_t op_pop ();
+void op_go ();
+uint32_t op_push (const uint32_t op_code);
 int32_t op_execute (const uint32_t opCode);
+
+
 
 #endif
 
