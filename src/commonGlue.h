@@ -54,6 +54,11 @@ void mpu_setClockFreq (const uint32_t freqMhz);
 void render_signalUpdate ();
 void render_signalTiles ();
 void render_cycleMode ();
+void render_zoomIn ();
+void render_zoomOut ();
+void render_zoomReset ();
+
+void drawPanel (const uint8_t which);
 
 int uiInput (const int32_t x, const int32_t y, const uint32_t flags);
 
