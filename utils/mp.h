@@ -104,8 +104,8 @@ enum _course {
 #define GPS_10M_LAT				(GPS_1000M_LAT/100.0f)
 #define GPS_10M_LON				(GPS_1000M_LON/100.0f)
 
-#define GPS_LENGTH_LAT			(GPS_500M_LAT)
-#define GPS_LENGTH_LON			(GPS_500M_LON)
+#define GPS_LENGTH_LAT			(GPS_250M_LAT)
+#define GPS_LENGTH_LON			(GPS_250M_LON)
 
 #define POI_LENGTH_LAT			(GPS_2000M_LAT)
 #define POI_LENGTH_LON			(GPS_2000M_LON)
