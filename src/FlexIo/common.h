@@ -14,7 +14,7 @@ void display_begin (const uint32_t speed)
 // x1..y2 = the distination region these pixels represent
 void display_update (const uint16_t *pixels, const uint16_t x1, const uint16_t y1, const uint16_t x2, const uint16_t y2)
 {
-	lcd.pushPixels16bit(pixels, x1, y1, x2, y2);
+	lcd.pushPixels16bit((uint16_t*)pixels, x1, y1, x2, y2);
 }
 
 void display_setRotation (const uint8_t rotation)
