@@ -67,7 +67,7 @@ FLASHMEM void cmdSendResponse (const char *msg)
 	serialFlush();
 }
 
-FLASHMEM static File file_open (const char *file)
+static File file_open (const char *file)
 {
 	fio_setDir(TRACKPTS_DIR);
 	return SD.open(file);
@@ -242,8 +242,13 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 		cmdSendResponse("Resetting: coldstart");
 		gps_coldStart();
 	}else if (!strncmp(msg, "passthrough:", 12)){
-		uint8_t state = atoi(&msg[12])&0x01;
-		gnssReceiver_PassthroughEnabled = state;
+		uint8_t which = atoi(&msg[12]);
+		if (which == 1){
+			gnssReceiver_PassthroughEnabled = 1;
+			
+		}else if (which == 2){
+			gnssReceiver_PassthroughEnabled = 2;
+		}
 	}
 }
 
@@ -619,16 +624,28 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 		}
 		printf(CS("Clock frequency: %u"), (unsigned int)F_CPU_ACTUAL);
 
-	}else if (!strncmp(msg, "detail", 6)){
+	}else if (!strncmp(msg, "status", 6)){
 		extern uint8_t external_psram_size;
 		
 		cmdSendResponse(CFG_STRING);
+		printf(CS("SDCard size: %iGB"), SDCARD_SIZE);
 		printf(CS("Clock frequency: %uMhz"), (unsigned int)F_CPU_ACTUAL/1000/1000);
 		printf(CS("CPU temp: %.2fc"), InternalTemperature.readTemperatureC());
 		printf(CS("ExtMem: %uMB"), external_psram_size);
 		printf(CS("Tiles: %i"), tilesCount());
 		printf(CS("Blocks: %i"), blocksCount());
 		printf(CS("Tile memory used: %u"), tileMemoryUsage());
+
+		printf(CS("GNSS Receiver:"));
+		if (RECEIVER_M10 == 1)
+			printf(CS("   UBlox M10"));
+		else
+			printf(CS("   UBlox M8"));
+
+		if (RECEIVER_SINGLE == 1)
+			printf(CS("   Single"));
+		else
+			printf(CS("   Multi"));
 	}
 }
 
@@ -660,6 +677,7 @@ FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
 	}else if (!strncmp(buffer, CMD_FDATA, strlen(CMD_FDATA))){
 		char *msg = &buffer[strlen(CMD_FDATA)];
 		cmd_fdata(msg, cmdlen);
+		uiLogs_clear();
 		
 	}else if (!strncmp(buffer, CMD_EXIT, strlen(CMD_EXIT))){
 		return 0;
