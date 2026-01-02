@@ -51,7 +51,7 @@ static int exitSig = 0;
 #define COM_BAUD_230400			5
 #define COM_BAUD_460800			6
 #define COM_BAUD_921600			7
-#define COM_BAUD				COM_BAUD_460800
+#define COM_BAUD				COM_BAUD_230400
 #define COM_BAUD_FWDEFAULT		COM_BAUD_9600
 #define COM_BAUD_LASTSAVED		COM_BAUD_115200
 #define BAUDRATE(n)				(baudRates[(n)])
@@ -688,8 +688,10 @@ void cmd_receiver (const char *cmdStr)
 {
 	if (!strncmp("hotstart", cmdStr, 8)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		
 	}else if (!strncmp("warmstart", cmdStr, 9)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		
 	}else if (!strncmp("coldstart", cmdStr, 9)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 
@@ -912,7 +914,6 @@ void cmd_help (const char *cmdStr)
 
 int main (const int argc, const char *argv[])
 {   
-
 	if (argc < 3){
 		if (argc == 2){
 			if ((*argv[1] == 'h') || (*argv[1] == 'H')){
