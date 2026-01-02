@@ -10,7 +10,7 @@
 
 
 
-#define SERIAL_RATE				(460800)
+#define SERIAL_RATE				(230400)
 #define DEBUG_LINES				(24)
 #define DEBUG_LINE_LEN			(42)
 #define LOCATION_BINSIZE		(60)		// bin size of at least 2 seconds (functional rate * 2)
@@ -24,7 +24,7 @@
 #define COM_BAUD_460800			6
 #define COM_BAUD_921600			7
 
-#define COM_BAUD				COM_BAUD_460800
+#define COM_BAUD				COM_BAUD_230400
 #define COM_BAUD_FWDEFAULT		COM_BAUD_9600
 #define COM_BAUD_LASTSAVED		COM_BAUD_115200
 #define BAUDRATE(n)				(baudRates[(n)])
@@ -136,7 +136,8 @@ typedef struct {
 		pos_rec_t sum[LOCATION_BINSIZE];
 	}location;
 
-	uint32_t nav_status_msss;						// milliseconds since Startup / Reset
+	uint32_t status_msSS[2];						// milliseconds since Startup / Reset
+	uint32_t resetCt[2];
 }sat_stats_t;
 
 
@@ -154,7 +155,7 @@ void addDebugLine (const uint8_t *str);
 
 int gps_serialWrite (uint8_t *buffer, uint32_t bufferSize);
 void gps_configurePorts (ubx_device_t *dev);
-void gps_configure (ubx_device_t *dev);
+void gps_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque);
 
 void gps_printVersions ();
 void gps_printStatus ();
@@ -164,6 +165,7 @@ void gps_hotStart ();
 
 void gps_reinit ();
 void gps_reconnect ();
+void gps_status ();
 
 void gps_resetOdo ();
 void gps_startOdo ();
@@ -175,9 +177,10 @@ void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
 
+uint8_t gps_getPortActive ();
 
 
-void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
+//void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 void gps_loadOfflineAssist (const int printInfo);
 
 int gps_writeUbx (void *buffer, const uint32_t bufferSize);
