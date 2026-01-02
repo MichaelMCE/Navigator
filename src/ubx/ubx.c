@@ -31,7 +31,6 @@
 #define ALERT_BEFORE		1
 #define ALERT_AFTER			2
 #define ALERT_SINGLE		4
-#define UBX_BUFFER_SIZE		2048
 
 
 
@@ -424,49 +423,44 @@ void receiver_resetRxTx ()
 	userData.rates.tx = 0;
 }
 
-int ubx_processBlock (const uint8_t *data, int length)
+int ubx_processBlock (const uint8_t *data, uint16_t length, uint8_t *ubx_buffer, int32_t *ubx_index, int32_t *ubx_fill)
 {
-	static uint8_t ubx_buffer[UBX_BUFFER_SIZE];
-	static int ubx_index = 0;
-	static int ubx_fill = 0;
-
-	
 	userData.rates.rx += length;
 
-	if ((ubx_fill + length) > UBX_BUFFER_SIZE)
+	if ((*ubx_fill + length) > UBX_BUFFER_SIZE)
 		return 0;
 
-	memcpy(&ubx_buffer[ubx_fill], data, length);
-	ubx_fill += length;
+	memcpy(&ubx_buffer[*ubx_fill], data, length);
+	*ubx_fill += length;
 
-	while(((ubx_fill - ubx_index) > 2) && (ubx_buffer[ubx_index+0] != MSG_UBX_B1) && (ubx_buffer[ubx_index+1] != MSG_UBX_B2))
-		ubx_index++;
+	while(((*ubx_fill - *ubx_index) > 2) && (ubx_buffer[*ubx_index] != MSG_UBX_B1) && (ubx_buffer[(*ubx_index)+1] != MSG_UBX_B2))
+		(*ubx_index)++;
 
-	while((ubx_fill - ubx_index) >= 8){
-		length = (ubx_fill - ubx_index);
+	while((*ubx_fill - *ubx_index) >= 8){
+		length = (*ubx_fill - *ubx_index);
 
-		if ((ubx_buffer[ubx_index + 0] == MSG_UBX_B1) && (ubx_buffer[ubx_index + 1] == MSG_UBX_B2)){
-			uint16_t msg_length = ((uint16_t)ubx_buffer[ubx_index+4] << 0) + ((uint16_t)ubx_buffer[ubx_index+5] << 8);
+		if ((ubx_buffer[*ubx_index + 0] == MSG_UBX_B1) && (ubx_buffer[(*ubx_index) + 1] == MSG_UBX_B2)){
+			uint16_t msg_length = ((uint16_t)ubx_buffer[(*ubx_index)+4] << 0) + ((uint16_t)ubx_buffer[(*ubx_index)+5] << 8);
 
 			if ((msg_length+8) > UBX_BUFFER_SIZE)
-				ubx_index++;
+				(*ubx_index)++;
 			else if ((msg_length+8) > length)
 				break;
 			else
-				ubx_index += ubx_processPayload(&ubx_buffer[ubx_index], msg_length);
+				(*ubx_index) += ubx_processPayload(&ubx_buffer[*ubx_index], msg_length);
 		}else{
-			ubx_index++;
+			(*ubx_index)++;
 		}
 	}
 
-	length = (ubx_fill - ubx_index);
-	if (length && ubx_index){
-		memcpy(ubx_buffer, &ubx_buffer[ubx_index], length);
-		ubx_index = 0;
-		ubx_fill = length;
+	length = (*ubx_fill - *ubx_index);
+	if (length && *ubx_index){
+		memcpy(ubx_buffer, &ubx_buffer[*ubx_index], length);
+		*ubx_index = 0;
+		*ubx_fill = length;
 	}
 
-	return ubx_index;
+	return *ubx_index;
 }
 
 /*
@@ -524,7 +518,7 @@ static void configureGNSS_M10 (ubx_device_t *dev)
 		CFG_SIGNAL_GAL_ENA,       0x01,
 		CFG_SIGNAL_BDS_ENA,       0x01,
 		CFG_SIGNAL_QZSS_ENA,      0x00,
-		CFG_SIGNAL_GLO_ENA,       0x00,
+		CFG_SIGNAL_GLO_ENA,       0x01,
 		CFG_SIGNAL_BDS_B1C_ENA,   0x01
 	};
 
@@ -642,7 +636,7 @@ void ubx_setRate (ubx_device_t *dev, const uint8_t rate)
 static void configureRate (ubx_device_t *dev)
 {
 	if (RECEIVER_M10)
-		setRate(dev, 35);
+		setRate(dev, 36);
 	else
 		setRate(dev, 57);
 }
@@ -976,83 +970,86 @@ FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const dou
 	ubx_sendEx(dev, 10, UBX_MGA, UBX_MGA_INI_POSLLH, &posllh, sizeof(posllh));
 }
 
-FLASHMEM void gps_configure (ubx_device_t *dev)
+FLASHMEM void gps_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque)
 {
-	//printf(CS("gps_configure "));
-	
-	memset(&userData, 0, sizeof(userData));
-	memset(&ubxRegTable, 0, sizeof(ubxRegTable));
-	
-	payloadOpaqueSet(&userData);
-	
-	payloadPostCbSet(CBFREQ_LOW,      msgPostLowCb,  0);
-	payloadPostCbSet(CBFREQ_MEDIUM,   msgPostMedCb,  0);
-	payloadPostCbSet(CBFREQ_HIGH,     msgPostHighCb, 0);
+	if (flags&RECEIVER_CFG_CLEAN){
+		memset(&userData, 0, sizeof(userData));
+		memset(&ubxRegTable, 0, sizeof(ubxRegTable));
+	}
 
-	payloadHandlerSet("ack_nak",      UBX_ACK, UBX_ACK_NAK,      ack_nak,      MSG_STATUS_DISABLED);
-	payloadHandlerSet("ack_ack",      UBX_ACK, UBX_ACK_ACK,      ack_ack,      MSG_STATUS_DISABLED);
-	payloadHandlerSet("nav_geofence", UBX_NAV, UBX_NAV_GEOFENCE, nav_geofence, MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_posecef",  UBX_NAV, UBX_NAV_POSECEF,  nav_posecef,  MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_dop",      UBX_NAV, UBX_NAV_DOP,      nav_dop,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_pvt",      UBX_NAV, UBX_NAV_PVT,      nav_pvt,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_svinfo",   UBX_NAV, UBX_NAV_SVINFO,   nav_svinfo,   MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_status",   UBX_NAV, UBX_NAV_STATUS,   nav_status,   MSG_STATUS_ENABLED);	
-	payloadHandlerSet("nav_sat",      UBX_NAV, UBX_NAV_SAT,      nav_sat,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_eoe",      UBX_NAV, UBX_NAV_EOE,      nav_eoe,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_posllh",   UBX_NAV, UBX_NAV_POSLLH,   nav_posllh,   MSG_STATUS_ENABLED);
-	payloadHandlerSet("aid_alm",      UBX_AID, UBX_AID_ALM,      aid_alm,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("aid_aop",      UBX_AID, UBX_AID_AOP,      aid_aop,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("aid_eph",      UBX_AID, UBX_AID_EPH,      aid_eph,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("mon_ver",      UBX_MON, UBX_MON_VER,      mon_ver,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("mon_io",       UBX_MON, UBX_MON_IO,       mon_io,       MSG_STATUS_ENABLED);
-	payloadHandlerSet("rxm_sfrbx",    UBX_RXM, UBX_RXM_SFRBX,    rxm_sfrbx,    MSG_STATUS_ENABLED);
-	payloadHandlerSet("inf_error",    UBX_INF, UBX_INF_ERROR,    inf_debug,    MSG_STATUS_ENABLED);
-	payloadHandlerSet("inf_warning",  UBX_INF, UBX_INF_WARNING,  inf_debug,    MSG_STATUS_ENABLED);
-	payloadHandlerSet("inf_notice",   UBX_INF, UBX_INF_NOTICE,   inf_debug,    MSG_STATUS_ENABLED);
-	payloadHandlerSet("inf_test",     UBX_INF, UBX_INF_TEST,     inf_debug,    MSG_STATUS_ENABLED);
-	payloadHandlerSet("inf_debug",    UBX_INF, UBX_INF_DEBUG,    inf_debug,    MSG_STATUS_ENABLED);	
-	payloadHandlerSet("cfg_inf",      UBX_CFG, UBX_CFG_INF,      cfg_inf,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("cfg_rate",     UBX_CFG, UBX_CFG_RATE,     cfg_rate,     MSG_STATUS_ENABLED);
-	payloadHandlerSet("cfg_nav5",     UBX_CFG, UBX_CFG_NAV5,     cfg_nav5,     MSG_STATUS_ENABLED);	
-	payloadHandlerSet("cfg_navx5",    UBX_CFG, UBX_CFG_NAVX5,    cfg_navx5,    MSG_STATUS_ENABLED);	
-	payloadHandlerSet("cfg_gnss",     UBX_CFG, UBX_CFG_GNSS,     cfg_gnss,     MSG_STATUS_ENABLED);	
-	payloadHandlerSet("cfg_geofence", UBX_CFG, UBX_CFG_GEOFENCE, cfg_geofence, MSG_STATUS_ENABLED);
-	payloadHandlerSet("cfg_prt",      UBX_CFG, UBX_CFG_PRT,      cfg_prt,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("cfg_usb",      UBX_CFG, UBX_CFG_USB,      cfg_usb,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("cfg_odo",      UBX_CFG, UBX_CFG_ODO,      cfg_odo,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_odo",      UBX_NAV, UBX_NAV_ODO,      nav_odo,      MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_timebds",  UBX_NAV, UBX_NAV_TIMEBDS,  nav_timebds,  MSG_STATUS_ENABLED);
-	payloadHandlerSet("nav_sbas",     UBX_NAV, UBX_NAV_SBAS,     nav_sbas,     MSG_STATUS_ENABLED);	
-	payloadHandlerSet("upd_sos",      UBX_UPD, UBX_UPD_SOS,      upd_sos,      MSG_STATUS_ENABLED);	
-	payloadHandlerSet("nav_velned",   UBX_NAV, UBX_NAV_VELNED,   nav_velned,   MSG_STATUS_ENABLED);	
+	if (flags&RECEIVER_CFG_DEVPORTA) dev->uart = dev->uartPort[0];
+	if (flags&RECEIVER_CFG_DEVPORTB) dev->uart = dev->uartPort[1];
 	
+	if (flags&RECEIVER_CFG_OPAQUE) payloadOpaqueSet(&userData);		// fixme
+	
+	if (flags&RECEIVER_CFG_CALLBACK){
+		payloadPostCbSet(CBFREQ_LOW,      msgPostLowCb,  0);
+		payloadPostCbSet(CBFREQ_MEDIUM,   msgPostMedCb,  0);
+		payloadPostCbSet(CBFREQ_HIGH,     msgPostHighCb, 0);
+	}
 
-	if (1) configurePorts(dev);
-	if (1) configureInf(dev);
-	if (1) configureRate(dev);
-	if (RECEIVER_M10) configureGNSS_M10(dev);
-	if (1) configureGNSS_M8(dev);
-	if (1) configureNav5(dev);
-	if (1) configureNavX5(dev);
-	if (0) configureHNR(dev);
-	if (1) configureOdo(dev);
-	if (0) configureGeofence(dev);
+	if (flags&RECEIVER_CFG_HANDLER){
+		payloadHandlerSet("ack_nak",      UBX_ACK, UBX_ACK_NAK,      ack_nak,      MSG_STATUS_DISABLED);
+		payloadHandlerSet("ack_ack",      UBX_ACK, UBX_ACK_ACK,      ack_ack,      MSG_STATUS_DISABLED);
+		payloadHandlerSet("nav_geofence", UBX_NAV, UBX_NAV_GEOFENCE, nav_geofence, MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_posecef",  UBX_NAV, UBX_NAV_POSECEF,  nav_posecef,  MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_dop",      UBX_NAV, UBX_NAV_DOP,      nav_dop,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_pvt",      UBX_NAV, UBX_NAV_PVT,      nav_pvt,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_svinfo",   UBX_NAV, UBX_NAV_SVINFO,   nav_svinfo,   MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_status",   UBX_NAV, UBX_NAV_STATUS,   nav_status,   MSG_STATUS_ENABLED);	
+		payloadHandlerSet("nav_sat",      UBX_NAV, UBX_NAV_SAT,      nav_sat,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_eoe",      UBX_NAV, UBX_NAV_EOE,      nav_eoe,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_posllh",   UBX_NAV, UBX_NAV_POSLLH,   nav_posllh,   MSG_STATUS_ENABLED);
+		payloadHandlerSet("aid_alm",      UBX_AID, UBX_AID_ALM,      aid_alm,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("aid_aop",      UBX_AID, UBX_AID_AOP,      aid_aop,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("aid_eph",      UBX_AID, UBX_AID_EPH,      aid_eph,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("mon_ver",      UBX_MON, UBX_MON_VER,      mon_ver,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("mon_io",       UBX_MON, UBX_MON_IO,       mon_io,       MSG_STATUS_ENABLED);
+		payloadHandlerSet("rxm_sfrbx",    UBX_RXM, UBX_RXM_SFRBX,    rxm_sfrbx,    MSG_STATUS_ENABLED);
+		payloadHandlerSet("inf_error",    UBX_INF, UBX_INF_ERROR,    inf_debug,    MSG_STATUS_ENABLED);
+		payloadHandlerSet("inf_warning",  UBX_INF, UBX_INF_WARNING,  inf_debug,    MSG_STATUS_ENABLED);
+		payloadHandlerSet("inf_notice",   UBX_INF, UBX_INF_NOTICE,   inf_debug,    MSG_STATUS_ENABLED);
+		payloadHandlerSet("inf_test",     UBX_INF, UBX_INF_TEST,     inf_debug,    MSG_STATUS_ENABLED);
+		payloadHandlerSet("inf_debug",    UBX_INF, UBX_INF_DEBUG,    inf_debug,    MSG_STATUS_ENABLED);	
+		payloadHandlerSet("cfg_inf",      UBX_CFG, UBX_CFG_INF,      cfg_inf,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_rate",     UBX_CFG, UBX_CFG_RATE,     cfg_rate,     MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_nav5",     UBX_CFG, UBX_CFG_NAV5,     cfg_nav5,     MSG_STATUS_ENABLED);	
+		payloadHandlerSet("cfg_navx5",    UBX_CFG, UBX_CFG_NAVX5,    cfg_navx5,    MSG_STATUS_ENABLED);	
+		payloadHandlerSet("cfg_gnss",     UBX_CFG, UBX_CFG_GNSS,     cfg_gnss,     MSG_STATUS_ENABLED);	
+		payloadHandlerSet("cfg_geofence", UBX_CFG, UBX_CFG_GEOFENCE, cfg_geofence, MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_prt",      UBX_CFG, UBX_CFG_PRT,      cfg_prt,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_usb",      UBX_CFG, UBX_CFG_USB,      cfg_usb,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_odo",      UBX_CFG, UBX_CFG_ODO,      cfg_odo,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_odo",      UBX_NAV, UBX_NAV_ODO,      nav_odo,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_timebds",  UBX_NAV, UBX_NAV_TIMEBDS,  nav_timebds,  MSG_STATUS_ENABLED);
+		payloadHandlerSet("nav_sbas",     UBX_NAV, UBX_NAV_SBAS,     nav_sbas,     MSG_STATUS_ENABLED);	
+		payloadHandlerSet("upd_sos",      UBX_UPD, UBX_UPD_SOS,      upd_sos,      MSG_STATUS_ENABLED);	
+		payloadHandlerSet("nav_velned",   UBX_NAV, UBX_NAV_VELNED,   nav_velned,   MSG_STATUS_ENABLED);	
+	}
 
+	if (flags&RECEIVER_CFG_Ports)			configurePorts(dev);
+	if (flags&RECEIVER_CFG_Inf)				configureInf(dev);
+	if (flags&RECEIVER_CFG_Rate)			configureRate(dev);
+	if (flags&RECEIVER_CFG_GNSS){
+		if (RECEIVER_M10)					configureGNSS_M10(dev);
+		if (1)								configureGNSS_M8(dev);
+	}
+	if (flags&RECEIVER_CFG_Nav5)			configureNav5(dev);
+	if (flags&RECEIVER_CFG_NavX5)			configureNavX5(dev);
+	if (flags&RECEIVER_CFG_HNR)				configureHNR(dev);
+	if (flags&RECEIVER_CFG_Odo)				configureOdo(dev);
+	if (flags&RECEIVER_CFG_Geofence)		configureGeofence(dev);
+	
+	if (flags&RECEIVER_CFG_ODO_RESET) 		ubx_odo_reset(dev);
+	if (flags&RECEIVER_CFG_MSG_DISABLEALL)	ubx_msgDisableAll(dev);
 
-	ubx_odo_reset(dev);
-	ubx_msgDisableAll(dev);
-	//ubx_msgEnable(dev, UBX_MON, UBX_MON_IO);
-	ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
-	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_USB);
-	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
-		
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT, 4);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP, 18);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO, 10);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF, 17);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT, 19);
-	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 20);
+	if (flags&RECEIVER_CFG_MSG_POSLLH)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
+	if (flags&RECEIVER_CFG_MSG_PVT)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT,    4);
+	if (flags&RECEIVER_CFG_MSG_DOP)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP,    18);
+	if (flags&RECEIVER_CFG_MSG_ODO)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO,    10);
+	if (flags&RECEIVER_CFG_MSG_POSECEF)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF,17);
+	if (flags&RECEIVER_CFG_MSG_SAT)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT,    19);
+	if (flags&RECEIVER_CFG_MSG_STATUS)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 20);
 
 	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_EOE);
 	//ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_GEOFENCE, 60);
@@ -1064,10 +1061,16 @@ FLASHMEM void gps_configure (ubx_device_t *dev)
 	//ubx_msgPoll(dev, UBX_AID, UBX_AID_EPH);
 	//ubx_msgPoll(dev, UBX_AID, UBX_AID_ALM);
 	//ubx_msgPoll(dev, UBX_AID, UBX_AID_AOP);
-
-	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GNSS);
-	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
-	ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
-	ubx_msgPoll(dev, UBX_CFG, UBX_NAV_SAT);
-	ubx_msgPoll(dev, UBX_NAV, UBX_NAV_STATUS);
+	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
+	//ubx_msgEnable(dev, UBX_MON, UBX_MON_IO);
+	
+	if (flags&RECEIVER_CFG_POLL){
+		ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
+		ubx_msgPoll(dev, UBX_CFG, UBX_CFG_USB);
+		ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GNSS);
+		ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
+		ubx_msgPoll(dev, UBX_CFG, UBX_CFG_RATE);
+		ubx_msgPoll(dev, UBX_CFG, UBX_NAV_SAT);
+		ubx_msgPoll(dev, UBX_NAV, UBX_NAV_STATUS);
+	}
 }

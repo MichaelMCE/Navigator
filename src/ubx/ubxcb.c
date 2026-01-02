@@ -45,8 +45,8 @@ PROGMEM static const char *sbasSystem[18]   = {"Unknown", "WAAS", "EGNOS", "MSAS
 PROGMEM static const char *odoProfile[8]	= {"Running", "Cycling", "Swimming", "Car", "Custom", "", "", ""};
 PROGMEM static const char *odoFlags[4]		= {"Odometer-enabled", "Low-speed COG filter enabled", "Output low-pass filtered velocity", "Output low-pass filtered heading"};
 PROGMEM static const char *protoId[16]		= {"UBX", "NEMA", "", "RAW", "", "RTCM3", "", "", "", "", "", "", "USER0", "USER1", "USER2", "USER3"};
-PROGMEM static const char *updResponseAck[4]= {"Not acknowledged", "Acknowledged"};
 PROGMEM static const char *updResponseRes[4]= {"Unknown", "Failed restoring from backup", "Restored from backup", "Not restored (No backup)"};
+PROGMEM static const char *updResponseAck[2]= {"Not acknowledged", "Acknowledged"};
 
 static sat_stats_t stats;
 
@@ -371,7 +371,7 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 		gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
 	}
 
-#if 0
+#if 1
 	gps->iTow = pvt->iTow;	
 	gps->time.hour = pvt->hour;
 	gps->time.min = pvt->min;
@@ -581,13 +581,15 @@ FLASHMEM int nav_posllh (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	gps->fix.hAcc = posllh->hAcc/10.0f;
     gps->fix.vAcc = posllh->vAcc/10.0f;
     
+#if 0    
 	gps->time.hour = (((posllh->iTow/1000)/60)/60)%24;
 	gps->time.min = ((posllh->iTow/1000)/60)%60;
 	gps->time.sec = ((posllh->iTow/1000)%60);
     gps->time.ms = (posllh->iTow%1000)/10;
 	gps->iTow = posllh->iTow;
-	
+
 	gps->timeAdjusted = 0;
+#endif 
 
 #if 0
 	printf(CS(" iTow:   %u"), posllh->iTow);
@@ -606,7 +608,13 @@ FLASHMEM int nav_posllh (const uint8_t *payload, uint16_t msg_len, void *opaque)
 FLASHMEM int nav_status (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {
 	const nav_status_t*status = (nav_status_t*)payload;
-	stats.nav_status_msss = status->msss;
+	
+	const uint8_t port = gps_getPortActive();
+	if (port == 1)
+		stats.status_msSS[0] = status->msSS;
+	else if (port == 2)
+		stats.status_msSS[1] = status->msSS;
+
 
 	if (0 && isSerialConsoleConnected()){
 		printf(CS("\nnav_status %i"), msg_len);
@@ -628,7 +636,7 @@ FLASHMEM int nav_status (const uint8_t *payload, uint16_t msg_len, void *opaque)
 		printf(CS("   psmState: %s"), psmState[status->flags2&STATUS_FLAGS2_PSMSTATE]);
 		printf(CS("   spoofDetState: %s"), spoofDetState[(status->flags2&STATUS_FLAGS2_SPOOFDETSTATE)>>3]);
 		printf(CS(" TTFF:    %u"), (unsigned int)status->ttff);
-		printf(CS(" msSS:    %u"), (unsigned int)status->msss);
+		printf(CS(" msSS:    %u"), (unsigned int)status->msSS);
 	
 		gpsdata_t *gps = (gpsdata_t*)opaque;
 		printf(CS("timedateConfirmed: %i"), (gps->dateConfirmed && gps->timeConfirmed));
@@ -662,6 +670,7 @@ FLASHMEM int mon_ver (const uint8_t *payload, uint16_t msg_len, void *opaque)
 			str += 30;
 		}
 	}
+	addDebugLine((uint8_t*)" ");
 	return CBFREQ_NONE;
 }
 

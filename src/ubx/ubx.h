@@ -17,8 +17,9 @@
 
 
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
+#define RECEIVER_SINGLE			(0)
 
-
+#define UBX_BUFFER_SIZE			2048
 
 /*
 UBX
@@ -887,7 +888,7 @@ typedef struct {
 	uint8_t fixStat;					// STATUS_FIXSTAT_
 	uint8_t flags2;						// STATUS_FLAGS2_
 	uint32_t ttff;						// time to first fix
-	uint32_t msss;						// Milliseconds since Startup / Reset
+	uint32_t msSS;						// Milliseconds since Startup / Reset
 }__attribute__((packed))nav_status_t;
 
 typedef struct {
@@ -1390,6 +1391,35 @@ typedef struct {
 
 
 
+#define RECEIVER_CFG_OPAQUE			0x000001
+#define RECEIVER_CFG_HANDLER		0x000002
+#define RECEIVER_CFG_CALLBACK		0x000004
+#define RECEIVER_CFG_ODO_RESET		0x000008
+#define RECEIVER_CFG_MSG_DISABLEALL	0x000010
+
+#define RECEIVER_CFG_Ports			0x000020
+#define RECEIVER_CFG_Inf			0x000040
+#define RECEIVER_CFG_Rate			0x000080
+#define RECEIVER_CFG_GNSS			0x000100
+#define RECEIVER_CFG_Nav5			0x000200
+#define RECEIVER_CFG_NavX5			0x000400
+#define RECEIVER_CFG_HNR			0x000800
+#define RECEIVER_CFG_Odo			0x001000
+#define RECEIVER_CFG_Geofence		0x002000
+
+#define RECEIVER_CFG_MSG_POSLLH		0x0004000
+#define RECEIVER_CFG_MSG_PVT		0x0008000
+#define RECEIVER_CFG_MSG_DOP		0x0010000
+#define RECEIVER_CFG_MSG_ODO		0x0020000
+#define RECEIVER_CFG_MSG_POSECEF	0x0040000
+#define RECEIVER_CFG_MSG_SAT		0x0080000
+#define RECEIVER_CFG_MSG_STATUS		0x0100000
+#define RECEIVER_CFG_CLEAN			0x0200000
+#define RECEIVER_CFG_POLL			0x0400000
+#define RECEIVER_CFG_DEVPORTA		0x0800000
+#define RECEIVER_CFG_DEVPORTB		0x1000000
+
+
 #define MAX_REGMSG				64
 #define MSG_STATUS_DISABLED		0x00
 #define MSG_STATUS_ENABLED		0x01
@@ -1429,9 +1459,28 @@ typedef struct {
 }ubx_msg_t;
 
 
+
 typedef struct{
-	uint8_t stub[4];
+	void *uart;	// active
+	void *uartPort[2];
+	
+	struct {
+		uint8_t compose[UBX_BUFFER_SIZE];
+		uint8_t port[64];
+		
+		uint16_t portLen;
+		uint16_t stub;
+	
+		int32_t ubx_index;
+		int32_t ubx_fill;
+#if (!RECEIVER_SINGLE)
+	}buffer[2];
+#else
+	}buffer[1];
+#endif
 }ubx_device_t;
+
+
 
 
 #ifdef __cplusplus
@@ -1465,7 +1514,7 @@ int ubx_msgPollName (ubx_device_t *dev, const char *name);
 void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID);
 int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize);
 
-int ubx_processBlock (const uint8_t *data, int length);
+int ubx_processBlock (const uint8_t *data, uint16_t length, uint8_t *ubx_buffer, int32_t *ubx_index, int32_t *ubx_fill);
 
 void gps_requestUpdate ();
 
