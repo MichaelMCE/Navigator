@@ -22,8 +22,9 @@
 
 
 // Fully configured profiles:
+#define USE_FLEXTFT_NT35516		1		// Mk5		// Multiple GNSS receiver(s)
 #define USE_FLEXTFT_ILI9806		0		// Mk4
-#define USE_FLEXTFT_RM68120		1		// Mk3
+#define USE_FLEXTFT_RM68120		0		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
 
@@ -34,7 +35,6 @@
 #define USE_FLEXTFT_S6D04D1		0
 #define USE_FLEXTFT_LG4572B		0
 #define USE_FLEXTFT_NT35510		0
-#define USE_FLEXTFT_NT35516		0
 #define USE_SPI_GC9A01A			0
 #define USE_SPI_ST7735			0
 
@@ -136,22 +136,29 @@
 #define CFG_STRING				"854x480*2 ILI9806 IPS Display"
 #define TFT_SPEED				48
 #define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define TFT_LOWERPANEL			0
 #define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_RLBT
-#define MPU_CLOCK_FREQ			816
+#define MPU_CLOCK_FREQ			720
 #define ENABLE_ENCODERS			1
 #define EXTMEM_SIZE				8
-
+#define SDCARD_SIZE				32
 
 #elif USE_FLEXTFT_NT35516
 #define TFT_WIDTH				960
-#define TFT_HEIGHT				540
+#define TFT_HEIGHT				480/*540*/
 #define CFG_STRING				"960x540*2 NT35516 IPS Display"
-#define TFT_SPEED				22
-#define COL_CLAMP_MIN			0
-//#define COL_CLAMP_MAX			246
+#define TFT_SPEED				24
+#define TFT_INTENSITY			85		// PWM value from 0 to 127
+#define TFT_LOWERPANEL			1
+#define STRIP_RENDERER_HEIGHT	1		// Intended for use with the larger panels
+#define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+#define MPU_CLOCK_FREQ			816
+#define ENABLE_ENCODERS			0
+#define EXTMEM_SIZE				16
+#define SDCARD_SIZE				32
 #endif
 
 
