@@ -20,7 +20,9 @@
 #if USE_STARTUP_IMAGE
 #include "startup_352x320_16.h"
 #endif
-
+#if TFT_LOWERPANEL
+#include "lowerpane_960x60_16.h"
+#endif
 
 
 
@@ -162,7 +164,6 @@ FLASHMEM void drawDebugStrings (debugOverlay_t *debugLines)
 	for (int i = debugLines->totalAdded-1; i >= 0; i--){
 		char *str = (char*)debugLines->line[i];
 		drawString(inst.vfont, str, 5, y);
-		
 		y -= 30;
 	}
 }
@@ -330,6 +331,8 @@ static void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 	drawSatWorldHeading(cx, cy, radius, data, sats);
 }
 
+extern touch_t touchDebug;
+
 static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 {
 	char tbuffer[64];
@@ -378,12 +381,20 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	
 #if (VHEIGHT > 320)
 	//snprintf(tbuffer, sizeof(tbuffer), "P: %.2f, G: %.2f", data->dop.position/100.0f, data->dop.geometric/100.0f);
-	snprintf(tbuffer, sizeof(tbuffer), "msSS: %i", (int)(sats->nav_status_msss/1000));
+#if (RECEIVER_SINGLE)
+	snprintf(tbuffer, sizeof(tbuffer), "msSS: %i", (int)((sats->status_msSS[0]/1000.0f)+0.5f));
+#else
+	snprintf(tbuffer, sizeof(tbuffer), "msSS A: %i, B: %i", (int)((sats->status_msSS[0]/1000.0f)+0.5f), (int)((sats->status_msSS[1]/1000.0f)+0.5f));
+#endif
 	drawString(inst.vfont, tbuffer, 5, 170);
 	
 #endif
 
 	if (inst.renderFlags == 4) return;
+
+
+	snprintf(tbuffer, sizeof(tbuffer), "%i,%i", (int)touchDebug.points[0].x, (int)touchDebug.points[0].y);
+	drawString(inst.vfont, tbuffer, 200, VHEIGHT-15);
 
 	if (inst.runLog.enabled){
 		snprintf(tbuffer, sizeof(tbuffer), "%i", (int)inst.runLog.idx);
@@ -537,7 +548,25 @@ FLASHMEM static void setStartupImage ()
 	int y2 = y1 + img_h-1;
 	if (y2 > TFT_HEIGHT-1) y2 = TFT_HEIGHT-1;
 
+#if (TFT_LOWERPANEL)
+	// recenter image
+	y1 += 30;
+	y2 += 30;
+#endif
+
 	tft_update_array((uint16_t*)frame352x320, x1, y1, x2, y2);
+#endif
+}
+
+void drawPanel (const uint8_t which)
+{
+#if (TFT_LOWERPANEL)
+	switch (which){
+	case 0: tft_update_array((uint16_t*)blank960x60,     0, 480, 960-1, 540-1); return;
+	case 1: tft_update_array((uint16_t*)panel960x60_map, 0, 480, 960-1, 540-1); return;
+	case 2: tft_update_array((uint16_t*)panel960x60_log_importfaded, 0, 480, 960-1, 540-1); return;
+	case 3: tft_update_array((uint16_t*)panel960x60_log_import, 0, 480, 960-1, 540-1); return;
+	};
 #endif
 }
 
@@ -550,6 +579,7 @@ FLASHMEM static void init_display ()
 	tft_setBacklight(TFT_INTENSITY);
 	frameSend();
 	setStartupImage();
+	drawPanel(0);
 }
 
 static inline void trkPt_trackRecordAppend (trackRecord_t *trackRecord, const gpsdata_t *gpsData)
@@ -764,7 +794,7 @@ FLASHMEM void init_isrTimers ()
 	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);		// in microseconds
 	onceSecondTimer.priority(180);
 
-	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*125*1000);		// in microseconds
+	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*50*1000);		// in microseconds
 	tilesLoadTimer.priority(210);
 
 #if ENABLE_TOUCH_FT5216	
@@ -788,6 +818,9 @@ int uiInput (const int32_t x, const int32_t y, const uint32_t flags)
 
 FLASHMEM void setup ()
 {
+
+	if (MPU_CLOCK_FREQ > 60)
+		mpu_setClockFreq(MPU_CLOCK_FREQ);
 	
 #if ENABLE_MTP
 	mtp_init();
@@ -804,10 +837,10 @@ FLASHMEM void setup ()
 	return;
 #endif
 
+	gps_init();
 	cmd_init();
 	init_vfont();
 	init_debugStrings();
-	gps_init();
 	init_isrTimers();
 #if ENABLE_TOUCH_FT5216
 	touch_init();
@@ -821,40 +854,68 @@ FLASHMEM void setup ()
 	encoders_init();
 #endif
 
-	//delay(2000);
 	ui_init();
-
-	if (MPU_CLOCK_FREQ > 60)
-		mpu_setClockFreq(MPU_CLOCK_FREQ);
-
 	inst.renderFlags = 1;		// show log status by disabling sat availability rendering
 	log_stop();
+	drawPanel(1);
 }
 
+static volatile int zoomMultiplier = 1;
+
+void render_zoomIn ()
+{
+	float zoomlevel = sceneGetZoom(&inst);
+	zoomlevel -= (zoomlevel * (0.1f*(float)zoomMultiplier));
+	zoomMultiplier = 1;
+
+	if (zoomlevel < SCENE_ZOOM_MIN) zoomlevel = SCENE_ZOOM_MIN;
+	else if (zoomlevel > SCENE_ZOOM_MAX) zoomlevel = SCENE_ZOOM_MAX;
+
+	sceneSetZoom(&inst, zoomlevel);
+	sceneResetViewport(&inst);
+	render_signalTiles();
+}
+
+void render_zoomOut ()
+{
+	float zoomlevel = sceneGetZoom(&inst);
+	zoomlevel += (zoomlevel * (0.1f*(float)zoomMultiplier));
+	zoomMultiplier = 1;
+	
+	if (zoomlevel < SCENE_ZOOM_MIN) zoomlevel = SCENE_ZOOM_MIN;
+	else if (zoomlevel > SCENE_ZOOM_MAX) zoomlevel = SCENE_ZOOM_MAX;
+
+	sceneSetZoom(&inst, zoomlevel);
+	sceneResetViewport(&inst);
+	render_signalTiles();
+}
+
+void render_zoomReset ()
+{
+	sceneSetZoom(&inst, SCENE_ZOOM);
+	sceneResetViewport(&inst);
+	sceneLoadTiles(&inst);
+}
+	
 #if ENABLE_ENCODERS
 void doEncoders (encodersrd_t *encoders)
 {
 	if (encoders->encoder[2].positionChange != 0){
-		float zoomlevel = sceneGetZoom(&inst);
+		zoomMultiplier++;
+		//zoomMultiplier += abs(encoders->encoder[2].positionChange);
 		if (encoders->encoder[2].positionChange > 0)
-			zoomlevel += (zoomlevel * 0.1f);
+			op_push(OP_FUNC_ZOOMOUT);
 		else
-			zoomlevel -= (zoomlevel * 0.1f);
+			op_push(OP_FUNC_ZOOMIN);
 
-		if (zoomlevel < SCENE_ZOOM_MIN) zoomlevel = SCENE_ZOOM_MIN;
-		else if (zoomlevel > SCENE_ZOOM_MAX) zoomlevel = SCENE_ZOOM_MAX;
-
-		sceneSetZoom(&inst, zoomlevel);
-		sceneResetViewport(&inst);
-		render_signalTiles();
-		renderSignal = 1;
+		op_go();
+		return;
 	}
 
 	if (encoders->encoder[2].buttonPress){
-		sceneSetZoom(&inst, SCENE_ZOOM);
-		sceneResetViewport(&inst);
-		sceneLoadTiles(&inst);
-		renderSignal = 1;
+		op_push(OP_FUNC_ZOOMRESET);
+		op_go();
+		return;
 	}
 	
 	if (encoders->encoder[1].positionChange != 0){
@@ -865,10 +926,10 @@ void doEncoders (encodersrd_t *encoders)
 				log_runAdvance(-25);
 			renderSignal = 1;
 		}
+		return;
 	}
 	
 	if (encoders->encoder[1].buttonPress){
-		
 		if (!inst.runLog.enabled){
 			log_runStart();
 			log_runPause();
@@ -876,6 +937,7 @@ void doEncoders (encodersrd_t *encoders)
 			log_runStop();
 		}
 		renderSignal = 1;
+		return;
 	}
 
 	if (encoders->encoder[0].positionChange != 0){
@@ -891,6 +953,7 @@ void doEncoders (encodersrd_t *encoders)
 			tft_setBacklight(level);
 		}
 		//printf(CS("Backlight: %i"), (int)level);
+		return;
 	}
 
 	if (encoders->encoder[0].buttonPress){
@@ -1019,7 +1082,6 @@ FASTRUN void loop ()
 	if (op_state() == OP_READY){
 		if (op_execute(op_pop()))
 			render_signalUpdate();
-			
 	}
 
 	inst.rstats.nothingCount++;
