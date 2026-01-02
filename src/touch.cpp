@@ -42,6 +42,9 @@ void touch_startTimer ()
 	touchTimer.priority(150);
 }
 
+
+touch_t touchDebug;
+
 static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const int isReleased)
 {
 	if (!isReleased){
@@ -53,6 +56,13 @@ static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const int isRel
 			return;
 		}
 
+#if (USE_FLEXTFT_NT35516)
+		touch->points[0].x *= (540.0/480.0);
+		touch->points[0].y *= (960.0/854.0);
+#endif
+		touchDebug = *touch;
+		render_signalUpdate();
+		
 		uiInput(touch->points[0].x, touch->points[0].y, TOUCH_DOWN);
 		//printf(CS("uiInput exit: %i"), ret);
 
