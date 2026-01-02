@@ -24,6 +24,7 @@ static int layersActive = 0;
 #endif
 
 static uint8_t STORAGETYPE tft_buffer[layersTotal][CALC_PITCH_16(TFT_WIDTH)*TFT_HEIGHT_SPLIT];
+//static uint8_t DMAMEM tft_buffer[layersTotal][CALC_PITCH_16(TFT_WIDTH)*TFT_HEIGHT_SPLIT];
 static uint8_t backLightLevel = TFT_INTENSITY;
 
 
@@ -76,6 +77,7 @@ FLASHMEM void tft_init ()
 	// increase PSRAM clocks to max stable, ~130MHZ
 	CCM_CBCMR &= ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK);		// clear settings
 	
+	//CCM_CBCMR |= (CCM_CBCMR_FLEXSPI2_PODF(5) | CCM_CBCMR_FLEXSPI2_CLK_SEL(3));		// 188 MHz
 	//CCM_CBCMR |= (CCM_CBCMR_FLEXSPI2_PODF(3) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2));		// 166.2 MHz
 	//CCM_CBCMR |= (CCM_CBCMR_FLEXSPI2_PODF(2) | CCM_CBCMR_FLEXSPI2_CLK_SEL(3));		// 176 MHz
 	CCM_CBCMR |= (CCM_CBCMR_FLEXSPI2_PODF(3) | CCM_CBCMR_FLEXSPI2_CLK_SEL(1));		// 180 MHz
