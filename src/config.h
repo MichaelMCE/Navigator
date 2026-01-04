@@ -22,8 +22,8 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_NT35516		1		// Mk5		// Multiple GNSS receiver(s)
-#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_NT35516		0		// Mk5		// Multiple GNSS receiver(s)
+#define USE_FLEXTFT_ILI9806		1		// Mk4
 #define USE_FLEXTFT_RM68120		0		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
@@ -150,7 +150,7 @@
 #define TFT_HEIGHT				480/*540*/
 #define CFG_STRING				"960x540*2 NT35516 IPS Display"
 #define TFT_SPEED				24
-#define TFT_INTENSITY			85		// PWM value from 0 to 127
+#define TFT_INTENSITY			55		// PWM value from 0 to 127
 #define TFT_LOWERPANEL			1
 #define STRIP_RENDERER_HEIGHT	1		// Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
