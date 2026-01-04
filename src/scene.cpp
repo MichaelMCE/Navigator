@@ -1040,29 +1040,36 @@ static void inline drawTiles (application_t *inst, const vectorPt2_t *center, co
 static inline void drawCompass (application_t *inst, float course)
 {
 	course = 360.0f - course;
-	float x = VWIDTH-80.0, y = VHEIGHT-80;
+	float x = VWIDTH-184.0f;
+	float y = (VHEIGHT/2.0f) + 20.0f;
 	float x1, y1;
 	float x2, y2;
 
-	const uint16_t colour = COLOUR_PAL_GREY;
+#if (TFT_LOWERPANEL)
+	// recenter compass
+	y += 30;
+#endif
 
+	const uint16_t colour = COLOUR_PAL_GREY;
+	const float scale = 2.0f;
+	
 	for (float c = 0.0f; c < 10.0f; c += 1.0f)
-		drawCircle(x, y, 30.0f + (11.0f*M_PI) + c, colour);
+		drawCircle(x, y, (30.0f + (11.0f*M_PI) + c)*scale, colour);
 
 	for (float a = 45.0f; a < 360.0f+45.0f; a += 90.0f){
-		rotateZ(DEG2RAD(a+course), 30.0f, 40.0f, &x1, &y1);
-		rotateZ(DEG2RAD(a+course), 40.0f, 50.0f, &x2, &y2);
-		drawPolylineSolid(x+x1, y+y1, x+x2, y+y2, 4, colour);
+		rotateZ(DEG2RAD(a+course), 30.0f*scale, 40.0f*scale, &x1, &y1);
+		rotateZ(DEG2RAD(a+course), 40.0f*scale, 50.0f*scale, &x2, &y2);
+		drawPolylineSolid(x+x1, y+y1, x+x2, y+y2, 4.0f*scale, colour);
 	}
 
 	for (float a = 0.0f; a < 360.0f; a += 90.0f){
-		rotateZ(DEG2RAD(a+course), 35.0f, 40.0f, &x1, &y1);
-		rotateZ(DEG2RAD(a+course), 40.0f, 45.0f, &x2, &y2);
-		drawPolylineSolid(x+x1, y+y1, x+x2, y+y2, 8, colour);
+		rotateZ(DEG2RAD(a+course), 35.0f*scale, 40.0f*scale, &x1, &y1);
+		rotateZ(DEG2RAD(a+course), 40.0f*scale, 45.0f*scale, &x2, &y2);
+		drawPolylineSolid(x+x1, y+y1, x+x2, y+y2, 8.0f*scale, colour);
 	}
 	
 	
-	int tsize = 15;
+	const float tsize = 15.0f*scale;
 	drawTriangleFilled(x+tsize, y+tsize, x-tsize, y+tsize, x, y-(tsize*2), colour);
 	
 	vfont_t *ctx = inst->vfont;
@@ -1071,20 +1078,21 @@ static inline void drawCompass (application_t *inst, float course)
 	setRotationAngle(ctx, -angle, angle);
 	setRenderFilter(ctx, RENDEROP_ROTATE_GLYPHS|RENDEROP_ROTATE_STRING);
 	setBrushSize(ctx, 2.0f);
-	setGlyphScale(ctx, 0.7f);
+	setGlyphScale(ctx, 0.7f*scale);
 	setBrushStep(ctx, 1.0f);
+	setBrushColour(ctx, COLOUR_PAL_MAROON);
 	
 	int dx = 0;
-	rotateZ(DEG2RAD(course), 5.0f, -30.0f, &x1, &y1);
+	rotateZ(DEG2RAD(course), 5.0f*scale, -30.0f*scale, &x1, &y1);
 	drawString(ctx, "N", (x+x1)-dx, y+y1);
 	
-	rotateZ(DEG2RAD(course), -5.0f, 45.0f, &x1, &y1);
+	rotateZ(DEG2RAD(course), -5.0f*scale, 45.0f*scale, &x1, &y1);
 	drawString(ctx, "S", (x+x1)-dx, y+y1);
 	
-	rotateZ(DEG2RAD(course), 40.0f, 12.0f, &x1, &y1);
+	rotateZ(DEG2RAD(course), 40.0f*scale, 12.0f*scale, &x1, &y1);
 	drawString(ctx, "E", (x+x1)-dx, y+y1);
 	
-	rotateZ(DEG2RAD(course), -37.0f, 2.0f, &x1, &y1);
+	rotateZ(DEG2RAD(course), -37.0f*scale, 2.0f*scale, &x1, &y1);
 	drawString(ctx, "W", (x+x1)-dx, y+y1);
 	
 	setRenderFilter(ctx, RENDEROP_NONE);
@@ -1197,45 +1205,6 @@ static inline void drawRuler (application_t *inst, const uint16_t colour)
 	drawString(inst->vfont, buffer, x1+8, y - thickness - 12);
 }
 
-static inline void overlayRender (application_t *inst)
-{
-	
-	drawRuler(inst, COLOUR_PAL_RED);
-	
-/*	double mul = 1.0;
-	const double length = 100.0 * mul;
-	
-	uint16_t colour = COLOUR_PAL_RED;
-	int x = VWIDTH/2;
-	int y = VHEIGHT-40;
-	
-	double len = sceneDrawLineLengthHori(inst, x, y, length, colour);
-	drawLine(x-(len/2.0), y-8, x-(len/2.0), y+8, colour);
-	drawLine(x+(len/2.0), y-8, x+(len/2.0), y+8, colour);
-
-	setGlyphScale(inst->vfont, 0.8f);
-	setBrush(inst->vfont, BRUSH_POINT);
-	setBrushSize(inst->vfont, 1.0);
-	setBrushStep(inst->vfont, 1.0);
-	setBrushQuality(inst->vfont, 2);
-	
-	char buffer[8];
-	snprintf(buffer, sizeof(buffer), "%.0f", length);
-	drawString(inst->vfont, buffer, (x+(len/2.0))-54, y-12);
-
-	x = VWIDTH-40;
-	y = VHEIGHT/2;
-	len = sceneDrawLineLengthVert(inst, x, y, length, colour);
-	drawLine(x-8, y-(len/2.0), x+8, y-(len/2.0), colour);
-	drawLine(x-8, y+(len/2.0), x+8, y+(len/2.0), colour);
-
-	setRenderFilter(inst->vfont, RENDEROP_ROTATE_STRING);
-	setRotationAngle(inst->vfont, 0.0f, 90.0f);
-	drawString(inst->vfont, buffer, x-16, y-(len/2.0)+8);
-	setRenderFilter(inst->vfont, RENDEROP_NONE);
-*/
-}
-
 #if 0
 static inline void drawPOI (application_t *inst, poi_t *poi, vfont_t *vctx, const vectorPt2_t *center, const float spanMeters)
 {
@@ -1314,6 +1283,11 @@ void sceneRenderViewport (application_t *inst)
 	sceneRender(inst);
 }
 
+void sceneRenderMeasure (application_t *inst)
+{
+	drawRuler(inst, COLOUR_PAL_RED);
+}
+
 void sceneRenderCompass (application_t *inst)
 {
 	drawCompass(inst, inst->viewport.heading);
@@ -1322,11 +1296,6 @@ void sceneRenderCompass (application_t *inst)
 void sceneRenderPOI (application_t *inst)
 {
 	//drawPOI(inst, &inst->poi, inst->vfont, &inst->viewport.location, inst->viewport.zoom);
-}
-
-void sceneRenderOverlay (application_t *inst)
-{
-	overlayRender(inst);
 }
 
 void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord)
@@ -1365,8 +1334,8 @@ FLASHMEM void sceneInit (application_t *inst)
 	inst->rstats.rflags.trackSpot = 0;
 	inst->rstats.rflags.trackPath = 1;
 	inst->rstats.rflags.trackLine = 0;
-	
-	inst->rstats.rflags.overlay = 1;
+
+	inst->rstats.rflags.measure = 1;
 	
 	tilesInit();
 }

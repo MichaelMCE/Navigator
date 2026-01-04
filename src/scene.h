@@ -123,8 +123,9 @@ typedef struct {
 		uint32_t trackPath:1;
 		uint32_t trackSpot:1;
 		uint32_t trackLine:1;
-		uint32_t overlay:1;
-		uint32_t stub:14;
+		uint32_t measure:1;
+		uint32_t strings:1;
+		uint32_t stub:13;
 	}rflags;		// render flags
 }runState_t;
 
@@ -161,7 +162,6 @@ typedef struct {
 	float distance;				// dstance traveled, in meters, since last tile update
 	
 	uint32_t renderPassCt;
-	uint32_t renderFlags;
 	uint32_t cmdTaskRunMode;
 	uint32_t heartbeatPulse;
 	
@@ -248,8 +248,8 @@ void sceneMakeGPSWindow (const vectorPt2_t *center, const double spanMeters, vec
 void sceneSetLocation (application_t *inst, const vectorPt2_t *loc);
 void sceneSetHeading (application_t *inst, const float heading);
 void sceneRenderCompass (application_t *inst);
+void sceneRenderMeasure (application_t *inst);
 void sceneRenderViewport (application_t *inst);
-void sceneRenderOverlay (application_t *inst);
 void sceneResetViewport (application_t *inst);
 void sceneRenderTrackPoints (application_t *inst, trackRecord_t *trackRecord);
 void sceneRenderLocGraphic (application_t *inst);
