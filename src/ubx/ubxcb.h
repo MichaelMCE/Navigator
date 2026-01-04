@@ -18,7 +18,6 @@
 
 
 
-
 int ack_nak (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int ack_ack (const uint8_t *payload, uint16_t msg_len, void *opaque);
 

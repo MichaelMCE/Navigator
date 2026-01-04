@@ -26,8 +26,6 @@
 
 
 
-
-
 PROGMEM static const char *GNSSIDs[8]		= {"GPS", "SBAS", "Galileo", "BeiDou", "IMES", "QZSS", "GLONASS", ""};
 PROGMEM static const char *geoConfidence[6]	= {"None", "68%", "95%", "99.7%", "99.9999%", "99.999999%"};
 PROGMEM static const char *geoState[4]		= {"Unknown", "Inside", "Outside", ""};
@@ -906,16 +904,20 @@ FLASHMEM int cfg_gnss (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	printf(CS("\ncfg_gnss %i"), msg_len);
 	
 	const cfg_gnss_t *gnss = (cfg_gnss_t*)payload;
-	char str[64] = {0};
-
+	gps_updateReceiverGNSSMenu(gnss);
+	
 	printf(CS(" msgVer:          %i"), gnss->msgVer);
 	printf(CS(" numTrkChHw:      %i"), gnss->numTrkChHw);
 	printf(CS(" numTrkChUse:     %i"), gnss->numTrkChUse);
 	printf(CS(" numConfigBlocks: %i"), gnss->numConfigBlocks);
 	
+	char str[64] = {0};
 	for (int i = 0; i < gnss->numConfigBlocks; i++){
 		const cfg_cfgblk_t *blk = &gnss->cfgblk[i];
-		printf(CS("   gnssId:%i - %s - %s"), blk->gnssId, GNSSIDs[blk->gnssId&0x07], status[(blk->flags&GNSS_CFGBLK_ENABLED&0x01)]);
+		const int id = blk->gnssId&0x07;
+		const int isEnabled = blk->flags&GNSS_CFGBLK_ENABLED&0x01;
+
+		printf(CS("   gnssId:%i - %s - %s"), blk->gnssId, GNSSIDs[id], status[isEnabled]);
 
 		if (blk->flags&GNSS_CFGBLK_ENABLED){
 			if (str[0])
