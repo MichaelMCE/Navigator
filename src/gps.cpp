@@ -11,6 +11,7 @@
 
 #include "ubx/ubx.h"
 #include "ubx/ubxcb.h"
+#include "ui/ui.h"
 #include "gps.h"
 #include "cmd.h"
 
@@ -29,6 +30,55 @@ static uint8_t bufferReadX[1][32768];
 static uint8_t bufferWriteX[1][1024];
 #endif
 
+
+
+
+void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss)
+{
+	for (int i = 0; i < gnss->numConfigBlocks; i++){
+		const cfg_cfgblk_t *blk = &gnss->cfgblk[i];
+		
+		const int id = blk->gnssId&0x07;
+		const int isEnabled = blk->flags&GNSS_CFGBLK_ENABLED&0x01;
+		
+		if (id == GNSSID_GPS){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_GPS);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_GPS);
+		}else if (id == GNSSID_GALILEO){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_GALILEO);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_GALILEO);
+		}else if (id == GNSSID_BEIDOU){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_BEIDOU);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_BEIDOU);
+		}else if (id == GNSSID_GLONASS){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_GLONASS);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_GLONASS);
+		}else if (id == GNSSID_SBAS){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_SBAS);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_SBAS);
+		}else if (id == GNSSID_QZSS){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_QZSS);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_QZSS);
+		}else if (id == GNSSID_IMES){
+			if (isEnabled)
+				ui_enableReady(0, UI_ID_BUTTON_IMES);
+			else
+				ui_enableNotReady(0, UI_ID_BUTTON_IMES);
+		}
+	}
+}
 
 uint8_t gps_getPortActive ()
 {

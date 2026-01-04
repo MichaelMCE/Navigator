@@ -177,6 +177,8 @@ void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
 
+void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss);
+
 uint8_t gps_getPortActive ();
 
 
