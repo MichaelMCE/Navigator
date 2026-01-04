@@ -335,6 +335,9 @@ extern touch_t touchDebug;
 
 static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 {
+	if (!inst.rstats.rflags.strings)
+		return;
+		
 	char tbuffer[64];
 
 	setBrush(inst.vfont, BRUSH_DISK);
@@ -390,9 +393,6 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	
 #endif
 
-	if (inst.renderFlags == 4) return;
-
-
 	snprintf(tbuffer, sizeof(tbuffer), "%i,%i", (int)touchDebug.points[0].x, (int)touchDebug.points[0].y);
 	drawString(inst.vfont, tbuffer, 200, VHEIGHT-15);
 
@@ -419,6 +419,9 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 
 static void drawMapOverlaySpeed (gpsdata_t *data)
 {
+	if (!inst.rstats.rflags.strings)
+		return;
+		
 	char tbuffer[8];
 	int x = (VWIDTH/2);
 	int y = 0;
@@ -471,20 +474,21 @@ static void drawMapOverlay (gpsdata_t *data)
 	inst.rstats.rtime.strings = millis() - t0;
 	
 	if (sats->numSvs){
-		if (inst.renderFlags == 0)
+		if (inst.rstats.rflags.satlevels)
 			drawSatSignalLevels(data, sats);
-		if (inst.renderFlags == 0 || inst.renderFlags == 1)
+			
+		if (inst.rstats.rflags.satAvailability)
 			drawSatSignalAvailability(data, sats);
-		if (inst.renderFlags == 0 || inst.renderFlags == 1 || inst.renderFlags == 2)
+			
+		if (inst.rstats.rflags.satWorld)
 			drawSatWorld(data, sats);
-		if (inst.renderFlags != 4 && !inst.runLog.enabled)
+			
+		if (inst.rstats.rflags.strings && !inst.runLog.enabled)
 			drawMapOverlaySpeed(data);
 	}
 	
-	if (!inst.rstats.rflags.satlevels || inst.renderFlags != 0){	// dont overwrite sat levels
-		//if (serialConnected)
-			drawLogStatus(8, VHEIGHT - 28, 20);
-	}
+	if (!inst.rstats.rflags.satlevels)
+		drawLogStatus(8, VHEIGHT - 28, 20);
 }
 
 static inline void frameClear ()
@@ -660,13 +664,6 @@ void receiver_cb (const gpsdata_t *const opaque, const intptr_t unused)
 	}
 }
 
-void render_cycleMode ()
-{
-	if (++inst.renderFlags == 6)
-		inst.renderFlags = 0;
-	render_signalUpdate();
-}
-		
 void render_signalTiles ()
 {
 	inst.loadTiles = 200;
@@ -724,10 +721,7 @@ static void drawMap (const pos_rec_t *loc, const float heading)
 	map_render(&trackRecord, loc, heading, MAP_RENDER_TRACKPOINTS);
 	inst.rstats.rtime.trkpts = (micros() - t1)/1000.0f;
 
-	if (inst.renderFlags == 4)
-		map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC | MAP_RENDER_COMPASS | MAP_RENDER_OVERLAY);
-	else
-		map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC);
+	map_render(&trackRecord, loc, heading, MAP_RENDER_LOCGRAPTHIC | MAP_RENDER_COMPASS | MAP_RENDER_MEASURE);
 }
 
 static void drawCompose (gpsdata_t *data)
@@ -758,10 +752,10 @@ static void drawCompose (gpsdata_t *data)
 		}
 	}
 	
-	if (inst.renderFlags == 5){
-		inst.rstats.rtime.strings = 0;
-		return;
-	}
+	//if (inst.renderFlags == 5){
+	//	inst.rstats.rtime.strings = 0;
+	//	return;
+	//}
 
 	if (debugStrings.ready){
 		debugStrings.ready--;
@@ -837,6 +831,7 @@ FLASHMEM void setup ()
 	return;
 #endif
 
+	ui_init();
 	gps_init();
 	cmd_init();
 	init_vfont();
@@ -854,8 +849,7 @@ FLASHMEM void setup ()
 	encoders_init();
 #endif
 
-	ui_init();
-	inst.renderFlags = 1;		// show log status by disabling sat availability rendering
+	//inst.renderFlags = 1;		// show log status by disabling sat availability rendering
 	log_stop();
 	drawPanel(1);
 }
@@ -903,17 +897,27 @@ void doEncoders (encodersrd_t *encoders)
 	if (encoders->encoder[2].positionChange != 0){
 		zoomMultiplier++;
 		//zoomMultiplier += abs(encoders->encoder[2].positionChange);
-		if (encoders->encoder[2].positionChange > 0)
-			op_push(OP_FUNC_ZOOMOUT);
-		else
-			op_push(OP_FUNC_ZOOMIN);
+		if (encoders->encoder[2].positionChange > 0){
+			if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
+				op_push(OP_FUNC_LOG_DOWN);
+			else
+				op_push(OP_FUNC_ZOOMOUT);
+		}else{
+			if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
+				op_push(OP_FUNC_LOG_UP);
+			else
+				op_push(OP_FUNC_ZOOMIN);
+		}
 
 		op_go();
 		return;
 	}
 
 	if (encoders->encoder[2].buttonPress){
-		op_push(OP_FUNC_ZOOMRESET);
+		if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
+			op_push(OP_FUNC_LOG_LOAD);
+		else
+			op_push(OP_FUNC_ZOOMRESET);
 		op_go();
 		return;
 	}
@@ -956,7 +960,7 @@ void doEncoders (encodersrd_t *encoders)
 		return;
 	}
 
-	if (encoders->encoder[0].buttonPress){
+	if (0 && encoders->encoder[0].buttonPress){
 		//printf(CS("GPS Passthrough %i"), (!gnssReceiver_PassthroughEnabled)&0x01);
 		cmdSendResponse("");
 		Serial.flush();
@@ -1067,9 +1071,8 @@ FASTRUN void loop ()
 	if (trackRecord.recordActive){
 		if (recordSignal > 60){
 			recordSignal = 0;
-			if (inst.renderFlags != 4 && !trackRecord.writeDisabled){		// safe mode. don't write whilst compass is displayed.
+			if (!trackRecord.writeDisabled)		// safe mode. don't write whilst compass is displayed.
 				fpRecord_appendLog(&trackRecord);
-			}
 			gps_task();
 		}
 	}
