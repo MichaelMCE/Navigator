@@ -53,7 +53,6 @@ void mpu_setClockFreq (const uint32_t freqMhz);
 
 void render_signalUpdate ();
 void render_signalTiles ();
-void render_cycleMode ();
 void render_zoomIn ();
 void render_zoomOut ();
 void render_zoomReset ();
