@@ -516,8 +516,12 @@ static void configureGNSS_M10 (ubx_device_t *dev)
 		CFG_SIGNAL_GPS_ENA,       0x01,
 		CFG_SIGNAL_SBAS_ENA,      0x00,
 		CFG_SIGNAL_GAL_ENA,       0x01,
+#if (RECEIVER_SINGLE)
+		CFG_SIGNAL_BDS_ENA,       0x00,
+#else
 		CFG_SIGNAL_BDS_ENA,       0x01,
-		CFG_SIGNAL_QZSS_ENA,      0x00,
+#endif
+		CFG_SIGNAL_QZSS_ENA,      0x01,
 		CFG_SIGNAL_GLO_ENA,       0x01,
 		CFG_SIGNAL_BDS_B1C_ENA,   0x01
 	};
@@ -636,7 +640,7 @@ void ubx_setRate (ubx_device_t *dev, const uint8_t rate)
 static void configureRate (ubx_device_t *dev)
 {
 	if (RECEIVER_M10)
-		setRate(dev, 36);
+		setRate(dev, 38);
 	else
 		setRate(dev, 57);
 }
@@ -650,7 +654,7 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.mask |= NAV5_MASK_POSMASK | NAV5_MASK_TIMEMASK | NAV5_MASK_STATICHOLDMASK;
 	nav.mask |= NAV5_MASK_DGPSMASK | NAV5_MASK_CNOTHRESHOLD | NAV5_MASK_UTC;
 
-	nav.dynModel = NAV5_DYNMODEL_WRIST;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
+	nav.dynModel = NAV5_DYNMODEL_PORTABLE;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 

@@ -17,7 +17,7 @@
 
 
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
-#define RECEIVER_SINGLE			(0)
+#define RECEIVER_SINGLE			(1)
 
 #define UBX_BUFFER_SIZE			2048
 
