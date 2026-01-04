@@ -2,6 +2,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
+#define UI_DRAW_TOUCH_RECTS			0		// draw button's touch bounding box
 
 #define UI_WIDGET_ENABLED			1
 #define UI_WIDGET_DISABLED			0
@@ -9,16 +10,25 @@
 
 enum _ui_ids {
 	UI_IDBASE				=		100,
-	UI_ID_PANEL_MAPCTRL,
+	UI_ID_PANEL_MENU,
 	UI_ID_PANEL_RECEIVER,
 	UI_ID_PANEL_RECEIVER_RESTART,
+	UI_ID_PANEL_RECEIVER_RATE,
+	UI_ID_PANEL_RECEIVER_GNSS,
 	UI_ID_PANEL_MPU,
 	UI_ID_PANEL_DISPLAY,
-	UI_ID_PANEL_GNSS,
+	UI_ID_PANEL_MAP,
 	UI_ID_PANEL_LOGCTRL,
 	UI_ID_PANEL_LOGS,
 
 	UI_ID_BUTTON_empty,
+	
+	UI_ID_BUTTON_AREAFILL,
+	UI_ID_BUTTON_AREAOUTLINR,
+	UI_ID_BUTTON_PATHFILL,
+	UI_ID_BUTTON_FATHLINE,
+	UI_ID_BUTTON_TITLEBOUND,
+	UI_ID_BUTTON_SCHEME,
 	
 	UI_ID_BUTTON_START,
 	UI_ID_BUTTON_STOP,
@@ -27,10 +37,18 @@ enum _ui_ids {
 	
 	UI_ID_BUTTON_LOGS,
 	UI_ID_BUTTON_DISPLAY,
+	UI_ID_BUTTON_MAP,
 	UI_ID_BUTTON_RECEIVER,
 	UI_ID_BUTTON_MPU,
 		
-	UI_ID_BUTTON_MODE,
+	UI_ID_BUTTON_DRAW_TEXT,
+	UI_ID_BUTTON_DRAW_SATW,
+	UI_ID_BUTTON_DRAW_AVAIL,
+	UI_ID_BUTTON_DRAW_LVLS,
+	UI_ID_BUTTON_DRAW_COMP,
+	UI_ID_BUTTON_DRAW_RULER,
+	UI_ID_BUTTON_DRAW_LOC,
+	UI_ID_BUTTON_DRAW_ROUTE,
 	UI_ID_BUTTON_OFF,
 		
 	UI_ID_BUTTON_REBOOT,
@@ -48,7 +66,16 @@ enum _ui_ids {
 	UI_ID_BUTTON_RECONNECT,
 	UI_ID_BUTTON_STATUS,
 	UI_ID_BUTTON_VERSION,
+	UI_ID_BUTTON_RATE,
 	UI_ID_BUTTON_GNSS,
+	
+	UI_ID_BUTTON_RATE1,
+	UI_ID_BUTTON_RATE2,
+	UI_ID_BUTTON_RATE3,
+	UI_ID_BUTTON_RATE4,
+	UI_ID_BUTTON_RATE5,
+	UI_ID_BUTTON_RATE6,
+	UI_ID_BUTTON_RATE7,
 	
 	UI_ID_BUTTON_GPS,
 	UI_ID_BUTTON_GALILEO,
@@ -84,23 +111,26 @@ enum _ui_ids {
 #define CHILD_WIDGET_OBJ(o,n)		((ui_widget_t*)WIDGET(o)->children.widgets[(n)]);
 
 
+typedef struct ui_widget_t ui_widget_t;
 
-typedef struct _ui_widget_t {
+struct ui_widget_t {
 	uint8_t id;
 	uint8_t type;				// UI_WIDGET_
 	
-	uint16_t isEnabled:1;
-	uint16_t stub:7;
+	uint16_t isEnabled:1;		// render and accept input
+	uint16_t isNotReady:1;		// button is enabled & disablable but not accepting input
+	uint16_t isHighlighted:1;
+	uint16_t stub:5;
 	uint16_t flags:8;			// is a button that'll open a menu panel;
 	
 	struct {
 		uint8_t total;
 		uint8_t stub[3];
-		_ui_widget_t **widgets;
+		ui_widget_t **widgets;
 	}children;
 	
-	_ui_widget_t *parent;		// ui_panel_t, or NULL of root
-}ui_widget_t;
+	ui_widget_t *parent;		// ui_panel_t, or NULL of root
+};
 
 
 typedef int (*ui_widget_cb_t) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2);
@@ -143,8 +173,6 @@ typedef struct {
 		uint8_t stub;
 
 		float size;				// vFont size * 10
-
-		//uint32_t renderFlags;	// vFont flags
 	}label;
 	
 	struct {
@@ -158,15 +186,21 @@ typedef struct {
 	ui_widget_t widget;
 	ui_rect_t rect;
 	ui_callback_t callback;
-
+	
+	int8_t buttonHeight;
+	int8_t buttonX;
+	int8_t buttonY;
+	int8_t stub;
 }ui_panel_t;
 
 
 void ui_init ();
-
-// returns 1 if successful, 0 if you're an idiot
-int ui_enable (void *opaque, const uint8_t child_id);
 int ui_disable (void *opaque, const uint8_t child_id);
+int ui_enable (void *opaque, const uint8_t child_id);
+int ui_enableReady (void *opaque, const uint8_t child_id);
+int ui_enableNotReady (void *opaque, const uint8_t child_id);	// enabled, rendered but with input disabled
+int ui_setHighlight (const uint8_t child_id, const uint8_t state);
+int ui_getHighlight (const uint8_t child_id);
 int ui_isEnabled (void *opaque, const uint8_t child_id);
 void ui_draw (const uint32_t unused1, const uint32_t unused2);
 int ui_input (const int32_t x, const int32_t y, const uint32_t flags);
@@ -212,6 +246,10 @@ enum _opcodes {
 	OP_FUNC_LOG_OPEN,		// ui panel
 	OP_FUNC_LOG_CLOSE,
 	OP_FUNC_LOG_LOAD,		// import log file
+	OP_FUNC_LOG_UP,
+	OP_FUNC_LOG_DOWN,
+	
+	OP_FUNC_RECEIVER_RATE,
 	
 	OP_FUNC_CONFIG,
 	OP_FUNC_OVERLAYDETAIL,
