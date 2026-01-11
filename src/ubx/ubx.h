@@ -19,6 +19,22 @@
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
 #define RECEIVER_SINGLE			(1)
 
+
+#define COM_BAUD_9600			0
+#define COM_BAUD_19200			1
+#define COM_BAUD_38400			2
+#define COM_BAUD_57600			3
+#define COM_BAUD_115200			4
+#define COM_BAUD_230400			5
+#define COM_BAUD_460800			6
+#define COM_BAUD_921600			7
+
+#define COM_BAUD				COM_BAUD_230400
+#define COM_BAUD_FWDEFAULT		COM_BAUD_9600
+#define COM_BAUD_LASTSAVED		COM_BAUD_115200
+#define BAUDRATE(n)				(baudRates[(n)])
+
+
 #define UBX_BUFFER_SIZE			2048
 
 /*
@@ -1461,12 +1477,13 @@ typedef struct {
 
 
 typedef struct{
-	void *uart;	// active
+	void *uart;	// active serial port
 	void *uartPort[2];
-	
+	uint32_t uartBaud[2];
+				
 	struct {
 		uint8_t compose[UBX_BUFFER_SIZE];
-		uint8_t port[64];
+		uint8_t port[8];
 		
 		uint16_t portLen;
 		uint16_t stub;
@@ -1508,6 +1525,9 @@ void ubx_setRate (ubx_device_t *dev, const uint8_t rate);
 void receiver_resetRxTx ();
 int receiver_getRx ();
 int receiver_getTx ();
+void receiver_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque);
+void receiver_configurePorts (ubx_device_t *dev);
+void reciever_baudRateDiscover (ubx_device_t *dev);
 
 void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 int ubx_msgPollName (ubx_device_t *dev, const char *name);
@@ -1517,6 +1537,8 @@ int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize);
 int ubx_processBlock (const uint8_t *data, uint16_t length, uint8_t *ubx_buffer, int32_t *ubx_index, int32_t *ubx_fill);
 
 void gps_requestUpdate ();
+
+
 
 #ifdef __cplusplus
 }

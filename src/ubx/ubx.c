@@ -517,11 +517,11 @@ static void configureGNSS_M10 (ubx_device_t *dev)
 		CFG_SIGNAL_SBAS_ENA,      0x00,
 		CFG_SIGNAL_GAL_ENA,       0x01,
 #if (RECEIVER_SINGLE)
-		CFG_SIGNAL_BDS_ENA,       0x00,
+		CFG_SIGNAL_BDS_ENA,       0x01,
 #else
 		CFG_SIGNAL_BDS_ENA,       0x01,
 #endif
-		CFG_SIGNAL_QZSS_ENA,      0x01,
+		CFG_SIGNAL_QZSS_ENA,      0x00,
 		CFG_SIGNAL_GLO_ENA,       0x01,
 		CFG_SIGNAL_BDS_B1C_ENA,   0x01
 	};
@@ -609,14 +609,15 @@ static void configurePorts (ubx_device_t *dev)
 	prt.mode.bits.nStopBits = CFG_STOPBITS_1;
 	prt.mode.bits.partity = CFG_PARTITY_NONE;
 	prt.mode.bits.bitOrder = CFG_BITORDER_LSB;
-	prt.baudRate = BAUDRATE(COM_BAUD);
+	//prt.baudRate = BAUDRATE(COM_BAUD);
+	prt.baudRate = dev->uartBaud[0];
 	prt.inProtoMask = CFG_PROTO_UBX;
 	prt.outProtoMask = CFG_PROTO_UBX;
 
 	ubx_sendEx(dev, 10, UBX_CFG, UBX_CFG_PRT, &prt, sizeof(prt));
 }
 
-void gps_configurePorts (ubx_device_t *dev)
+void receiver_configurePorts (ubx_device_t *dev)
 {
 	configurePorts(dev);
 }
@@ -640,7 +641,7 @@ void ubx_setRate (ubx_device_t *dev, const uint8_t rate)
 static void configureRate (ubx_device_t *dev)
 {
 	if (RECEIVER_M10)
-		setRate(dev, 38);
+		setRate(dev, 37);
 	else
 		setRate(dev, 57);
 }
@@ -654,11 +655,11 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.mask |= NAV5_MASK_POSMASK | NAV5_MASK_TIMEMASK | NAV5_MASK_STATICHOLDMASK;
 	nav.mask |= NAV5_MASK_DGPSMASK | NAV5_MASK_CNOTHRESHOLD | NAV5_MASK_UTC;
 
-	nav.dynModel = NAV5_DYNMODEL_PORTABLE;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
+	nav.dynModel = NAV5_DYNMODEL_WRIST;	// STATIONARY PORTABLE WRIST PEDESTRIAN;
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 
-	nav.minElv = 5;
+	nav.minElv = 6;
 	nav.drLimit = 0;
 	nav.pDop = 25.0f * 10;
 	nav.tDop = 25.0f * 10;
@@ -974,7 +975,7 @@ FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const dou
 	ubx_sendEx(dev, 10, UBX_MGA, UBX_MGA_INI_POSLLH, &posllh, sizeof(posllh));
 }
 
-FLASHMEM void gps_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque)
+FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque)
 {
 	if (flags&RECEIVER_CFG_CLEAN){
 		memset(&userData, 0, sizeof(userData));
@@ -1047,27 +1048,15 @@ FLASHMEM void gps_configure (ubx_device_t *dev, const uint32_t flags, const uint
 	if (flags&RECEIVER_CFG_ODO_RESET) 		ubx_odo_reset(dev);
 	if (flags&RECEIVER_CFG_MSG_DISABLEALL)	ubx_msgDisableAll(dev);
 
-	if (flags&RECEIVER_CFG_MSG_POSLLH)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
-	if (flags&RECEIVER_CFG_MSG_PVT)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT,    4);
-	if (flags&RECEIVER_CFG_MSG_DOP)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP,    18);
-	if (flags&RECEIVER_CFG_MSG_ODO)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO,    10);
-	if (flags&RECEIVER_CFG_MSG_POSECEF)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF,17);
-	if (flags&RECEIVER_CFG_MSG_SAT)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT,    19);
-	if (flags&RECEIVER_CFG_MSG_STATUS)	ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 20);
+	if (flags&RECEIVER_CFG_MSG_POSLLH)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSLLH, 1);
+	if (flags&RECEIVER_CFG_MSG_PVT)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_PVT,    4);
+	if (flags&RECEIVER_CFG_MSG_DOP)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_DOP,    18);
+	if (flags&RECEIVER_CFG_MSG_ODO)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_ODO,    15);
+	if (flags&RECEIVER_CFG_MSG_POSECEF)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF,17);
+	if (flags&RECEIVER_CFG_MSG_SAT)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT,    19);
+	if (flags&RECEIVER_CFG_MSG_STATUS)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 12);
 
-	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_EOE);
-	//ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_GEOFENCE, 60);
-	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_GEOFENCE);
-	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAV5);
-	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_NAVX5);
-	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_SVINFO);
-	//ubx_msgEnable(dev, UBX_NAV, UBX_NAV_STATUS);
-	//ubx_msgPoll(dev, UBX_AID, UBX_AID_EPH);
-	//ubx_msgPoll(dev, UBX_AID, UBX_AID_ALM);
-	//ubx_msgPoll(dev, UBX_AID, UBX_AID_AOP);
-	//ubx_msgPoll(dev, UBX_CFG, UBX_CFG_PRT);
-	//ubx_msgEnable(dev, UBX_MON, UBX_MON_IO);
-	
+
 	if (flags&RECEIVER_CFG_POLL){
 		ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
 		ubx_msgPoll(dev, UBX_CFG, UBX_CFG_USB);
