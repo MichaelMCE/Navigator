@@ -6,9 +6,9 @@
 
 
 
-
+trackRecord_t trackRecord;
 extern application_t inst;
-extern trackRecord_t trackRecord;
+
 
 
 
@@ -122,4 +122,12 @@ void log_pause ()
 int log_isActive ()
 {
 	return trackRecord.recordActive;
+}
+
+void log_write ()
+{
+	if (trackRecord.recordActive){
+		if (!trackRecord.writeDisabled)
+			fpRecord_appendLog(&trackRecord);
+	}
 }
