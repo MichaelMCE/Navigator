@@ -24,7 +24,6 @@ static int layersActive = 0;
 #endif
 
 static uint8_t STORAGETYPE tft_buffer[layersTotal][CALC_PITCH_16(TFT_WIDTH)*TFT_HEIGHT_SPLIT];
-//static uint8_t DMAMEM tft_buffer[layersTotal][CALC_PITCH_16(TFT_WIDTH)*TFT_HEIGHT_SPLIT];
 static uint8_t backLightLevel = TFT_INTENSITY;
 
 
