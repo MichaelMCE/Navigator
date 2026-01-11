@@ -798,6 +798,8 @@ FLASHMEM int cfg_rate (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	printf(CS("\ncfg_rate %i"), msg_len);
 	
 	const cfg_rate_t *rate = (cfg_rate_t*)payload;
+	gps_updateReceiverRateMenu(rate->measRate);
+	
 	char str[64] = {0};
 
 	char *tStd;
