@@ -216,17 +216,43 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 		uint8_t rate = atoi(&msg[5]);
 		gps_setRate(rate);
 		printf(CS("Rate period set to %ims"), rate);
+		
+	}else if (!strncmp(msg, "baud:", 5)){
+		uint32_t baud = atoi(&msg[5]);
+		gps_setBaud(baud);
+
+	}else if (!strncmp(msg, "discover", 8)){
+		gps_baudDiscover();
+
+	}else if (!strncmp(msg, "reconnect", 9)){
+		cmdSendResponse("Reconnecting..");
+		gps_reconnect_noConfigure();
+		cmdSendResponse("Done");
+	
+	}else if (!strncmp(msg, "configure", 9)){
+		cmdSendResponse("Reconfiguring..");
+		gps_reconfigure();
+		cmdSendResponse("Done");
 
 	}else if (!strncmp(msg, "poll:", 5)){
 		char *pollMsg = &msg[5];
 		if (!gps_pollMsg(pollMsg))
 			printf(CS("ubx message '%s' not available"), pollMsg);
-		
-	}else if (!strncmp(msg, "setpos:", 7)){		// finish me
 	
-		//char *pollMsg = &msg[5];
-		//gps_setIntialPosition( ,  ,  , 200);
-		cmdSendResponse("Position not set");
+	}else if (!strncmp(msg, "location", 8)){
+		gps_printPositionAlt();
+
+	}else if (!strncmp(msg, "time", 4)){
+		timegps_t time = log_getLastTime();
+		printf(CS("Time: %.02i:%.02i:%.02i"), time.hour, time.min, time.sec);
+
+	}else if (!strncmp(msg, "date", 4)){
+		dategps_t date = log_getLastDate();
+		printf(CS("Date: %.02i.%.02i.%i"), date.day, date.month, date.year-2000);
+
+	}else if (!strncmp(msg, "itow", 4)){
+		int32_t iTow = log_getLastiTow();
+		printf(CS("iTow: %ul"), (unsigned int)iTow);
 
 	}else if (!strncmp(msg, "status", 6)){
 		gps_printStatus();
@@ -645,7 +671,7 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 		if (RECEIVER_SINGLE == 1)
 			printf(CS("   Single"));
 		else
-			printf(CS("   Multi"));
+			printf(CS("   Dual"));
 	}
 }
 
