@@ -1335,7 +1335,7 @@ FLASHMEM void sceneInit (application_t *inst)
 	inst->rstats.rflags.trackPath = 1;
 	inst->rstats.rflags.trackLine = 0;
 
-	inst->rstats.rflags.measure = 1;
+	inst->rstats.rflags.measure = 0;
 	
 	tilesInit();
 }
