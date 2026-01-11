@@ -155,7 +155,7 @@ typedef struct {
 	
 	uint8_t colourScheme;
 	uint8_t loadTiles;
-	uint8_t freeTiles;
+	//uint8_t freeTiles;
 	uint8_t assistNowAutoLoad;
 	
 	vectorPt2_t	tileLoadLoc;	// tiles for loading were last checked at this location
