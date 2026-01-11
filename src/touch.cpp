@@ -15,7 +15,7 @@ static touch_t touch;
 static IntervalTimer touchTimer;
 
 touchCtx_t touchCtx = {0};
-
+touch_t touchDebug;
 
 
 void touch_init ()
@@ -38,12 +38,9 @@ static void ISR_touch_sig ()
 
 void touch_startTimer ()
 {
-	touchTimer.begin(ISR_touch_sig, 7*1000);			// 5 == 200hz, 7 = 142hz, in microseconds
+	touchTimer.begin(ISR_touch_sig, 5*1000);			// 5 == 200hz, 7 = 142hz, in microseconds
 	touchTimer.priority(150);
 }
-
-
-touch_t touchDebug;
 
 static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const int isReleased)
 {
@@ -80,7 +77,6 @@ void touch_task (touchCtx_t *ctx)
 		return;
 
 	int total = touch_process(&touch, ctx->rotate);
-
 	if (!total && ctx->pressed){
 		ctx->pressed = 0;
 		//printf(CS("\nReleased"));
@@ -88,7 +84,6 @@ void touch_task (touchCtx_t *ctx)
 		opSendTouch(ctx, &touch, 1);
 	}
 	
-
 	if (total && !ctx->pressed){
 		ctx->pressed = 1;
 		//printf(CS("\nPressed"));
