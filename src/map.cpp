@@ -36,7 +36,7 @@ FLASHMEM void map_init (vfont_t *vfont)
 	map_setDetail(MAP_RENDER_VIEWPORT, 1);
 	map_setDetail(MAP_RENDER_TRACKPOINTS, 1);
 	map_setDetail(MAP_RENDER_LOCGRAPTHIC, 1);
-	map_setDetail(MAP_RENDER_MEASURE, 1);		// ruler
+	map_setDetail(MAP_RENDER_MEASURE, 0);		// ruler
 	
 	map_setDetail(MAP_RENDER_SLEVELS, 0);
 	map_setDetail(MAP_RENDER_SAVAIL, 1);
