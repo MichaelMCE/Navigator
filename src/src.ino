@@ -56,14 +56,33 @@ static vfont_t vfontContext;
 static debugOverlay_t debugStrings;
 static gpsdata_t gpsData;
 
-trackRecord_t trackRecord;
+extern trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
+extern touch_t touchDebug;
 
 
 
 
+uint32_t log_getLastiTow ()
+{
+	return gpsData.iTow;
+}
 
+pos_rec_t log_getLastPosition ()
+{
+	return gpsData.navAvg;
+}
+
+dategps_t log_getLastDate ()
+{
+	return gpsData.date;
+}
+
+timegps_t log_getLastTime ()
+{
+	return gpsData.time;
+}
 
 void date_getAdjustedTime (gpsdata_t *data, dategps_t *date, timegps_t *time)
 {
@@ -125,10 +144,39 @@ FLASHMEM void mpu_reboot ()
     SCB_AIRCR = 0x05FA0004;
 }
 
+void mpu_updateMPUFreqMenu (const uint32_t freqMhz)
+{
+	for (int i = UI_ID_BUTTON_FREQ136; i <= UI_ID_BUTTON_FREQ816; i++)
+		ui_setHighlight(i, 0);
+
+	switch (freqMhz){
+	case 136:
+		ui_setHighlight(UI_ID_BUTTON_FREQ136, 1);
+		return;
+	case 272:
+		ui_setHighlight(UI_ID_BUTTON_FREQ272, 1);
+		return;
+	case 528:
+		ui_setHighlight(UI_ID_BUTTON_FREQ528, 1);
+		return;
+	case 600:
+		ui_setHighlight(UI_ID_BUTTON_FREQ600, 1);
+		return;
+	case 720:
+		ui_setHighlight(UI_ID_BUTTON_FREQ720, 1);
+		return;
+	case 816:
+		ui_setHighlight(UI_ID_BUTTON_FREQ816, 1);
+		return;
+	}
+}
+
 FLASHMEM void mpu_setClockFreq (const uint32_t freqMhz)
 {
-	if (freqMhz >= 24 && freqMhz <= 960)
+	if (freqMhz >= 24 && freqMhz <= 960){
 		set_arm_clock(freqMhz*1000*1000);
+		mpu_updateMPUFreqMenu(freqMhz);
+	}
 }
 
 FLASHMEM void addDebugLine (const uint8_t *str)
@@ -331,8 +379,6 @@ static void drawSatWorld (gpsdata_t *data, sat_stats_t *sats)
 	drawSatWorldHeading(cx, cy, radius, data, sats);
 }
 
-extern touch_t touchDebug;
-
 static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 {
 	if (!inst.rstats.rflags.strings)
@@ -393,8 +439,10 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	
 #endif
 
+#if UI_DRAW_TOUCH_POSITION
 	snprintf(tbuffer, sizeof(tbuffer), "%i,%i", (int)touchDebug.points[0].x, (int)touchDebug.points[0].y);
 	drawString(inst.vfont, tbuffer, 200, VHEIGHT-15);
+#endif
 
 	if (inst.runLog.enabled){
 		snprintf(tbuffer, sizeof(tbuffer), "%i", (int)inst.runLog.idx);
@@ -751,17 +799,13 @@ static void drawCompose (gpsdata_t *data)
 				inst.runLog.idx = 0;
 		}
 	}
-	
-	//if (inst.renderFlags == 5){
-	//	inst.rstats.rtime.strings = 0;
-	//	return;
-	//}
 
 	if (debugStrings.ready){
 		debugStrings.ready--;
 		drawDebugStrings(&debugStrings);
 	}else{
-		drawMapOverlay(&gpsData);
+		if (!ui_isEnabled(NULL, UI_ID_PANEL_LOGS))	// use a flag instead
+			drawMapOverlay(&gpsData);
 	}
 }
 
@@ -813,9 +857,6 @@ int uiInput (const int32_t x, const int32_t y, const uint32_t flags)
 FLASHMEM void setup ()
 {
 
-	if (MPU_CLOCK_FREQ > 60)
-		mpu_setClockFreq(MPU_CLOCK_FREQ);
-	
 #if ENABLE_MTP
 	mtp_init();
 #endif
@@ -842,6 +883,9 @@ FLASHMEM void setup ()
 #endif
 	init_record();
 
+	if (MPU_CLOCK_FREQ > 60)
+		mpu_setClockFreq(MPU_CLOCK_FREQ);
+
 	map_init(&vfontContext);
 	fpRecord_init(&trackRecord);
 
@@ -849,7 +893,6 @@ FLASHMEM void setup ()
 	encoders_init();
 #endif
 
-	//inst.renderFlags = 1;		// show log status by disabling sat availability rendering
 	log_stop();
 	drawPanel(1);
 }
@@ -978,7 +1021,8 @@ void console_printCmdStats (runState_t *stats)
 {
 	cmdSendResponse("");
 	printf(CS("zoom:%.0f, temp:%.1f, nothing:%llu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
-	printf(CS("map:%.2f, strings:%i, poi:%.2f, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.poi, stats->rtime.trkpts);
+	//printf(CS("map:%.2f, strings:%i, poi:%.2f, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.poi, stats->rtime.trkpts);
+	printf(CS("map:%.2f, strings:%i, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.trkpts);
 	//printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
 	printf(CS("epoch:%i, rx:%i"), gpsData.rates.epochPerRead, receiver_getRx());
 	receiver_resetRxTx();
@@ -1036,7 +1080,7 @@ FASTRUN void loop ()
 
 		if (inst.rstats.rflags.console && serialConnected)
 			console_printCmdStats(&inst.rstats);
-
+#if 0
 		// load auto.ubx once we have a valid date, but not too quickly as not always taken
 		// perform once per boot only
 		if (inst.assistNowAutoLoad == 1){
@@ -1045,11 +1089,7 @@ FASTRUN void loop ()
 				gps_loadOfflineAssist(0);
 			}
 		}
-
-		if (0 && inst.freeTiles){
-			inst.freeTiles = 0;
-			//tilesUnload(inst.renderPassCt);
-		}
+#endif
 	}
 
 #if ENABLE_TOUCH_FT5216
@@ -1068,13 +1108,11 @@ FASTRUN void loop ()
 		}
 	}
 
-	if (trackRecord.recordActive){
-		if (recordSignal > 60){
-			recordSignal = 0;
-			if (!trackRecord.writeDisabled)		// safe mode. don't write whilst compass is displayed.
-				fpRecord_appendLog(&trackRecord);
-			gps_task();
-		}
+	if (recordSignal > LOG_WRITE_PERIOD){
+		recordSignal = 0;
+		op_push(OP_FUNC_LOG_WRITE);
+		op_push(OP_FUNC_GPS_TASK);
+		op_go();
 	}
 
 	if (inst.cmdTaskRunMode){
