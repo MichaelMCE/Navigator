@@ -31,7 +31,6 @@ FLASHMEM int fpRecord_init (trackRecord_t *trackRecord)
 int fpRecord_open (trackRecord_t *trackRecord, const uint8_t *filename, const uint32_t flags)
 {
 	trackRecord->fp = fio_open(filename, flags);
-	//printf(CS("fpRecord_open: %s"), filename);
 	return (trackRecord->fp != 0);
 }
 
@@ -40,13 +39,10 @@ int fpRecord_read (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
 	void *buffer = &trackRecord->trackPoints[tpFrom];
 	int total = (tpTo - tpFrom) + 1;
 		
-	if (!fio_seek(trackRecord->fp, tpFrom * sizeof(trackPoint_t))){
-		//printf(CS("fpRecord_read: fio_seek failed to %i, %i %i"), tpFrom * sizeof(trackPoint_t), tpFrom, tpTo);
+	if (!fio_seek(trackRecord->fp, tpFrom * sizeof(trackPoint_t)))
 		return 0;
-	}
 
 	int ret = fio_read(trackRecord->fp, buffer, total * sizeof(trackPoint_t));
-	//printf(CS("fpRecord_read: ret %i"), ret);
 	return ret;
 }
 
@@ -55,13 +51,10 @@ int fpRecord_write (trackRecord_t *trackRecord, const int tpFrom, const int tpTo
 	void *buffer = &trackRecord->trackPoints[tpFrom];
 	int total = (tpTo - tpFrom) + 1;
 		
-	if (!fio_seek(trackRecord->fp, tpFrom * sizeof(trackPoint_t))){
-		//printf(CS("fpRecord_write: fio_seek failed to %i, %i %i"), tpFrom * sizeof(trackPoint_t), tpFrom, tpTo);
+	if (!fio_seek(trackRecord->fp, tpFrom * sizeof(trackPoint_t)))
 		return 0;
-	}
 
 	int ret = fio_write(trackRecord->fp, buffer, total * sizeof(trackPoint_t));
-	//printf(CS("fpRecord_write: ret %i"), ret);
 	return ret;
 }
 
@@ -74,15 +67,12 @@ void fpRecord_appendLog (trackRecord_t *trackRecord)
 {
 	int recFrom = trackRecord->lastFrom;
 	int recTo = trackRecord->marker-1;
-		
-	//printf(CS("recordSignal signal: %i %i"), recFrom, recTo);
-	
+
 	if (recFrom < recTo && (recTo - recFrom > 55)){
 		if (fpRecord_open(trackRecord, (uint8_t*)trackRecord->filename, FIO_NEW|FIO_WRITE)){
 			if (fpRecord_write(trackRecord, recFrom, recTo))
 				trackRecord->lastFrom = recTo+1;
 		}
-
 		fpRecord_close(trackRecord);
 	}
 }
