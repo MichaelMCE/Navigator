@@ -686,7 +686,42 @@ void cmd_debug (const char *cmdStr)
 
 void cmd_receiver (const char *cmdStr)
 {
-	if (!strncmp("hotstart", cmdStr, 8)){
+
+	if (!strncmp("rate", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
+	}else if (!strncmp("time", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+	
+	}else if (!strncmp("date", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		
+	}else if (!strncmp("itow", cmdStr, 4)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
+	}else if (!strncmp("baud:", cmdStr, 5)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		//setReadResponseState(hSerial, 1, 1);
+		//return;
+
+	}else if (!strncmp("poll:", cmdStr, 5)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		
+	}else if (!strncmp("status", cmdStr, 6)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
+	}else if (!strncmp("version", cmdStr, 7)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
+	}else if (!strncmp("location", cmdStr, 8)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		
+	}else if (!strncmp("discover", cmdStr, 8)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		setReadResponseState(hSerial, 1, 1);
+		return;
+
+	}else if (!strncmp("hotstart", cmdStr, 8)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 		
 	}else if (!strncmp("warmstart", cmdStr, 9)){
@@ -695,20 +730,14 @@ void cmd_receiver (const char *cmdStr)
 	}else if (!strncmp("coldstart", cmdStr, 9)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 
-	}else if (!strncmp("poll:", cmdStr, 5)){
+	}else if (!strncmp("configure", cmdStr, 9)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
-		
-	}else if (!strncmp("status", cmdStr, 6)){
-		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		setReadResponseState(hSerial, 1, 1);
+		return;
 
-	}else if (!strncmp("setpos:", cmdStr, 7)){
+	}else if (!strncmp("reconnect", cmdStr, 9)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
-
-	}else if (!strncmp("rate", cmdStr, 4)){
-		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
-						
-	}else if (!strncmp("version", cmdStr, 7)){
-		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+		setReadResponseState(hSerial, 1, 1);
 	
 	}else if (!strncmp("passthrough:", cmdStr, 12)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
@@ -717,6 +746,7 @@ void cmd_receiver (const char *cmdStr)
 		return;
 	}
 
+	Sleep(100);
 	setReadResponseState(hSerial, 0, 1);
 }
 
