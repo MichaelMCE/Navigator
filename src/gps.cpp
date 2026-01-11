@@ -11,10 +11,7 @@
 
 #include "ubx/ubx.h"
 #include "ubx/ubxcb.h"
-#include "ui/ui.h"
-#include "gps.h"
-#include "cmd.h"
-
+#include "commonGlue.h"
 
 
 
@@ -31,9 +28,32 @@ static uint8_t bufferWriteX[1][1024];
 #endif
 
 
+FLASHMEM void gps_updateReceiverBaudMenu (const uint32_t baud)
+{
+	for (int i = UI_ID_BUTTON_BAUD_9600; i <= UI_ID_BUTTON_BAUD_921600; i++)
+		ui_setHighlight(i, 0);
+		
+	if (baud == 9600) ui_setHighlight(UI_ID_BUTTON_BAUD_9600, 1);
+	else if (baud == 19200) ui_setHighlight(UI_ID_BUTTON_BAUD_19200, 1);
+	else if (baud == 38400) ui_setHighlight(UI_ID_BUTTON_BAUD_38400, 1);
+	else if (baud == 57600) ui_setHighlight(UI_ID_BUTTON_BAUD_57600, 1);
+	else if (baud == 115200) ui_setHighlight(UI_ID_BUTTON_BAUD_115200, 1);
+	else if (baud == 230400) ui_setHighlight(UI_ID_BUTTON_BAUD_230400, 1);
+	else if (baud == 460800) ui_setHighlight(UI_ID_BUTTON_BAUD_460800, 1);
+	else if (baud == 921600) ui_setHighlight(UI_ID_BUTTON_BAUD_921600, 1);
+}
 
+FLASHMEM void gps_updateReceiverRateMenu (const uint32_t measRate)
+{
+	for (int i = UI_ID_BUTTON_RATE1; i <= UI_ID_BUTTON_RATE7; i++)
+		ui_setHighlight(i, 0);
+		
+	int id = (UI_ID_BUTTON_RATE1-35)+measRate;
+	if (id >= UI_ID_BUTTON_RATE1 && id <= UI_ID_BUTTON_RATE7)
+		ui_setHighlight(id, 1);
+}
 
-void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss)
+FLASHMEM void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss)
 {
 	for (int i = 0; i < gnss->numConfigBlocks; i++){
 		const cfg_cfgblk_t *blk = &gnss->cfgblk[i];
@@ -80,7 +100,7 @@ void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss)
 	}
 }
 
-uint8_t gps_getPortActive ()
+FLASHMEM uint8_t gps_getPortActive ()
 {
 	if (dev.uart == dev.uartPort[0])
 		return 1;
@@ -205,6 +225,14 @@ void gps_printVersions ()
 	ubx_printVersions(&dev);
 }
 
+void gps_printPositionAlt ()
+{
+	pos_rec_t loc = log_getLastPosition();
+	printf(CS("Longitude: %.8f"), loc.longitude);
+	printf(CS("Latitude:  %.8f"), loc.latitude);
+	printf(CS("Altitude:  %.1f"), loc.altitude);
+}
+
 void gps_printStatus ()
 {
 #if (!RECEIVER_SINGLE)
@@ -248,9 +276,11 @@ void gps_hotStart ()
 void gps_reinit ()
 {
 #if (!RECEIVER_SINGLE)
-	gps_configure(&dev, gps_getDefaultConfig(2), 0);
+	gps_setPort(2);
+	receiver_configure(&dev, gps_getDefaultConfig(2), 0);
 #endif
-	gps_configure(&dev, gps_getDefaultConfig(1), 0);
+	gps_setPort(1);
+	receiver_configure(&dev, gps_getDefaultConfig(1), 0);
 }
 
 void gps_resetOdo ()
@@ -274,7 +304,7 @@ void gps_stopOdo ()
 	gps_setPort(1);
 }
 
-void gps_setRate (const uint8_t rate)
+void gps_setRate (const uint32_t rate)
 {
 #if (!RECEIVER_SINGLE)
 	gps_setPort(2);
@@ -282,6 +312,8 @@ void gps_setRate (const uint8_t rate)
 #endif
 	gps_setPort(1);
 	ubx_setRate(&dev, rate);
+	
+	gps_updateReceiverRateMenu(rate);
 }
 
 int gps_writeUbx (void *buffer, const uint32_t bufferSize)
@@ -301,63 +333,150 @@ int gps_serialWrite (uint8_t *buffer, uint32_t bufferSize)
 	return uart->write(buffer, bufferSize);
 }
 
-FLASHMEM static void reciever_baudReset (ubx_device_t *dev)
+void reciever_baudRateDiscover (ubx_device_t *dev)
 {
 	HardwareSerialIMXRT *uart = (HardwareSerialIMXRT*)dev->uart;
 
 	for (int i = 0; baudRates[i]; i++){
+		printf(CS("Baud rate set: %i"), (int)baudRates[i]);
 		uart->begin(baudRates[i]);
 		uart->clear();
-		delay(50);	
-		gps_configurePorts(dev);
+		delay(100);	
+		receiver_configurePorts(dev);
 		delay(200);
+		uart->flush();
 		uart->clear();
 		uart->end();
 		delay(200);
 	}
 }
 
-FLASHMEM void gps_reconnect ()
+void gps_baudDiscover ()
 {
+	reciever_baudRateDiscover(&dev);
+}
 
+uint32_t gps_getBaud ()
+{
+	return dev.uartBaud[0];
+}
+
+void gps_setBaud (const uint32_t baud)
+{
+	for (int i = 0; baudRates[i]; i++){
+		if (baudRates[i] == baud){
+			dev.uartBaud[0] = baud;
+			dev.uartBaud[1] = baud;
+			gps_updateReceiverBaudMenu(baud);
+			printf(CS("Baud rate set: %i"), (int)baudRates[i]);
+			return;
+		}
+	}
+	cmdSendResponse("Invalid baud rate");
+}
+
+void gps_reconnect ()
+{
 	HardwareSerialIMXRT *uart;
 	
 #if (!RECEIVER_SINGLE)
 	// Port B
 	uart = gps_setPort(2);
 	
-	reciever_baudReset(&dev);
-	delay(100);
-	uart->begin(SERIAL_RATE);
+	//reciever_baudReset(&dev);
+	//delay(100);
+	
+	uart->clear();
+	uart->end();
+	uart->begin(dev.uartBaud[1]);
+
+	gps_setBuffers(1);
 	delay(100);
 	uart->clear();
-	gps_configure(&dev, gps_getDefaultConfig(2), 0);
+	receiver_configure(&dev, gps_getDefaultConfig(2), 0);
 	delay(100);
-	gps_configurePorts(&dev);
+	receiver_configurePorts(&dev);
 #endif
 
 	// Port A
 	uart = gps_setPort(1);
 	
-	reciever_baudReset(&dev);
-	delay(100);
-	uart->begin(SERIAL_RATE);
+	//reciever_baudReset(&dev);
+	//delay(100);
+	
+	uart->clear();
+	uart->end();
+	uart->begin(dev.uartBaud[0]);
+	
+	gps_setBuffers(1);
 	delay(100);
 	uart->clear();
-	gps_configure(&dev, gps_getDefaultConfig(1), 0);
+	receiver_configure(&dev, gps_getDefaultConfig(1), 0);
 	delay(100);
-	gps_configurePorts(&dev);
+	receiver_configurePorts(&dev);
 }
 
-FLASHMEM static void gps_setup (ubx_device_t *dev, const uint8_t port)
+void gps_reconnect_noConfigure ()
 {
-	HardwareSerialIMXRT *uart = gps_setPort(port);
-	reciever_baudReset(dev);
-	delay(100);
-	uart->begin(SERIAL_RATE);
+	HardwareSerialIMXRT *uart;
+	
+#if (!RECEIVER_SINGLE)
+	// Port B
+
+	cmdSendResponse("Port 2..");
+	uart = gps_setPort(2);
+	
+	//reciever_baudReset(&dev);
+	//cmdSendResponse("Port 2 Buad reset");
+	//delay(100);
+	
+	uart->clear();
+	uart->end();
+	uart->begin(dev.uartBaud[1]);
+
+	gps_setBuffers(2);
 	delay(100);
 	uart->clear();
-	gps_configure(dev, gps_getDefaultConfig(port), 0);
+	delay(100);
+	receiver_configurePorts(&dev);
+#endif
+
+	// Port A
+	cmdSendResponse("Port 1..");
+	uart = gps_setPort(1);
+	
+	//reciever_baudReset(&dev);
+	//cmdSendResponse("Port 1 Buad reset");
+	//delay(100);
+	
+	uart->clear();
+	uart->end();	
+	uart->begin(dev.uartBaud[0]);
+	
+	gps_setBuffers(1);
+	delay(100);
+	uart->clear();
+	delay(100);
+	receiver_configurePorts(&dev);
+}
+
+void gps_reconfigure ()
+{
+	gps_setPort(2);
+	receiver_configure(&dev, gps_getDefaultConfig(2), 1);
+	gps_setPort(1);
+	receiver_configure(&dev, gps_getDefaultConfig(1), 0);
+}
+
+FLASHMEM static void gps_setup (ubx_device_t *dev, const uint8_t port, const uint32_t baud)
+{
+	HardwareSerialIMXRT *uart = gps_setPort(port);
+	//reciever_baudReset(dev);
+	//delay(100);
+	uart->begin(baud);
+	delay(100);
+	uart->clear();
+	receiver_configure(dev, gps_getDefaultConfig(port), 0);
 }
 
 static void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
@@ -384,24 +503,30 @@ void gps_init ()
 {
 	memset(&dev, 0, sizeof(dev));
 
+	dev.uartBaud[0] = UART_BAUD;
+	dev.uartBaud[1] = UART_BAUD;
+	
 #if (!RECEIVER_SINGLE)
 	dev.uartPort[0] = &Serial1;		// Port A
 	dev.uartPort[1] = &Serial2;		// Port B
 
 	gps_setBuffers(2);
-	gps_setup(&dev, 2);
+	gps_setup(&dev, 2, dev.uartBaud[1]);
 	gps_loadOfflineAssist(1);
 #else
+
 	dev.uartPort[0] = &Serial1;		// Port A
 	dev.uartPort[1] = dev.uartPort[0];
 #endif
 
 	gps_setBuffers(1);
-	gps_setup(&dev, 1);
+	gps_setup(&dev, 1, dev.uartBaud[0]);
 	gps_loadOfflineAssist(1);
 	
 	// set default port
 	gps_setPort(1);
+	
+	gps_updateReceiverBaudMenu(UART_BAUD);
 }
 
 static void serial_Event1 (ubx_device_t *dev)
