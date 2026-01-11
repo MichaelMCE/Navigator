@@ -22,7 +22,7 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_NT35516		0		// Mk5		// Multiple GNSS receiver(s)
+#define USE_FLEXTFT_NT35516		0		// Mk5		// Dual GNSS receiver
 #define USE_FLEXTFT_ILI9806		1		// Mk4
 #define USE_FLEXTFT_RM68120		0		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
@@ -95,13 +95,14 @@
 #define CFG_STRING				"800x480*2 RM68120 TFT Display"
 #define TFT_SPEED				40
 #define TFT_INTENSITY			55		// PWM value from 0 to 255
+#define TFT_LOWERPANEL			0
 #define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
 #define MPU_CLOCK_FREQ			720
 #define ENABLE_ENCODERS			1
 #define EXTMEM_SIZE				16
-
+#define SDCARD_SIZE				32
 
 #elif USE_FLEXTFT_R61408
 #define TFT_WIDTH				800
