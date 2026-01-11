@@ -29,9 +29,13 @@
 #endif
 
 
+#define LOG_WRITE_PERIOD		60	// write data to log once per n seconds
 
 
 void mpu_reboot ();
+void mpu_setClockFreq (const uint32_t freqMhz);
+void mpu_updateMPUFreqMenu (const uint32_t freqMhz);
+
 void log_setRecordState (const int state);
 void log_setAcquisitionState (const int state);
 void log_reset ();
@@ -48,8 +52,12 @@ void log_runStart ();
 void log_runReset ();
 void log_runPause ();
 void log_runAdvance (const int32_t advanceBy);
+void log_write ();
 
-void mpu_setClockFreq (const uint32_t freqMhz);
+pos_rec_t log_getLastPosition ();
+timegps_t log_getLastTime ();
+dategps_t log_getLastDate ();
+uint32_t log_getLastiTow ();
 
 void render_signalUpdate ();
 void render_signalTiles ();
