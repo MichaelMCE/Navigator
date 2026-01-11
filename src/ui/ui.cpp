@@ -8,6 +8,7 @@
 
 extern trackRecord_t trackRecord;
 extern application_t inst;
+extern uint8_t external_psram_size;
 
 
 #define FILES_DISPLAY_MAX		9
@@ -36,17 +37,18 @@ static ui_button_t button_logRefresh;
 static ui_button_t button_logLoad;
 
 
-#define UI_WIDGETOBJS_TOTAL		19
+#define UI_WIDGETOBJS_TOTAL		23
 
 #if (TFT_LOWERPANEL)
-static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_overlayDetail), 0, WIDGET(&button_logCtrl), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), WIDGET(&button_logRefresh), WIDGET(&button_logLoad), 0, 0};
+static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_overlayDetail), 0, WIDGET(&button_logCtrl), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), WIDGET(&button_logRefresh), WIDGET(&button_logLoad), 0, 0, 0, 0, 0, 0};
 #else
-static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, NULL, 0, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, 0};
+static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, NULL, 0, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0};
 #endif
 
 static uint32_t opFuncs[OP_QUEUE_LENGTH];	// FIFO
 static uint32_t opPosition = 0;
 static uint32_t opState = OP_IDLE;
+static uint32_t opSetBaud = 0;
 static uint8_t  opSetRate = 37;
 
 
@@ -79,10 +81,11 @@ static void ui_draw_button (ui_all_t *widget, const int32_t x, const int32_t y)
 	}
 
 	drawString(inst.vfont, button->label.text, x+button->offset.x, y+button->offset.y);
-	button->rect.width = (inst.vfont->pos.x - (x+button->offset.x))+1;
+	if (!button->rect.width)
+		button->rect.width = (inst.vfont->pos.x - (x+button->offset.x))+4;
 	
 #if (UI_DRAW_TOUCH_RECTS)
-	drawRectangle(x, y, x+button->rect.width, y+button->rect.height, COLOUR_PAL_BLACK);
+	drawRectangle(x, y - (button->offset.y/2), x+button->rect.width, (y+button->rect.height), COLOUR_PAL_BLACK);
 #endif
 }
 
@@ -107,6 +110,12 @@ static void ui_draw_panel (ui_all_t *widget, const int32_t x, const int32_t y)
 				ui_button_t *button = (ui_button_t*)obj;
 				int ty = (y + button->rect.y) + ((button->rect.height - triangleSize)/2);
 				drawTriangleFilled(tx, ty, tx+triangleSize, ty+(triangleSize/2), tx, ty+triangleSize, COLOUR_PAL_ELITE);
+				
+			}else if (obj->widget.type == UI_WIDGET_BUTTON && (obj->widget.flags&UI_WIDGET_FLAG_HASPOPUP)){
+				ui_button_t *button = (ui_button_t*)obj;
+				tx += 8;
+				int ty = (y + button->rect.y) + ((button->rect.height - triangleSize)/2) + 6;
+				drawCircleFilled(tx, ty, triangleSize/2.0f, COLOUR_PAL_ELITE);
 			}
 		}
 	}
@@ -168,8 +177,9 @@ static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x
 				localY = obj->rect.y;
 
 				if (!obj->widget.isNotReady){
-					if (childX >= obj->rect.x && childY >= obj->rect.y){
-						if (childX < obj->rect.x+obj->rect.width && childY < obj->rect.y+obj->rect.height){
+					const int32_t offsetY = (((ui_button_t *)obj)->offset.y/2);
+					if (childX >= obj->rect.x && childY >= (obj->rect.y - offsetY)){
+						if (childX < obj->rect.x+obj->rect.width && childY < (obj->rect.y+obj->rect.height)-offsetY){
 							if (obj->callback.func(widget, widget->id, *flags, UI_WIDGET_MSG_INPUT, x, y)){
 								ret++;
 								*flags = widget->id;
@@ -543,6 +553,19 @@ int32_t op_execute (const uint32_t opCode)
 		op_halt();
 		return 0;
 
+	case OP_FUNC_RECEIVER_BAUD:
+		if (opSetBaud == UI_ID_BUTTON_BAUD_9600) opSetBaud = 9600;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_19200) opSetBaud = 19200;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_38400) opSetBaud = 38400;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_57600) opSetBaud = 57600;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_115200) opSetBaud = 115200;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_230400) opSetBaud = 230400;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_460800) opSetBaud = 460800;
+		else if (opSetBaud == UI_ID_BUTTON_BAUD_921600) opSetBaud = 921600;
+		if (opSetBaud > 1000)
+			gps_setBaud(opSetBaud);
+		return 1;
+	
 	case OP_FUNC_RECEIVER_RATE:
 		gps_setRate(opSetRate);
 		return 1;
@@ -558,6 +581,14 @@ int32_t op_execute (const uint32_t opCode)
 			filelist.total = 0;
 		}		
 		return 1;
+
+	case OP_FUNC_LOG_START:
+		log_start();
+		return 1;
+		
+	case OP_FUNC_LOG_STOP:
+		log_stop();
+		return 1;
 		
 	case OP_FUNC_LOG_OPEN:
 		uiLogs_open();
@@ -571,6 +602,14 @@ int32_t op_execute (const uint32_t opCode)
 		load_import();
 		return 1;
 		
+	case OP_FUNC_LOG_WRITE:
+		log_write();
+		return 0;
+		
+	case OP_FUNC_GPS_TASK:
+		gps_task();
+		return 0;
+		
 	case OP_FUNC_ZOOMIN:
 		render_zoomIn();
 		return 1;
@@ -581,14 +620,6 @@ int32_t op_execute (const uint32_t opCode)
 
 	case OP_FUNC_ZOOMRESET:
 		render_zoomReset();
-		return 1;
-
-	case OP_FUNC_LOG_START:
-		log_start();
-		return 1;
-		
-	case OP_FUNC_LOG_STOP:
-		log_stop();
 		return 1;
 		
 	case OP_FUNC_LOG_PAUSE:
@@ -621,6 +652,14 @@ int32_t op_execute (const uint32_t opCode)
 		gps_coldStart();
 		return 1;
 
+	case OP_FUNC_FREQ136:
+		mpu_setClockFreq(136);
+		return 0;
+		
+	case OP_FUNC_FREQ272:
+		mpu_setClockFreq(272);
+		return 0;
+		
 	case OP_FUNC_FREQ528:
 		mpu_setClockFreq(528);
 		return 0;
@@ -701,6 +740,9 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		return 1;
 		
 	case UI_ID_BUTTON_SCHEME:
+		ui_disable(NULL, UI_ID_PANEL_MAP);
+		ui_enable(NULL, UI_ID_PANEL_MAP_STYLE);
+		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
 		return 1;
 		
 	case UI_ID_BUTTON_LOAD:
@@ -736,7 +778,9 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		ui_disable(NULL, UI_ID_BUTTON_PAUSE);
 		ui_enableNotReady(NULL, UI_ID_BUTTON_STOP);
 		ui_enableReady(NULL, UI_ID_BUTTON_RESET);
+		op_push(OP_FUNC_LOG_WRITE);
 		op_push(OP_FUNC_LOG_STOP);
+		op_push(OP_FUNC_GPS_TASK);
 		op_go();
 		return 1;
 		
@@ -830,6 +874,12 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
 		return 1;
 
+	case UI_ID_BUTTON_STYLE1:
+	case UI_ID_BUTTON_STYLE2:
+	case UI_ID_BUTTON_STYLE3:
+		sceneSetColourScheme(id - UI_ID_BUTTON_STYLE1);
+		return 1;
+		
 	case UI_ID_BUTTON_MAP:
 		ui_enable(NULL, UI_ID_PANEL_MAP);
 		ui_disable(NULL, UI_ID_PANEL_MENU);
@@ -862,15 +912,46 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		op_go();
 		return 1;
 
+	case UI_ID_BUTTON_BAUD_9600:
+	case UI_ID_BUTTON_BAUD_19200:
+	case UI_ID_BUTTON_BAUD_38400:
+	case UI_ID_BUTTON_BAUD_57600:
+	case UI_ID_BUTTON_BAUD_115200:
+	case UI_ID_BUTTON_BAUD_230400:
+	case UI_ID_BUTTON_BAUD_460800:
+	case UI_ID_BUTTON_BAUD_921600:
+		opSetBaud = id;
+		op_push(OP_FUNC_RECEIVER_BAUD);
+		op_go();
+		return 1;
+	
+	case UI_ID_BUTTON_BAUD:
+		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
+		ui_enable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
+		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
+		return 1;
+		
 	case UI_ID_BUTTON_RATE:
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
 		ui_enable(NULL, UI_ID_PANEL_RECEIVER_RATE);
 		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
 		return 1;
-			
+
 	case UI_ID_BUTTON_GNSS:
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
 		ui_enable(NULL, UI_ID_PANEL_RECEIVER_GNSS);
+		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
+		return 1;
+
+	case UI_ID_BUTTON_MPU_STATUS:
+		ui_disable(NULL, UI_ID_PANEL_MPU);
+		ui_enable(NULL, UI_ID_PANEL_MPU_ABOUT);
+		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
+		return 1;
+							
+	case UI_ID_BUTTON_FREQ:
+		ui_disable(NULL, UI_ID_PANEL_MPU);
+		ui_enable(NULL, UI_ID_PANEL_MPU_FREQ);
 		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
 		return 1;
 
@@ -884,6 +965,16 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		op_push(OP_FUNC_HOTSTART);
 		op_go();
 		return 1;
+
+	case UI_ID_BUTTON_FREQ136:
+		op_push(OP_FUNC_FREQ136);
+		op_go();
+		return 0;
+		
+	case UI_ID_BUTTON_FREQ272:
+		op_push(OP_FUNC_FREQ272);
+		op_go();
+		return 0;
 
 	case UI_ID_BUTTON_FREQ528:
 		op_push(OP_FUNC_FREQ528);
@@ -946,13 +1037,19 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 	
 	case UI_ID_BUTTON_LOGCTRL:
 		ui_disable(NULL, UI_ID_PANEL_MENU);
+#if (TFT_LOWERPANEL)
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RESTART);
 		ui_disable(NULL, UI_ID_PANEL_MPU);
+		ui_disable(NULL, UI_ID_PANEL_MPU_ABOUT);
+		ui_disable(NULL, UI_ID_PANEL_MPU_FREQ);
+		ui_disable(NULL, UI_ID_PANEL_MAP_STYLE);
 		ui_disable(NULL, UI_ID_PANEL_DISPLAY);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_GNSS);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RATE);
+		ui_disable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
 		ui_disable(NULL, UI_ID_PANEL_MAP);
+#endif
 		ui_disable(NULL, UI_ID_PANEL_LOGS);
 
 		if (ui_isEnabled(NULL, UI_ID_PANEL_LOGCTRL))
@@ -967,9 +1064,13 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RESTART);
 		ui_disable(NULL, UI_ID_PANEL_MPU);
+		ui_disable(NULL, UI_ID_PANEL_MPU_ABOUT);
+		ui_disable(NULL, UI_ID_PANEL_MPU_FREQ);
+		ui_disable(NULL, UI_ID_PANEL_MAP_STYLE);
 		ui_disable(NULL, UI_ID_PANEL_DISPLAY);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_GNSS);
 		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RATE);
+		ui_disable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
 		ui_disable(NULL, UI_ID_PANEL_LOGCTRL);
 		ui_disable(NULL, UI_ID_PANEL_MAP);
 		ui_disable(NULL, UI_ID_PANEL_LOGS);
@@ -982,10 +1083,73 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 	return 0;
 }
 
+static void ui_draw_about (ui_all_t *widget, const int32_t x, const int32_t y)
+{
+	setBrush(inst.vfont, BRUSH_DISK);
+	setGlyphScale(inst.vfont, 1.0f);
+	setBrushSize(inst.vfont, 3.0f);
+	setBrushQuality(inst.vfont, 2);
+	setBrushColour(inst.vfont, COLOUR_PAL_DARKGREY);
+	
+	char buffer[128];
+	int btX = x + 10;
+	int btY = y + 24;
+	const int pitchY = 34;
+
+
+	drawString(inst.vfont, CFG_STRING, btX, btY);
+	
+	sprintf(buffer, "GNSS Receiver:");
+	if (RECEIVER_SINGLE == 1)
+		strcat(buffer, " Single");
+	else
+		strcat(buffer, " Dual");
+
+	if (RECEIVER_M10 == 1)
+		strcat(buffer, " UBlox M10");
+	else
+		strcat(buffer, " UBlox M8");
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+
+	sprintf(buffer, "SDCard size: %iGB", SDCARD_SIZE);
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "Clock frequency: %uMhz", (unsigned int)F_CPU_ACTUAL/1000/1000);
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+
+	sprintf(buffer, "ExtMem: %uMB", external_psram_size);
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "CPU temp: %.2fc", InternalTemperature.readTemperatureC());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "Tiles: %i", tilesCount());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "Blocks: %i", blocksCount());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "Tile memory used: %u", tileMemoryUsage());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+
+	btY += pitchY;
+
+	sprintf(buffer, "Receiver Baud: %i", (int)gps_getBaud());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	
+	sprintf(buffer, "Rx: %i   Tx: %i", receiver_getRx(), receiver_getTx());
+	drawString(inst.vfont, buffer, btX, btY += pitchY);
+	receiver_resetRxTx();
+}
+
 int uiPanel_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2)
 {
 	if (msg == UI_WIDGET_MSG_RENDER){
 		ui_draw_panel((ui_all_t*)widget, var1, var2);
+		if (id == UI_ID_PANEL_MPU_ABOUT){
+			ui_draw_about((ui_all_t*)widget, var1, var2);	
+		}
+
 		return 1;
 	}
 	return 0;
@@ -998,7 +1162,6 @@ static int uiLogs_input (ui_widget_t *widget, const uint8_t id, const uint32_t f
 		
 		if (y > file->rect.y-(file->rect.height/2) && y < file->rect.y+(file->rect.height/2)){
 			if (x > file->rect.x && x < file->rect.x+file->rect.width){
-				//printf(CS("%s.tpts"), file->name);
 				if (!strcmp(filelist.selected.name, file->name)){
 					memset(&filelist.selected, 0, sizeof(filelist.selected));
 					ui_disable(NULL, UI_ID_BUTTON_LOAD);
@@ -1119,7 +1282,7 @@ static int uiLogs_collect (ui_all_t *widget, const uint8_t id, const int32_t x, 
 					filelist.files[fileCt].rect.x = offsetX + 124;
 					filelist.files[fileCt].rect.y = offsetY;
 					filelist.files[fileCt].rect.width = 700;
-					filelist.files[fileCt].rect.height = 40;
+					filelist.files[fileCt].rect.height = 45;
    					fileCt++;
 				}
 				offsetY += 50;
@@ -1213,8 +1376,8 @@ FLASHMEM static ui_button_t *ui_panel_addButton (ui_panel_t *panel, const uint8_
 			button->label.quality = 2;
 
 			button->rect.x = panel->buttonX;
-			button->rect.width = panel->rect.width-(button->rect.x*2);
-			button->rect.height = 46;
+			button->rect.width = 0; //0 = auto set at render. panel->rect.width-(button->rect.x*2);
+			button->rect.height = 50;
 			button->offset.x = 2;
 			button->offset.y = 20;
 
@@ -1274,7 +1437,7 @@ static inline int ui_button_setPosition (const uint8_t id, const uint16_t x, con
 
 FLASHMEM static void ui_panelBuild_receiver_restart ()
 {
-	ui_panel_t *receiver = ui_panel_create(UI_ID_PANEL_RECEIVER_RESTART, 3, uiPanel_cb, 30, 34, 230, 3*60);
+	ui_panel_t *receiver = ui_panel_create(UI_ID_PANEL_RECEIVER_RESTART, 3, uiPanel_cb, 110, 34, 230, 3*60);
 	if (!receiver) return;
 	
 	widgetObjs[7] = WIDGET(receiver);
@@ -1289,21 +1452,60 @@ FLASHMEM static void ui_panelBuild_receiver_restart ()
 	ui_enable(0, UI_ID_BUTTON_COLDSTART);
 }
 
+FLASHMEM static void ui_panelBuild_receiver_baud ()
+{
+	const int btHeight = 58;
+	const uint16_t height = (8*btHeight) - 10;
+	ui_panel_t *receiver = ui_panel_create(UI_ID_PANEL_RECEIVER_BAUD, 8, uiPanel_cb, 160, ((VHEIGHT-height)/2)-5, 180, height);
+	if (!receiver) return;
+	
+	widgetObjs[22] = WIDGET(receiver);
+
+	receiver->buttonHeight = btHeight;
+	receiver->buttonY -= 5;
+	
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_9600,   0, uiButtons_cb, "9600",   1);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_19200,  0, uiButtons_cb, "19200",  2);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_38400,  0, uiButtons_cb, "38400",  3);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_57600,  0, uiButtons_cb, "57600",  4);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_115200, 0, uiButtons_cb, "115200", 5);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_230400, 0, uiButtons_cb, "230400", 6);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_460800, 0, uiButtons_cb, "460800", 7);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD_921600, 0, uiButtons_cb, "921600", 8);
+
+	ui_enable(0, UI_ID_BUTTON_BAUD_9600);
+	ui_enable(0, UI_ID_BUTTON_BAUD_19200);
+	ui_enable(0, UI_ID_BUTTON_BAUD_38400);
+	ui_enable(0, UI_ID_BUTTON_BAUD_57600);
+	ui_enable(0, UI_ID_BUTTON_BAUD_115200);
+	ui_enable(0, UI_ID_BUTTON_BAUD_230400);
+	ui_enable(0, UI_ID_BUTTON_BAUD_460800);
+	ui_enable(0, UI_ID_BUTTON_BAUD_921600);
+}
+
 FLASHMEM static void ui_panelBuild_receiver ()
 {
-	ui_panel_t *receiver = ui_panel_create(UI_ID_PANEL_RECEIVER, 7, uiPanel_cb, 20, (VHEIGHT-(7*60))-20, 230, 7*60);
+	const int btHeight = 58;
+	const uint16_t height = (8*btHeight) - 10;
+	
+	ui_panel_t *receiver = ui_panel_create(UI_ID_PANEL_RECEIVER, 8, uiPanel_cb, 110, ((VHEIGHT-height)/2)-5, 230, height);
 	if (!receiver) return;
 	
 	widgetObjs[2] = WIDGET(receiver);
 	
-	ui_panel_addButton(receiver, UI_ID_BUTTON_GPS_RESTART, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Restart", 1);
+	receiver->buttonHeight = btHeight;
+	receiver->buttonY -= 5;
+	
+	ui_panel_addButton(receiver, UI_ID_BUTTON_BAUD,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Baud",    1);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_REINIT,      0, uiButtons_cb, "Reinit",    2);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_RECONNECT,   0, uiButtons_cb, "Reconnect", 3);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_STATUS,      0, uiButtons_cb, "Status",    4);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_VERSION,     0, uiButtons_cb, "Version",   5);
-	ui_panel_addButton(receiver, UI_ID_BUTTON_RATE,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Rate",    6);
-	ui_panel_addButton(receiver, UI_ID_BUTTON_GNSS,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "GNSS",    7);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_GPS_RESTART, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Restart", 6);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_RATE,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Rate",    7);
+	ui_panel_addButton(receiver, UI_ID_BUTTON_GNSS,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "GNSS",    8);
 	
+	ui_enable(0, UI_ID_BUTTON_BAUD);
 	ui_enable(0, UI_ID_BUTTON_GPS_RESTART);
 	ui_enable(0, UI_ID_BUTTON_REINIT);
 	ui_enable(0, UI_ID_BUTTON_RECONNECT);
@@ -1315,7 +1517,7 @@ FLASHMEM static void ui_panelBuild_receiver ()
 
 FLASHMEM static void ui_panelBuild_receiver_rate ()
 {
-	ui_panel_t *rate = ui_panel_create(UI_ID_PANEL_RECEIVER_RATE, 7, uiPanel_cb, 20, (VHEIGHT-(7*60))-20, 110, 7*60);
+	ui_panel_t *rate = ui_panel_create(UI_ID_PANEL_RECEIVER_RATE, 7, uiPanel_cb, 110, (VHEIGHT-(7*60))-20, 110, 7*60);
 	if (!rate) return;
 	
 	widgetObjs[17] = WIDGET(rate);
@@ -1335,14 +1537,11 @@ FLASHMEM static void ui_panelBuild_receiver_rate ()
 	ui_enable(0, UI_ID_BUTTON_RATE5);
 	ui_enable(0, UI_ID_BUTTON_RATE6);
 	ui_enable(0, UI_ID_BUTTON_RATE7);
-	
-	// allign this with the actual rate
-	ui_setHighlight(UI_ID_BUTTON_RATE4, 1);
 }
 
 FLASHMEM static void ui_panelBuild_receiver_gnss ()
 {
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_RECEIVER_GNSS, 7, uiPanel_cb, 20, (VHEIGHT-(7*60))-20, 230, 7*60);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_RECEIVER_GNSS, 7, uiPanel_cb, 110, (VHEIGHT-(7*60))-20, 230, 7*60);
 	if (!panel) return;
 	
 	widgetObjs[5] = WIDGET(panel);
@@ -1364,31 +1563,74 @@ FLASHMEM static void ui_panelBuild_receiver_gnss ()
 	ui_enableNotReady(0, UI_ID_BUTTON_IMES);
 }
 
-FLASHMEM static void ui_panelBuild_mpu ()
+FLASHMEM static void ui_panelBuild_mpu_about ()
 {
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MPU, 6, uiPanel_cb, 20, (VHEIGHT-(6*60))-20, 230, 6*60);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MPU_ABOUT, 1, uiPanel_cb, 100, 20, 620, 440);
 	if (!panel) return;
 	
-	widgetObjs[3] = WIDGET(panel);
+	widgetObjs[20] = WIDGET(panel);
 	
-	ui_panel_addButton(panel, UI_ID_BUTTON_REBOOT,  0, uiButtons_cb, "Reboot",    1);
-	ui_panel_addButton(panel, UI_ID_BUTTON_empty,   0, uiButtons_cb, " ",         2);
-	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ528, 0, uiButtons_cb, "Freq: 528", 3);
-	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ600, 0, uiButtons_cb, "Freq: 600", 4);
-	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ720, 0, uiButtons_cb, "Freq: 720", 5);
-	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ816, 0, uiButtons_cb, "Freq: 816", 6);
+	ui_panel_addButton(panel, UI_ID_BUTTON_ABOUT_CLOSE, 0, uiButtons_cb, " ", 1);
+	ui_disable(0, UI_ID_BUTTON_ABOUT_CLOSE);
+}
+
+FLASHMEM static void ui_panelBuild_mpu_freq ()
+{
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MPU_FREQ, 6, uiPanel_cb, 130, (VHEIGHT-(6*60))-20, 120, 6*60);
+	if (!panel) return;
 	
-	ui_enable(0, UI_ID_BUTTON_REBOOT);
-	ui_disable(0, UI_ID_BUTTON_empty);
+	widgetObjs[19] = WIDGET(panel);
+	
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ136, 0, uiButtons_cb, "136", 1);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ272, 0, uiButtons_cb, "272", 2);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ528, 0, uiButtons_cb, "528", 3);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ600, 0, uiButtons_cb, "600", 4);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ720, 0, uiButtons_cb, "720", 5);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ816, 0, uiButtons_cb, "816", 6);
+	
+	ui_enable(0, UI_ID_BUTTON_FREQ136);
+	ui_enable(0, UI_ID_BUTTON_FREQ272);
 	ui_enable(0, UI_ID_BUTTON_FREQ528);
 	ui_enable(0, UI_ID_BUTTON_FREQ600);
 	ui_enable(0, UI_ID_BUTTON_FREQ720);
 	ui_enable(0, UI_ID_BUTTON_FREQ816);
 }
 
+FLASHMEM static void ui_panelBuild_mpu ()
+{
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MPU, 3, uiPanel_cb, 110, (VHEIGHT-(3*60))-20, 252, 3*60);
+	if (!panel) return;
+	
+	widgetObjs[3] = WIDGET(panel);
+	
+	ui_panel_addButton(panel, UI_ID_BUTTON_REBOOT,     0, uiButtons_cb, "Reboot", 1);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FREQ,       UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Frequency", 2);
+	ui_panel_addButton(panel, UI_ID_BUTTON_MPU_STATUS, UI_WIDGET_FLAG_HASPOPUP, uiButtons_cb, "About", 3);
+	
+	ui_enable(0, UI_ID_BUTTON_REBOOT);
+	ui_enable(0, UI_ID_BUTTON_FREQ);
+	ui_enable(0, UI_ID_BUTTON_MPU_STATUS);
+}
+
+FLASHMEM static void ui_panelBuild_map_style ()
+{
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MAP_STYLE, 3, uiPanel_cb, 110, (VHEIGHT-(3*60))-20, 100, 3*60);
+	if (!panel) return;
+	
+	widgetObjs[21] = WIDGET(panel);
+	
+	ui_panel_addButton(panel, UI_ID_BUTTON_STYLE1, 0, uiButtons_cb, " 1 ", 1);
+	ui_panel_addButton(panel, UI_ID_BUTTON_STYLE2, 0, uiButtons_cb, " 2 ", 2);
+	ui_panel_addButton(panel, UI_ID_BUTTON_STYLE3, 0, uiButtons_cb, " 3 ", 3);
+
+	ui_enable(0, UI_ID_BUTTON_STYLE1);
+	ui_enable(0, UI_ID_BUTTON_STYLE2);
+	ui_enable(0, UI_ID_BUTTON_STYLE3);
+}
+
 FLASHMEM static void ui_panelBuild_map ()
 {
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MAP, 6, uiPanel_cb, 20, (VHEIGHT-(6*60))-20, 340, 6*60);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MAP, 6, uiPanel_cb, 110, (VHEIGHT-(6*60))-20, 340, 6*60);
 	if (!panel) return;
 	
 	widgetObjs[18] = WIDGET(panel);
@@ -1414,7 +1656,7 @@ FLASHMEM static void ui_panelBuild_map ()
 
 FLASHMEM static void ui_panelBuild_display ()
 {
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_DISPLAY, 8, uiPanel_cb, 20, 3, 384, (8*59)-5);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_DISPLAY, 8, uiPanel_cb, 110, 2, 384, (8*59)-7);
 	if (!panel) return;
 	
 	widgetObjs[4] = WIDGET(panel);
@@ -1499,7 +1741,7 @@ FLASHMEM static void ui_panelBuild_menu ()
 	tbuttons = 6;
 #endif
 
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MENU, tbuttons, uiPanel_cb, 20, (VHEIGHT-(tbuttons*60))-20, 230, tbuttons*60);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MENU, tbuttons, uiPanel_cb, 110, (VHEIGHT-(tbuttons*60))-20, 230, tbuttons*60);
 	if (!panel) return;
 	
 	widgetObjs[1] = WIDGET(panel);
@@ -1544,6 +1786,18 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t flags)
 			ui_disable(NULL, UI_ID_PANEL_RECEIVER);
 			return 1;
 
+		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU_ABOUT)){
+			ui_disable(NULL, UI_ID_PANEL_MPU_ABOUT);
+			return 1;
+
+		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MAP_STYLE)){
+			ui_disable(NULL, UI_ID_PANEL_MAP_STYLE);
+			return 1;
+			
+		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU_FREQ)){
+			ui_disable(NULL, UI_ID_PANEL_MPU_FREQ);
+			return 1;
+
 		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU)){
 			ui_disable(NULL, UI_ID_PANEL_MPU);
 			return 1;
@@ -1558,6 +1812,10 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t flags)
 
 		}else if (ui_isEnabled(NULL, UI_ID_PANEL_LOGS)){
 			uiLogs_close();
+			return 1;
+
+		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_BAUD)){
+			ui_disable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
 			return 1;
 
 		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_RATE)){
@@ -1594,7 +1852,10 @@ FLASHMEM void uiBuild ()
 	ui_panelBuild_receiver_gnss();
 	ui_panelBuild_receiver_rate();
 	ui_panelBuild_receiver_restart();
-
+	ui_panelBuild_mpu_freq();
+	ui_panelBuild_mpu_about();
+	ui_panelBuild_map_style();
+	ui_panelBuild_receiver_baud();
 	
 	// config toggle button
 	ui_button_t *button = &button_config;
@@ -1610,12 +1871,13 @@ FLASHMEM void uiBuild ()
 	button->label.scale = 13;
 	button->label.size = 4.0f;
 	button->label.quality = 2;
-	button->rect.x = 30;
-	button->rect.y = VHEIGHT-60;
+	button->rect.x = 120;
+	button->rect.y = VHEIGHT-52;
 	button->rect.width = 140;
-	button->rect.height = 50;
+	button->rect.height = 70;
 	if (TFT_LOWERPANEL){
 		button->label.text = NULL;
+		button->rect.x = 30;
 		button->rect.y = 480;
 		button->rect.width = 80;
 		button->rect.height = 60;
