@@ -977,6 +977,8 @@ FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const dou
 
 FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque)
 {
+	printf(CS("receiver_configure: %i"), (int)dev->portNumber);
+	
 	if (flags&RECEIVER_CFG_CLEAN){
 		memset(&userData, 0, sizeof(userData));
 		memset(&ubxRegTable, 0, sizeof(ubxRegTable));
@@ -994,8 +996,8 @@ FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const
 	}
 
 	if (flags&RECEIVER_CFG_HANDLER){
-		payloadHandlerSet("ack_nak",      UBX_ACK, UBX_ACK_NAK,      ack_nak,      MSG_STATUS_DISABLED);
-		payloadHandlerSet("ack_ack",      UBX_ACK, UBX_ACK_ACK,      ack_ack,      MSG_STATUS_DISABLED);
+		payloadHandlerSet("ack_nak",      UBX_ACK, UBX_ACK_NAK,      ack_nak,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("ack_ack",      UBX_ACK, UBX_ACK_ACK,      ack_ack,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_geofence", UBX_NAV, UBX_NAV_GEOFENCE, nav_geofence, MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_posecef",  UBX_NAV, UBX_NAV_POSECEF,  nav_posecef,  MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_dop",      UBX_NAV, UBX_NAV_DOP,      nav_dop,      MSG_STATUS_ENABLED);
@@ -1024,11 +1026,12 @@ FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const
 		payloadHandlerSet("cfg_geofence", UBX_CFG, UBX_CFG_GEOFENCE, cfg_geofence, MSG_STATUS_ENABLED);
 		payloadHandlerSet("cfg_prt",      UBX_CFG, UBX_CFG_PRT,      cfg_prt,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("cfg_usb",      UBX_CFG, UBX_CFG_USB,      cfg_usb,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("cfg_hnr",      UBX_CFG, UBX_CFG_HNR,      cfg_hnr,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("cfg_odo",      UBX_CFG, UBX_CFG_ODO,      cfg_odo,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_odo",      UBX_NAV, UBX_NAV_ODO,      nav_odo,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_timebds",  UBX_NAV, UBX_NAV_TIMEBDS,  nav_timebds,  MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_sbas",     UBX_NAV, UBX_NAV_SBAS,     nav_sbas,     MSG_STATUS_ENABLED);	
-		payloadHandlerSet("upd_sos",      UBX_UPD, UBX_UPD_SOS,      upd_sos,      MSG_STATUS_ENABLED);	
+		payloadHandlerSet("upd_sos",      UBX_UPD, UBX_UPD_SOS,      upd_sos,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("nav_velned",   UBX_NAV, UBX_NAV_VELNED,   nav_velned,   MSG_STATUS_ENABLED);	
 	}
 

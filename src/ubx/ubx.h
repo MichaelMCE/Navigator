@@ -17,7 +17,7 @@
 
 
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
-#define RECEIVER_SINGLE			(1)
+#define RECEIVER_SINGLE			(0)
 
 
 #define COM_BAUD_9600			0
@@ -1495,6 +1495,8 @@ typedef struct{
 #else
 	}buffer[1];
 #endif
+
+	uint32_t portNumber;
 }ubx_device_t;
 
 
