@@ -45,6 +45,8 @@ enum _ui_ids {
 	UI_ID_BUTTON_MAP,
 	UI_ID_BUTTON_RECEIVER,
 	UI_ID_BUTTON_MPU,
+	
+	UI_ID_BUTTON_test,
 		
 	UI_ID_BUTTON_STYLE1,
 	UI_ID_BUTTON_STYLE2,
@@ -61,7 +63,7 @@ enum _ui_ids {
 	UI_ID_BUTTON_OFF,
 		
 	UI_ID_BUTTON_REBOOT,
-	UI_ID_BUTTON_FREQ,
+	UI_ID_BUTTON_MPU_FREQ,
 	UI_ID_BUTTON_MPU_STATUS,
 	
 	UI_ID_BUTTON_ABOUT_CLOSE,
@@ -75,19 +77,19 @@ enum _ui_ids {
 	UI_ID_BUTTON_BAUD_460800,
 	UI_ID_BUTTON_BAUD_921600,
 
-	UI_ID_BUTTON_FREQ136,
-	UI_ID_BUTTON_FREQ272,
-	UI_ID_BUTTON_FREQ528,
-	UI_ID_BUTTON_FREQ600,
-	UI_ID_BUTTON_FREQ720,
-	UI_ID_BUTTON_FREQ816,
+	UI_ID_BUTTON_MPU_FREQ136,
+	UI_ID_BUTTON_MPU_FREQ272,
+	UI_ID_BUTTON_MPU_FREQ528,
+	UI_ID_BUTTON_MPU_FREQ600,
+	UI_ID_BUTTON_MPU_FREQ720,
+	UI_ID_BUTTON_MPU_FREQ816,
 	
 	UI_ID_BUTTON_HOTSTART,
 	UI_ID_BUTTON_WARMSTART,
 	UI_ID_BUTTON_COLDSTART,
 	
 	UI_ID_BUTTON_BAUD,
-	UI_ID_BUTTON_GPS_RESTART,
+	UI_ID_BUTTON_RECEIVER_RESTART,
 	UI_ID_BUTTON_REINIT,
 	UI_ID_BUTTON_RECONNECT,
 	UI_ID_BUTTON_STATUS,
@@ -159,10 +161,7 @@ struct ui_widget_t {
 	ui_widget_t *parent;		// ui_panel_t, or NULL of root
 };
 
-
 typedef int (*ui_widget_cb_t) (ui_widget_t *opaque, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2);
-
-
 
 typedef struct {
 	void *opaque;
@@ -181,6 +180,17 @@ typedef struct {
 	ui_rect_t rect;
 	ui_callback_t callback;
 }ui_all_t;
+
+typedef struct {
+	ui_widget_t widget;
+	ui_rect_t rect;
+	ui_callback_t callback;
+	
+	int8_t buttonHeight;
+	int8_t buttonX;
+	int8_t buttonY;
+	int8_t stub;
+}ui_panel_t;
 
 typedef struct {
 	ui_widget_t widget;
@@ -207,18 +217,12 @@ typedef struct {
 		uint16_t width;			// clipped to rect.width/height
 		uint16_t height;
 	}image;
-}ui_button_t;
-
-typedef struct {
-	ui_widget_t widget;
-	ui_rect_t rect;
-	ui_callback_t callback;
 	
-	int8_t buttonHeight;
-	int8_t buttonX;
-	int8_t buttonY;
-	int8_t stub;
-}ui_panel_t;
+	struct {					// for menus
+		//ui_widget_t *panel;
+		uint8_t id;
+	}child;
+}ui_button_t;
 
 
 void ui_init ();
