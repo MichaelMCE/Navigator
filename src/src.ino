@@ -146,27 +146,27 @@ FLASHMEM void mpu_reboot ()
 
 void mpu_updateMPUFreqMenu (const uint32_t freqMhz)
 {
-	for (int i = UI_ID_BUTTON_FREQ136; i <= UI_ID_BUTTON_FREQ816; i++)
+	for (int i = UI_ID_BUTTON_MPU_FREQ136; i <= UI_ID_BUTTON_MPU_FREQ816; i++)
 		ui_setHighlight(i, 0);
 
 	switch (freqMhz){
 	case 136:
-		ui_setHighlight(UI_ID_BUTTON_FREQ136, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ136, 1);
 		return;
 	case 272:
-		ui_setHighlight(UI_ID_BUTTON_FREQ272, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ272, 1);
 		return;
 	case 528:
-		ui_setHighlight(UI_ID_BUTTON_FREQ528, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ528, 1);
 		return;
 	case 600:
-		ui_setHighlight(UI_ID_BUTTON_FREQ600, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ600, 1);
 		return;
 	case 720:
-		ui_setHighlight(UI_ID_BUTTON_FREQ720, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ720, 1);
 		return;
 	case 816:
-		ui_setHighlight(UI_ID_BUTTON_FREQ816, 1);
+		ui_setHighlight(UI_ID_BUTTON_MPU_FREQ816, 1);
 		return;
 	}
 }
@@ -510,7 +510,14 @@ static inline void drawLogStatus (int x, int y, int boxDepth)
 	x += 36;
 	if (isSerialConsoleConnected())
 		drawRectangleFilled(x+1, y+1, x+boxDepth-1, y+boxDepth-1, COLOUR_PAL_DARKGREEN);
-	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);	
+	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);
+
+	x += 36;
+	if (powersaveIsEnabled())
+		drawRectangleFilled(x+1, y+1, x+boxDepth-1, y+boxDepth-1, COLOUR_PAL_DARKGREEN);
+	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);
+	
+	
 }
 
 static void drawMapOverlay (gpsdata_t *data)
@@ -886,6 +893,7 @@ FLASHMEM void setup ()
 	if (MPU_CLOCK_FREQ > 60)
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 
+	powersave_init();
 	map_init(&vfontContext);
 	fpRecord_init(&trackRecord);
 
