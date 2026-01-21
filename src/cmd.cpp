@@ -672,6 +672,12 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 			printf(CS("   Single"));
 		else
 			printf(CS("   Dual"));
+
+	}else if (!strncmp(msg, "powersave:on", 12)){
+		powersaveEnableForce();
+
+	}else if (!strncmp(msg, "powersave:off", 13)){
+		powersaveDisable();
 	}
 }
 
