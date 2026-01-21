@@ -112,6 +112,7 @@ FLASHMEM uint8_t gps_getPortActive ()
 
 static inline HardwareSerialIMXRT *gps_setPort (const uint8_t port)
 {
+	dev.portNumber = port;
 	if (port == 1){
 		dev.uart = (HardwareSerialIMXRT*)dev.uartPort[0];
 		return (HardwareSerialIMXRT*)dev.uart;
