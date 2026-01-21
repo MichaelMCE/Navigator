@@ -23,6 +23,8 @@
 #include "tiles.h"
 #include "poi.h"
 #include "ui/ui.h"
+#include "powersave.h"
+
 
 #if ENABLE_MTP
 #include "mtp.h"
