@@ -434,10 +434,10 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 FLASHMEM int ack_ack (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {   
 	//printf(CS("ack_ack %i"), msg_len);
-#if 0
+#if 1
 	const ack_ack_t *ack = (ack_ack_t*)payload;
 	
-	printf(CS("\nack_ack: %.2X/%.2X\n"), ack->clsId, ack->msgId);
+	printf(CS("\nack_ack: 0x%.2X 0x%.2X"), ack->clsId, ack->msgId);
 #endif
 	return CBFREQ_NONE;
 }
@@ -445,10 +445,10 @@ FLASHMEM int ack_ack (const uint8_t *payload, uint16_t msg_len, void *opaque)
 FLASHMEM int ack_nak (const uint8_t *payload, uint16_t msg_len, void *opaque)
 {
 	//printf(CS("ack_nak %i"), msg_len);
-#if 0
+#if 1
 	const ack_nak_t *nak = (ack_nak_t*)payload;
 	
-	printf(CS("\nack_nak: %.2X/%.2X\n"), nak->clsId, nak->msgId);
+	printf(CS("\nack_nak: 0x%.2X 0x%.2X"), nak->clsId, nak->msgId);
 #endif
 	return CBFREQ_NONE;
 }
@@ -790,6 +790,17 @@ FLASHMEM int inf_debug (const uint8_t *payload, uint16_t msg_len, void *opaque)
 #endif
 
 	addDebugLine(msg);
+	return CBFREQ_NONE;	
+}
+
+FLASHMEM int cfg_hnr (const uint8_t *payload, uint16_t msg_len, void *opaque)
+{
+	printf(CS("\ncfg_hnr %i"), msg_len);
+	
+	const cfg_hnr_t *hnr = (cfg_hnr_t*)payload;
+	printf(CS(" highNavRate: %i"), hnr->highNavRate);
+	printf(CS(" reserved: %i %i %i"), hnr->reserved[0], hnr->reserved[1], hnr->reserved[2]);
+	
 	return CBFREQ_NONE;	
 }
 

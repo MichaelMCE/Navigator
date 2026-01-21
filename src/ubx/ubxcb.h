@@ -33,6 +33,7 @@ int cfg_nav5 (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_navx5 (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_gnss (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_rate (const uint8_t *payload, uint16_t msg_len, void *opaque);
+int cfg_hnr (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_inf (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_prt (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int cfg_usb (const uint8_t *payload, uint16_t msg_len, void *opaque);
