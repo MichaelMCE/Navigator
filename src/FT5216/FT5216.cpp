@@ -200,19 +200,21 @@ int touch_read (touch_t *touch)
 
    	touch->points[touch->idx].x = touch->x;
    	touch->points[touch->idx].y = touch->y;
-
    	return ++touch->idx;
 }
 
 void touch_begin (const int intPin, void(*cb)())
 {
 	pinMode(intPin, INPUT_PULLUP);
-	//attachInterrupt(intPin, cb, FALLING);
+	//attachInterrupt(intPin, cb, RISING);
 	FT5216_begin();
 }
 
+//volatile static int isready = 0;
+
 void touch_ISR ()
 {
+	//isready = 1;
 }
 
 void touch_start (const int intPin)
@@ -222,6 +224,9 @@ void touch_start (const int intPin)
 
 int touch_process (touch_t *touch, const uint32_t rotateDirection)
 {
+	//if (!isready) return;
+	//isready = 0;
+	
 	FT5216_start();
 	FT5216_write(FT5216_TOUCH_POINTS);
 	if (FT5216_end() != 0){
