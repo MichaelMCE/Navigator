@@ -18,6 +18,8 @@ touchCtx_t touchCtx = {0};
 touch_t touchDebug;
 
 
+
+
 void touch_init ()
 {
 	memset(&touch, 0, sizeof(touch_t));
@@ -77,6 +79,11 @@ void touch_task (touchCtx_t *ctx)
 		return;
 
 	int total = touch_process(&touch, ctx->rotate);
+	if (total)
+		powersaveDisable();
+	else
+		powersaveEnable();
+
 	if (!total && ctx->pressed){
 		ctx->pressed = 0;
 		//printf(CS("\nReleased"));

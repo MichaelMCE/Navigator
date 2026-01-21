@@ -68,8 +68,6 @@ int touch_process (touch_t *touch, const uint32_t rotateDirection);
 void touch_task (touchCtx_t *ctx);
 void touch_startTimer ();
 
-
-
 #define TOUCH_DOWN		1
 
 
