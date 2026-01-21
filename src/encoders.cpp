@@ -118,9 +118,12 @@ void enc3SwCB ()
 
 int encoders_isReady ()
 {
-	return  dial1.swChange || dial1.posNew!=0 ||
-			dial2.swChange || dial2.posNew!=0 ||
-			dial3.swChange || dial3.posNew!=0;
+	int isReady = dial1.swChange || dial1.posNew!=0 ||
+				  dial2.swChange || dial2.posNew!=0 ||
+				  dial3.swChange || dial3.posNew!=0;
+				  
+	if (isReady) powersaveDisable();
+	return  
 }
 
 int encoders_read (encodersrd_t *encoders)
