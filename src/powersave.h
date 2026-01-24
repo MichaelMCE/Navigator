@@ -6,8 +6,8 @@
 
 
 
-#define POWERSAVE_PERIOD		30000	// Millseconds
-#define POWERSAVE_FREQ			136		// MPU MHZ
+#define POWERSAVE_PERIOD		30		// Seconds
+#define POWERSAVE_FREQ			136		// MPU Mhz
 
 
 void powersave_init ();

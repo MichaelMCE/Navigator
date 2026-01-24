@@ -5,8 +5,8 @@
 
 
 
-static int powersaveEnabled = 0;
-static uint64_t powersaveFullMS = 0;
+extern application_t inst;
+
 
 
 
@@ -14,51 +14,50 @@ static uint64_t powersaveFullMS = 0;
 
 void powersave_init ()
 {
-	powersaveFullMS = millis();
+	inst.rstats.powersave.time = inst.rstats.oneSecondCounter;
 }
 
 int powersaveEnableForce ()
 {
-	if (powersaveEnabled)
-		return powersaveEnabled;
+	if (inst.rstats.powersave.enabled)
+		return inst.rstats.powersave.enabled;
 
-	powersaveEnabled = 1;
+	inst.rstats.powersave.enabled = 1;
 	mpu_setClockFreq(POWERSAVE_FREQ);
-	printf(CS("MPU freq set to 136Mhz"));
+	printf(CS("MPU freq set to %iMhz"), POWERSAVE_FREQ);
 
-	return powersaveEnabled;
+	return inst.rstats.powersave.enabled;
 }
 
 int powersaveEnable ()
 {
-	if (powersaveEnabled)
-		return powersaveEnabled;
+	if (inst.rstats.powersave.enabled)
+		return inst.rstats.powersave.enabled;
 
-	uint64_t t0 = millis();
-	if (t0 - powersaveFullMS > POWERSAVE_PERIOD){
-		powersaveEnabled = 1;
+	if (inst.rstats.oneSecondCounter - inst.rstats.powersave.time > POWERSAVE_PERIOD){
+		inst.rstats.powersave.time = inst.rstats.oneSecondCounter;
+		inst.rstats.powersave.enabled = 1;
 		mpu_setClockFreq(POWERSAVE_FREQ);
-		printf(CS("MPU freq set to 136Mhz"));
+		
+		printf(CS("MPU freq set to %iMhz"), POWERSAVE_FREQ);
 	}
-
-	return powersaveEnabled;
+	return inst.rstats.powersave.enabled;
 }
 
 int powersaveDisable ()
 {
-	if (powersaveEnabled){
-		powersaveEnabled = 0;
-		powersaveFullMS = millis();
+	if (inst.rstats.powersave.enabled){
+		inst.rstats.powersave.enabled = 0;
+		inst.rstats.powersave.time = inst.rstats.oneSecondCounter;
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 
-		printf(CS("MPU freq set to %iMhz"), (int)MPU_CLOCK_FREQ);
+		printf(CS("MPU freq set to %iMhz"), MPU_CLOCK_FREQ);
 	}
-	
-	return powersaveEnabled;
+	return inst.rstats.powersave.enabled;
 }
 
 int powersaveIsEnabled ()
 {
-	return powersaveEnabled;
+	return inst.rstats.powersave.enabled;
 }
 
