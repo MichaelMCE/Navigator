@@ -102,8 +102,14 @@ typedef struct {
 	int trkptsTotal;
 	int trkptsToWrite;
 	
-	uint64_t nothingCount;
-	uint64_t nothingCountSecond;
+	uint32_t nothingCount;
+	uint32_t nothingCountSecond;
+	uint32_t oneSecondCounter;
+
+	struct {
+		uint32_t enabled;
+		uint32_t time;
+	}powersave;
 	
 	struct {
 		uint32_t poi:1;
