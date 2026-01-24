@@ -1483,7 +1483,7 @@ typedef struct{
 				
 	struct {
 		uint8_t compose[UBX_BUFFER_SIZE];
-		uint8_t port[8];
+		uint8_t port[64];
 		
 		uint16_t portLen;
 		uint16_t stub;
