@@ -82,6 +82,17 @@ static inline ui_widget_t *ui_getWidget (const uint8_t id)
 	return NULL;
 }
 
+static inline void ui_disablePanels ()
+{
+	for (int i = 0; i < UI_WIDGETOBJS_TOTAL; i++){
+		ui_all_t *obj = (ui_all_t*)widgetObjs[i];
+		if (!obj) continue;
+
+		if (obj->widget.type == UI_WIDGET_PANEL)
+			obj->widget.isEnabled = 0;
+	}
+}
+
 static inline int ui_setPosition (const uint8_t id, const int32_t x, const int32_t y)
 {
 	ui_all_t *obj = (ui_all_t*)ui_getWidget(id);
@@ -687,7 +698,10 @@ int32_t op_execute (const uint32_t opCode)
 		return 1;
 		
 	case OP_FUNC_MODE:
-
+		if (ui_isEnabled(NULL, UI_ID_PANEL_DISPLAY))
+			ui_disable(0, UI_ID_PANEL_DISPLAY);
+		else
+			ui_enable(0, UI_ID_PANEL_DISPLAY);
 		return 1;
 
 	case OP_FUNC_OFF:
@@ -1042,25 +1056,9 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		return 1;
 #endif	
 	case UI_ID_BUTTON_CONFIG:	// toggle mapCtrl panel
-		if (ui_activePanelId) ui_disable(NULL, ui_activePanelId);
-		ui_activePanelId = UI_ID_PANEL_MENU;
-		
-		ui_disable(NULL, UI_ID_PANEL_MENU);
-		ui_disable(NULL, UI_ID_PANEL_RECEIVER);
-		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RESTART);
-		ui_disable(NULL, UI_ID_PANEL_MPU);
-		ui_disable(NULL, UI_ID_PANEL_MPU_ABOUT);
-		ui_disable(NULL, UI_ID_PANEL_MPU_FREQ);
-		ui_disable(NULL, UI_ID_PANEL_MAP_STYLE);
-		ui_disable(NULL, UI_ID_PANEL_DISPLAY);
-		ui_disable(NULL, UI_ID_PANEL_RECEIVER_GNSS);
-		ui_disable(NULL, UI_ID_PANEL_RECEIVER_RATE);
-		ui_disable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
-		ui_disable(NULL, UI_ID_PANEL_LOGCTRL);
-		ui_disable(NULL, UI_ID_PANEL_MAP);
-		ui_disable(NULL, UI_ID_PANEL_LOGS);
-			
+		ui_disablePanels();
 		ui_enable(NULL, UI_ID_PANEL_MENU);
+		ui_activePanelId = UI_ID_PANEL_MENU;
 		ui_disable(NULL, UI_ID_BUTTON_CONFIG);
 		drawPanel(1);
 		return 1;
@@ -1131,9 +1129,8 @@ int uiPanel_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, con
 {
 	if (msg == UI_WIDGET_MSG_RENDER){
 		ui_draw_panel((ui_all_t*)widget, var1, var2);
-		if (id == UI_ID_PANEL_MPU_ABOUT){
+		if (id == UI_ID_PANEL_MPU_ABOUT)
 			ui_draw_about((ui_all_t*)widget, var1, var2);	
-		}
 
 		return 1;
 	}
@@ -1231,8 +1228,7 @@ static void uiLogs_draw (ui_all_t *widget, const uint8_t id, const int32_t x, co
 void uiLogs_clear ()
 {
 	filelist.total = 0;
-	//memset(&filelist.selected, 0, sizeof(filelist.selected));
-	
+
 	for (int i = 0; i < FILES_DISPLAY_MAX; i++)
 		filelist.files[i].name[0] = 0;
 }
@@ -1590,7 +1586,6 @@ FLASHMEM static void ui_panelBuild_logs ()
 	widgetObjs[12] = WIDGET(panel);
 	
 	ui_panel_addButton(panel, UI_ID_BUTTON_empty, 0, uiButtons_cb, " ", 1);
-	//ui_disable(0, UI_ID_BUTTON_empty);
 }
 
 
@@ -1673,14 +1668,14 @@ FLASHMEM static void ui_panelBuild_receiver ()
 	receiver->buttonHeight = btHeight;
 	receiver->buttonY -= 5;
 	
-	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_BAUD,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Baud", 1, UI_ID_PANEL_RECEIVER_BAUD);
+	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_BAUD, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Baud", 1, UI_ID_PANEL_RECEIVER_BAUD);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_REINIT,      0, uiButtons_cb, "Reinit",    2);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_RECONNECT,   0, uiButtons_cb, "Reconnect", 3);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_STATUS,      0, uiButtons_cb, "Status",    4);
 	ui_panel_addButton(receiver, UI_ID_BUTTON_VERSION,     0, uiButtons_cb, "Version",   5);
 	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_RECEIVER_RESTART, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Restart", 6, UI_ID_PANEL_RECEIVER_RESTART);
-	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_RATE,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Rate", 7, UI_ID_PANEL_RECEIVER_RATE);
-	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_GNSS,        UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "GNSS", 8, UI_ID_PANEL_RECEIVER_GNSS);
+	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_RATE, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Rate", 7, UI_ID_PANEL_RECEIVER_RATE);
+	ui_panel_addButtonMenu(receiver, UI_ID_BUTTON_GNSS, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "GNSS", 8, UI_ID_PANEL_RECEIVER_GNSS);
 	
 	ui_enable(0, UI_ID_BUTTON_BAUD);
 	ui_enable(0, UI_ID_BUTTON_RECEIVER_RESTART);
@@ -1749,68 +1744,9 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t flags)
 			ui_activePanelId = 0;
 		}
 		ui_enable(NULL, UI_ID_BUTTON_CONFIG);
-		
-		/*
-		if (ui_isEnabled(NULL, UI_ID_PANEL_MENU)){
-			ui_disable(NULL, UI_ID_PANEL_MENU);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_LOGCTRL)){
-			ui_disable(NULL, UI_ID_PANEL_LOGCTRL);
-			return 1;
-		
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_RESTART)){
-			ui_disable(NULL, UI_ID_PANEL_RECEIVER_RESTART);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER)){
-			ui_disable(NULL, UI_ID_PANEL_RECEIVER);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU_ABOUT)){
-			ui_disable(NULL, UI_ID_PANEL_MPU_ABOUT);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MAP_STYLE)){
-			ui_disable(NULL, UI_ID_PANEL_MAP_STYLE);
-			return 1;
-			
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU_FREQ)){
-			ui_disable(NULL, UI_ID_PANEL_MPU_FREQ);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MPU)){
-			ui_disable(NULL, UI_ID_PANEL_MPU);
-			return 1;
-		
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_DISPLAY)){
-			ui_disable(NULL, UI_ID_PANEL_DISPLAY);
-			return 1;
-			
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_MAP)){
-			ui_disable(NULL, UI_ID_PANEL_MAP);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_LOGS)){
-			uiLogs_close();
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_BAUD)){
-			ui_disable(NULL, UI_ID_PANEL_RECEIVER_BAUD);
-			return 1;
-
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_RATE)){
-			ui_disable(NULL, UI_ID_PANEL_RECEIVER_RATE);
-			return 1;
-			
-		}else if (ui_isEnabled(NULL, UI_ID_PANEL_RECEIVER_GNSS)){
-			ui_disable(NULL, UI_ID_PANEL_RECEIVER_GNSS);
-			return 1;
-		}*/
 	}
 	return ret;
 }
-
 
 
 /*
