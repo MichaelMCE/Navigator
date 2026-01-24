@@ -1184,7 +1184,7 @@ static inline void drawRuler (application_t *inst, const uint16_t colour)
 
 	int x1 = (VWIDTH - width) / 2;
 	int x2 = x1 + width-1;
-	int y = VHEIGHT - 20;
+	int y = VHEIGHT - 30;
 
 	drawLine(x1, y - barEndDepth, x1, y + barEndDepth, colour);
 	drawLine(x2, y - barEndDepth, x2, y + barEndDepth, colour);
