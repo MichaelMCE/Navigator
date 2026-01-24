@@ -860,7 +860,7 @@ void cmd_mpu (const char *cmdStr)
 		setReadResponseState(hSerial, 0, 0);
 
 	}else{
-		serialSendCmd(hSerial, CMD_MPU, cmdStr);
+		serialSendCmd(hSerial, CMD_MPU, cmdStr);		// powersave:on :off 
 		setReadResponseState(hSerial, 0, 1);
 	}
 }
@@ -901,7 +901,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"sos",      cmd_sos,       "create, clear, poll"},
 	{"tiles",    cmd_tiles,     "flush, load"},
 	{"runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
-	{"mpu",      cmd_mpu,       "reboot, freq:mhz. Set microcontroller frequency"},
+	{"mpu",      cmd_mpu,       "reboot, freq:mhz, powersave:on/off. Set microcontroller frequency"},
 	
 	{"", NULL, ""}
 };
