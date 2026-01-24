@@ -738,7 +738,8 @@ void ISR_onceSecond_sig ()
 {
 	inst.rstats.nothingCountSecond = inst.rstats.nothingCount;
 	inst.rstats.nothingCount = 0;
-	
+	inst.rstats.oneSecondCounter++;
+		
 	renderSignal = 0xFF;
 	recordSignal++;
 
@@ -869,6 +870,9 @@ FLASHMEM void setup ()
 #endif
 		
 	Serial.begin(SERIAL_RATE);
+
+	if (MPU_CLOCK_FREQ > 60)
+		mpu_setClockFreq(136);
 
 	init_display();
 	fio_init();
@@ -1028,7 +1032,7 @@ void doEncoders (encodersrd_t *encoders)
 void console_printCmdStats (runState_t *stats)
 {
 	cmdSendResponse("");
-	printf(CS("zoom:%.0f, temp:%.1f, nothing:%llu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
+	printf(CS("zoom:%.0f, temp:%.1f, nothing:%lu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
 	//printf(CS("map:%.2f, strings:%i, poi:%.2f, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.poi, stats->rtime.trkpts);
 	printf(CS("map:%.2f, strings:%i, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.trkpts);
 	//printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
