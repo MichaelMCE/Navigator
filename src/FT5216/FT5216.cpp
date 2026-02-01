@@ -2,9 +2,7 @@
 /*
 	FT5216 i2c controller
 	Michael McE
-	
-	Does not handle press release. That's up to you.
-	06/08/23
+
 */
 
 
@@ -176,6 +174,7 @@ int touch_read (touch_t *touch)
 	if (avail <= 0 || avail != count)
 		return 0;
 
+	touch->time = millis();
 	touch->xh = FT5216_readByte();
 	touch->xl = FT5216_readByte();
 	touch->yh = FT5216_readByte();
@@ -198,6 +197,11 @@ int touch_read (touch_t *touch)
 		return 0;
 	}
 
+#if (USE_FLEXTFT_NT35516)
+	touch->x *= (540.0/480.0);
+	touch->y *= (960.0/854.0);
+#endif
+
    	touch->points[touch->idx].x = touch->x;
    	touch->points[touch->idx].y = touch->y;
    	return ++touch->idx;
@@ -210,7 +214,19 @@ void touch_begin (const int intPin, void(*cb)())
 	FT5216_begin();
 }
 
-//volatile static int isready = 0;
+//volatile int isready = 0;
+
+int FT5216_getTotal ()
+{
+	uint32_t tPoints = 0;
+	uint8_t count = FT5216_request(1);
+	if (count){
+		tPoints = FT5216_readByte()&0x0F;
+		if (tPoints > (int)sizeof(FT5216_RegAddrLUT))
+			tPoints = sizeof(FT5216_RegAddrLUT);
+	}
+	return tPoints;
+}
 
 void touch_ISR ()
 {
