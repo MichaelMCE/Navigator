@@ -123,7 +123,7 @@ int encoders_isReady ()
 				  dial3.swChange || dial3.posNew!=0;
 				  
 	if (isReady) powersaveDisable();
-	return  
+	return isReady;
 }
 
 int encoders_read (encodersrd_t *encoders)
