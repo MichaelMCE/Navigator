@@ -522,13 +522,13 @@ FASTRUN void NT35516_t41_p::sglBeatWR_nPrm_16 (uint32_t const cmd, uint16_t *val
 		//delayNanoseconds(20);
 
 		for (uint32_t i = 0; i < length; i++){
-			p->SHIFTBUF[0] = *value;
-	  		while (0 == (p->SHIFTSTAT & (3 << 0))){}
+			p->SHIFTBUF[0] = value[i];
+	  		//while (0 == (p->SHIFTSTAT & (3 << 0))){}
 			//delayNanoseconds(45);
 			//delayNanoseconds(5);
-			value++;
+			while(0 == (p->TIMSTAT |= (1U << 0))){}	
 		}
-		while (0 == (p->SHIFTSTAT & (3 << 0))){}
+		//while (0 == (p->SHIFTSTAT & (3 << 0))){}
 	}
 
 	//delayNanoseconds(10);
