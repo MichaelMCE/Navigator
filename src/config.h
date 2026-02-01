@@ -22,8 +22,8 @@
 
 
 // Fully configured profiles:
-#define USE_FLEXTFT_NT35516		1		// Mk5		// Dual GNSS receiver
-#define USE_FLEXTFT_ILI9806		0		// Mk4
+#define USE_FLEXTFT_NT35516		0		// Mk5		// Dual GNSS receiver
+#define USE_FLEXTFT_ILI9806		1		// Mk4
 #define USE_FLEXTFT_RM68120		0		// Mk3
 #define USE_FLEXTFT_R61529		0		// Mk2
 #define USE_FLEXTFT_R61408		0		// test bed
@@ -99,7 +99,8 @@
 #define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_SWAP_A_INVERT_H
-#define MPU_CLOCK_FREQ			720
+#define MPU_CLOCK_FREQ			816
+#define MPU_POWERSAVE_FREQ		600
 #define ENABLE_ENCODERS			1
 #define EXTMEM_SIZE				16
 #define SDCARD_SIZE				32
@@ -141,7 +142,8 @@
 #define STRIP_RENDERER_HEIGHT	16		// as above. Intended for use with the larger panels
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_RLBT
-#define MPU_CLOCK_FREQ			720
+#define MPU_CLOCK_FREQ			816
+#define MPU_POWERSAVE_FREQ		136
 #define ENABLE_ENCODERS			1
 #define EXTMEM_SIZE				8
 #define SDCARD_SIZE				32
@@ -157,6 +159,7 @@
 #define ENABLE_TOUCH_FT5216		1		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
 #define MPU_CLOCK_FREQ			816
+#define MPU_POWERSAVE_FREQ		136
 #define ENABLE_ENCODERS			0
 #define EXTMEM_SIZE				16
 #define SDCARD_SIZE				32
