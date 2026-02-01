@@ -109,9 +109,7 @@ static uint16_t calcChkSum (const uint8_t *hex, const uint32_t htotal, uint8_t *
 static void bufferDump (const uint8_t *buffer, const int32_t bufferSize)
 {
 	for (int i = 0; i < bufferSize; i++)
-		printf("0x%02X ", buffer[i]);
-
-	printf("\r\n");
+		printf(CS("0x%02X"), buffer[i]);
 }
 #endif
 
@@ -975,9 +973,23 @@ FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const dou
 	ubx_sendEx(dev, 10, UBX_MGA, UBX_MGA_INI_POSLLH, &posllh, sizeof(posllh));
 }
 
+FLASHMEM void receiver_cfgSave (ubx_device_t *dev)
+{
+	cfg_cfg_t cfg;
+	memset(&cfg, 0, sizeof(cfg));
+
+	cfg.save.mask = 0xFFFF;			// everything
+	cfg.device.bits.devBBR = 1;
+	cfg.device.bits.devFlash = 1;
+	cfg.device.bits.devEEPROM = 1;
+	cfg.device.bits.devSpiFlash = 1;
+	
+	ubx_sendEx(dev, 50, UBX_CFG, UBX_CFG_CFG, &cfg, sizeof(cfg));
+}
+
 FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque)
 {
-	printf(CS("receiver_configure: %i"), (int)dev->portNumber);
+	//printf(CS("receiver_configure: %i"), (int)dev->portNumber);
 	
 	if (flags&RECEIVER_CFG_CLEAN){
 		memset(&userData, 0, sizeof(userData));

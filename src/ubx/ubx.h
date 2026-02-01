@@ -17,7 +17,7 @@
 
 
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
-#define RECEIVER_SINGLE			(0)
+#define RECEIVER_SINGLE			(1)
 
 
 #define COM_BAUD_9600			0
@@ -725,6 +725,55 @@ typedef struct {
 	uint32_t flags;					// GNSS_CFGBLK_
 }__attribute__((packed))cfg_cfgblk_t;
 
+
+
+// 0000  B5 62 06 09 0D 00 00 00 00 00 FF FF 00 00 00 00 00 00 17 31 BF 
+
+typedef struct {
+	uint32_t ioPort:1;			// Communications port settings. Modifying this sub-section results in an IO system reset. Because of			this undefined data may be output for a short period of time after receiving the message.
+	uint32_t msgConf:1; 		// Message configuration
+	uint32_t infMsg:1; 			// INF message configuration
+	uint32_t navConf:1; 		// Navigation configuration
+	uint32_t rxmConf:1; 		// Receiver Manager configuration
+	uint32_t senConf:4; 		// Sensor interface configuration (not supported in protocol versions less than 19)
+	uint32_t rinvConf:1; 		// Remote inventory configuration
+	uint32_t antConf:1; 		// Antenna configuration
+	uint32_t logConf:1; 		// Logging configuration
+	uint32_t ftsConf:1; 		// FTS configuration. Only applicable to the FTS product varian
+	uint32_t unused1:16;
+	uint32_t nkd_aop:1;
+	uint32_t unused2:2;
+}cfg_cfg_mask_t;
+
+		
+typedef struct {				// Note that commands can be combined. The sequence of execution is clear, save, load.
+	union {
+		uint32_t mask;
+		cfg_cfg_mask_t bits;
+	}clear;
+	
+	union {
+		uint32_t mask;
+		cfg_cfg_mask_t bits;
+	}save;
+	
+	union {
+		uint32_t mask;
+		cfg_cfg_mask_t bits;
+	}load;
+	
+	union {
+		uint8_t mask;
+		struct {
+			uint8_t devBBR:1; 			// Battery backed RAM
+			uint8_t devFlash:1; 		// Flash
+			uint8_t devEEPROM:1; 		// EEPROM
+			uint8_t unused1:1;
+			uint8_t devSpiFlash:1; 		// SPI Flash
+			uint8_t unused2:3;
+		}bits;
+	}device;
+}__attribute__((packed))cfg_cfg_t;
 
 typedef struct {
 	uint8_t msgVer;
@@ -1530,6 +1579,7 @@ int receiver_getTx ();
 void receiver_configure (ubx_device_t *dev, const uint32_t flags, const uintptr_t opaque);
 void receiver_configurePorts (ubx_device_t *dev);
 void reciever_baudRateDiscover (ubx_device_t *dev);
+void receiver_cfgSave (ubx_device_t *dev);
 
 void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
 int ubx_msgPollName (ubx_device_t *dev, const char *name);
