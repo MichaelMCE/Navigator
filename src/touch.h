@@ -51,6 +51,15 @@ typedef struct {
 	uint8_t yl;
 }touch_t;
 
+
+
+#define TOUCH_BINSIZE		512
+typedef struct {
+	uint16_t x;
+	uint16_t y;
+}pos_t;
+
+
 typedef struct {
 	uint8_t enabled;	// send reports. does not reflect current FT5216 comm state
 	uint8_t pressed;	// is being pressed
@@ -58,7 +67,11 @@ typedef struct {
 	uint8_t tready;
 	
 	elapsedMillis t0;
+	
+	uint32_t touchDragTotal;
+	pos_t touchCord[TOUCH_BINSIZE];
 }touchCtx_t;
+
 
 
 void touch_init ();
@@ -66,9 +79,11 @@ void touch_start (const int intPin);
 int touch_isPressed ();
 int touch_process (touch_t *touch, const uint32_t rotateDirection);
 void touch_task (touchCtx_t *ctx);
-void touch_startTimer ();
 
+
+#define TOUCH_UP		0
 #define TOUCH_DOWN		1
+#define TOUCH_MOVE		3
 
 
 
