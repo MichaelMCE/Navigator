@@ -597,23 +597,24 @@ FASTRUN void ILI9806_t41_p::SglBeatWR_nPrm_16 (uint32_t const cmd, const uint16_
 
 #if 1
     if (length){
-    	delayNanoseconds(5);
-
 		for (uint32_t i = 0; i < length; i++){
 			//delayNanoseconds(1);
 			p->SHIFTBUF[0] = value[i];
-			delayNanoseconds(14);
+			//delayNanoseconds(14);
       		//while (0 == (p->SHIFTSTAT & (3 << 0))){
     		//}
+     		while(0 == (p->TIMSTAT |= (1U << 0))){}	
 		}
 	}
 #else
     if (length){
-		for (uint32_t i=0; i<length; i++){
-			p->SHIFTBUF[0] = *value++;
-      		while(0 == (p->SHIFTSTAT & (1U << 0))){
+		for (uint32_t i = 0; i < length; i++){
+			p->SHIFTBUF[0] = *value;
+      		while(0 == (p->SHIFTSTAT & (3 << 0))){
 			}
-
+			value++;
+		}
+   		while(0 == (p->SHIFTSTAT & (3 << 0))){
 		}
 		//Write the last byte
 		//while(0 == (p->SHIFTSTAT & (1U << 0))){
