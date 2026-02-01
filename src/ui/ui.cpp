@@ -1801,7 +1801,7 @@ FLASHMEM void uiBuild ()
 	button->label.scale = 13;
 	button->label.size = 4.0f;
 	button->label.quality = 2;
-	button->rect.x = 120;
+	button->rect.x = 152;
 	button->rect.y = VHEIGHT-52;
 	button->rect.width = 140;
 	button->rect.height = 70;
