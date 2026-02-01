@@ -211,6 +211,9 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 			gps_pollInf(INF_PROTO_USER2);
 		else if (!strcmp(proto, "user3"))
 			gps_pollInf(INF_PROTO_USER3);
+	
+	}else if (!strncmp(msg, "savecfg", 7)){
+		gps_saveConfig();
 
 	}else if (!strncmp(msg, "rate:", 5)){
 		uint8_t rate = atoi(&msg[5]);
