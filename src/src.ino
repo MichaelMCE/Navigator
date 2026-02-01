@@ -60,7 +60,7 @@ extern trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
 extern touch_t touchDebug;
-
+extern touchCtx_t touchCtx;
 
 
 
@@ -821,6 +821,18 @@ static inline void frameCompose ()
 {
 	drawCompose(&gpsData);
 	uiDraw();
+	
+	const uint32_t total = touchCtx.touchDragTotal;
+	
+	if (touchCtx.touchDragTotal){
+		for (uint32_t i = 0; i < total; i++)
+			drawCircleFilled(touchCtx.touchCord[i].x, touchCtx.touchCord[i].y, 10.0f, COLOUR_PAL_BROWN);
+	}
+	
+	drawCircleFilled(touchCtx.touchCord[0].x, touchCtx.touchCord[0].y, 10.0f, COLOUR_PAL_GREEN);
+	drawCircleFilled(touchCtx.touchCord[total-1].x, touchCtx.touchCord[total-1].y, 10.0f, COLOUR_PAL_RED);
+	
+	//drawLine(touchCtx.touchCord[0].x, touchCtx.touchCord[0].y, touchCtx.touchCord[total-1].x, touchCtx.touchCord[total-1].y, COLOUR_PAL_ORANGE);
 }
 
 FLASHMEM void init_debugStrings ()
@@ -842,11 +854,6 @@ FLASHMEM void init_isrTimers ()
 
 	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*50*1000);		// in microseconds
 	tilesLoadTimer.priority(210);
-
-#if ENABLE_TOUCH_FT5216	
-	touch_startTimer();
-#endif
-
 }
 
 static void uiDraw ()
@@ -1042,6 +1049,13 @@ void console_printCmdStats (runState_t *stats)
 
 FASTRUN void loop ()
 {
+#if ENABLE_TOUCH_FT5216
+	if (touchCtx.tready){
+		touch_task(&touchCtx);
+		touchCtx.tready = 0;
+	}
+#endif
+
 #if ENABLE_ENCODERS
 	if (encoders_isReady()){
 		encoders_read(&encoders);
@@ -1054,7 +1068,7 @@ FASTRUN void loop ()
 	if (gnssReceiver_PassthroughEnabled){
 		gps_task();
 		
-#if ENABLE_TOUCH_FT5216
+#if (0 && ENABLE_TOUCH_FT5216)
 		if (touchCtx.tready){		// touch panel to disengage passthrough
 			touch_task(&touchCtx);
 			touchCtx.tready = 0;
@@ -1075,7 +1089,7 @@ FASTRUN void loop ()
 
 	gps_task();
 
-#if ENABLE_TOUCH_FT5216
+#if (0 && ENABLE_TOUCH_FT5216)
 	if (touchCtx.tready){
 		touch_task(&touchCtx);
 		touchCtx.tready = 0;
@@ -1104,7 +1118,7 @@ FASTRUN void loop ()
 #endif
 	}
 
-#if ENABLE_TOUCH_FT5216
+#if (0 && ENABLE_TOUCH_FT5216)
 	if (touchCtx.tready){
 		touch_task(&touchCtx);
 		touchCtx.tready = 0;
@@ -1131,6 +1145,14 @@ FASTRUN void loop ()
 		inst.cmdTaskRunMode = cmd_task(inst.heartbeatPulse);
 		inst.heartbeatPulse = 0;
 	}
+
+#if (0 && ENABLE_TOUCH_FT5216)
+	if (touchCtx.tready){
+		touch_task(&touchCtx);
+		touchCtx.tready = 0;
+	}
+#endif
+
 
 	if (op_state() == OP_READY){
 		if (op_execute(op_pop()))
