@@ -184,6 +184,17 @@ int gps_pollMsg (const char *name)
 	return ubx_msgPollName(&dev, name);
 }
 
+void gps_saveConfig ()
+{
+#if (!RECEIVER_SINGLE)
+	gps_setPort(2);
+	receiver_cfgSave(&dev);
+#endif
+	
+	gps_setPort(1);
+	receiver_cfgSave(&dev);
+}
+
 void gps_sosPoll ()
 {
 #if (!RECEIVER_SINGLE)

@@ -172,11 +172,16 @@ void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
 
+void gps_saveConfig ();
+
 void gps_updateReceiverGNSSMenu (const cfg_gnss_t *gnss);
 void gps_updateReceiverRateMenu (const uint32_t measRate);
 void gps_updateReceiverBaudMenu (const uint32_t baud);
 
 uint8_t gps_getPortActive ();
+
+
+
 
 
 //void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
