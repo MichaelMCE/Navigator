@@ -710,6 +710,9 @@ void cmd_receiver (const char *cmdStr)
 	}else if (!strncmp("status", cmdStr, 6)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 
+	}else if (!strncmp("savecfg", cmdStr, 7)){
+		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
+
 	}else if (!strncmp("version", cmdStr, 7)){
 		serialSendCmd(hSerial, CMD_RECEIVER, cmdStr);
 
