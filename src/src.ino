@@ -399,7 +399,7 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	snprintf(tbuffer, sizeof(tbuffer), "Date: %.02i.%.02i.%i", data->date.day, data->date.month, data->date.year-2000);
 	drawString(inst.vfont, tbuffer, 5, 45);
 
-	snprintf(tbuffer, sizeof(tbuffer), "Sats: %i/%i", data->fix.sats, sats->numSvs);
+	snprintf(tbuffer, sizeof(tbuffer), "Sats: %i/%i", data->fix.sats, (int)sats->numSvs);
 	drawString(inst.vfont, tbuffer, VWIDTH-156, 20);
 	
 	snprintf(tbuffer, sizeof(tbuffer), "Fix: %s", getFixName(data->fix.type));
@@ -444,7 +444,7 @@ static inline void drawMapOverlayStrings (gpsdata_t *data, sat_stats_t *sats)
 	drawString(inst.vfont, tbuffer, 200, VHEIGHT-15);
 #endif
 
-	if (inst.runLog.enabled){
+	if (log_runStatus()){
 		snprintf(tbuffer, sizeof(tbuffer), "%i", (int)inst.runLog.idx);
 		drawString(inst.vfont, tbuffer, VWIDTH-400, VHEIGHT-15);
 	}else{
@@ -516,8 +516,6 @@ static inline void drawLogStatus (int x, int y, int boxDepth)
 	if (powersaveIsEnabled())
 		drawRectangleFilled(x+1, y+1, x+boxDepth-1, y+boxDepth-1, COLOUR_PAL_DARKGREEN);
 	drawRectangle(x, y, x+boxDepth, y+boxDepth, COLOUR_PAL_DARKGREY);
-	
-	
 }
 
 static void drawMapOverlay (gpsdata_t *data)
@@ -538,7 +536,7 @@ static void drawMapOverlay (gpsdata_t *data)
 		if (inst.rstats.rflags.satWorld)
 			drawSatWorld(data, sats);
 			
-		if (inst.rstats.rflags.strings && !inst.runLog.enabled)
+		if (inst.rstats.rflags.strings && !log_runStatus())
 			drawMapOverlaySpeed(data);
 	}
 	
@@ -551,12 +549,11 @@ static inline void frameClear ()
 	memset(renderBuffer, COLOUR_PAL_CREAM, sizeof(renderBuffer));
 }
 
-static void frameSend ()
+static inline void frameSend ()
 {
 	const uint32_t t0 = millis();
 
 #if USE_STRIP_RENDERER
-	
 	uint8_t *pixels8 = renderBuffer;
 	uint16_t *stripAddress = (uint16_t*)tft_getBuffer();
 
@@ -587,6 +584,25 @@ static void frameSend ()
 
 	tft_update();
 #endif
+
+	const uint32_t t1 = millis();
+	inst.rstats.rtime.display = (t1 - t0);
+}
+
+FLASHMEM static inline void frameSendClock ()
+{
+	const uint32_t t0 = millis();
+	
+	memset(renderBuffer, COLOUR_PAL_BLACK, sizeof(renderBuffer));
+	
+	char buffer[2][8];
+	date_adjustTime4BST(&gpsData);
+	snprintf(buffer[0], sizeof(buffer[0]), "%.02i:%.02i", gpsData.time.hour, gpsData.time.min);
+	snprintf(buffer[1], sizeof(buffer[1]), "%i", gpsData.time.sec);
+	
+	clock_render(buffer[0], buffer[1]);
+	frameSend();	
+	
 	const uint32_t t1 = millis();
 	inst.rstats.rtime.display = (t1 - t0);
 }
@@ -617,16 +633,46 @@ FLASHMEM static void setStartupImage ()
 #endif
 }
 
+static inline void drawPanelBlank ()
+{
+#if TFT_LOWERPANEL
+	const int height = 60;
+	const int y1 = 480;
+	memset(renderBuffer, COLOUR_PAL_BLACK, sizeof(renderBuffer));
+	tft_update_array((uint16_t*)renderBuffer, 0, y1, VWIDTH-1, y1+height-1);
+#endif
+}
+
 void drawPanel (const uint8_t which)
 {
 #if (TFT_LOWERPANEL)
+	static uint8_t currentPanel = 255;
+	
+	if (currentPanel == which)
+		return;
+
 	switch (which){
-	case 0: tft_update_array((uint16_t*)blank960x60,     0, 480, 960-1, 540-1); return;
+	case 0: tft_update_array((uint16_t*)blank960x60, 0, 480, 960-1, 540-1); return;
 	case 1: tft_update_array((uint16_t*)panel960x60_map, 0, 480, 960-1, 540-1); return;
 	case 2: tft_update_array((uint16_t*)panel960x60_log_importfaded, 0, 480, 960-1, 540-1); return;
 	case 3: tft_update_array((uint16_t*)panel960x60_log_import, 0, 480, 960-1, 540-1); return;
+	case 4: drawPanelBlank(); return;
 	};
 #endif
+}
+
+uint16_t *drawPanel_getPixels (const uint8_t which)
+{
+#if (TFT_LOWERPANEL)
+	switch (which){
+	case 0: return (uint16_t*)blank960x60;
+	case 1: return (uint16_t*)panel960x60_map;
+	case 2: return (uint16_t*)panel960x60_log_importfaded;
+	case 3: return (uint16_t*)panel960x60_log_import;
+	case 4: return (uint16_t*)blank960x60;	// should throw an error should one attempt to write here. Don't write here.
+	};
+#endif
+	return NULL;
 }
 
 FLASHMEM static void init_display ()
@@ -782,7 +828,7 @@ static void drawMap (const pos_rec_t *loc, const float heading)
 
 static void drawCompose (gpsdata_t *data)
 {
-	if (!inst.runLog.enabled){
+	if (!log_runStatus()){
 #if 0
 		if (!trackRecord.firstFix)
 			drawMap(&data->navAvg, data->misc.heading);
@@ -799,9 +845,8 @@ static void drawCompose (gpsdata_t *data)
 			data->misc.heading = trkPt->heading/100.0f;
 
 			drawMap(&trkPt->location, data->misc.heading);
-			//printf(CS("%i: %f %f"), (int)tpIdx, trkPt->location.longitude, trkPt->location.latitude);
-		
-			if (!inst.runLog.pause)
+
+			if (!log_stateIsPaused())
 				inst.runLog.idx += inst.runLog.step;
 			if (inst.runLog.idx >= trackRecord.marker-1)
 				inst.runLog.idx = 0;
@@ -823,7 +868,6 @@ static inline void frameCompose ()
 	uiDraw();
 	
 	const uint32_t total = touchCtx.touchDragTotal;
-	
 	if (touchCtx.touchDragTotal){
 		for (uint32_t i = 0; i < total; i++)
 			drawCircleFilled(touchCtx.touchCord[i].x, touchCtx.touchCord[i].y, 10.0f, COLOUR_PAL_BROWN);
@@ -856,7 +900,7 @@ FLASHMEM void init_isrTimers ()
 	tilesLoadTimer.priority(210);
 }
 
-static void uiDraw ()
+static inline void uiDraw ()
 {
 	ui_draw(0, 0);
 }
@@ -872,19 +916,19 @@ int uiInput (const int32_t x, const int32_t y, const uint32_t flags)
 FLASHMEM void setup ()
 {
 
-#if ENABLE_MTP
+#if (ENABLE_MTP)
 	mtp_init();
 #endif
 		
 	Serial.begin(SERIAL_RATE);
 
 	if (MPU_CLOCK_FREQ > 60)
-		mpu_setClockFreq(136);
+		mpu_setClockFreq(MPU_POWERSAVE_FREQ);
 
 	init_display();
 	fio_init();
 
-#if ENABLE_MTP
+#if (ENABLE_MTP)
 	while (1)
 		mtp_task();
 	return;
@@ -896,29 +940,31 @@ FLASHMEM void setup ()
 	init_vfont();
 	init_debugStrings();
 	init_isrTimers();
-#if ENABLE_TOUCH_FT5216
+#if (ENABLE_TOUCH_FT5216)
 	touch_init();
 #endif
 	init_record();
-
+	
 	if (MPU_CLOCK_FREQ > 60)
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 
 	powersave_init();
 	map_init(&vfontContext);
 	fpRecord_init(&trackRecord);
+	clock_init();
 
-#if ENABLE_ENCODERS
+#if (ENABLE_ENCODERS)
 	encoders_init();
 #endif
 
 	log_stop();
+	page_set(RENDER_PAGE_MAP);
 	drawPanel(1);
 }
 
 static volatile int zoomMultiplier = 1;
 
-void render_zoomIn ()
+FLASHMEM void render_zoomIn ()
 {
 	float zoomlevel = sceneGetZoom(&inst);
 	zoomlevel -= (zoomlevel * (0.1f*(float)zoomMultiplier));
@@ -932,7 +978,7 @@ void render_zoomIn ()
 	render_signalTiles();
 }
 
-void render_zoomOut ()
+FLASHMEM void render_zoomOut ()
 {
 	float zoomlevel = sceneGetZoom(&inst);
 	zoomlevel += (zoomlevel * (0.1f*(float)zoomMultiplier));
@@ -946,7 +992,7 @@ void render_zoomOut ()
 	render_signalTiles();
 }
 
-void render_zoomReset ()
+FLASHMEM void render_zoomReset ()
 {
 	sceneSetZoom(&inst, SCENE_ZOOM);
 	sceneResetViewport(&inst);
@@ -954,7 +1000,7 @@ void render_zoomReset ()
 }
 	
 #if ENABLE_ENCODERS
-void doEncoders (encodersrd_t *encoders)
+FLASHMEM void doEncoders (encodersrd_t *encoders)
 {
 	if (encoders->encoder[2].positionChange != 0){
 		zoomMultiplier++;
@@ -985,7 +1031,7 @@ void doEncoders (encodersrd_t *encoders)
 	}
 	
 	if (encoders->encoder[1].positionChange != 0){
-		if (inst.runLog.enabled){
+		if (log_runStatus()){
 			if (encoders->encoder[1].positionChange > 0)
 				log_runAdvance(25);
 			else
@@ -995,8 +1041,8 @@ void doEncoders (encodersrd_t *encoders)
 		return;
 	}
 	
-	if (encoders->encoder[1].buttonPress){
-		if (!inst.runLog.enabled){
+	if (encoders->encoder[0].buttonPress){
+		if (!log_runStatus()){
 			log_runStart();
 			log_runPause();
 		}else{
@@ -1007,36 +1053,32 @@ void doEncoders (encodersrd_t *encoders)
 	}
 
 	if (encoders->encoder[0].positionChange != 0){
-		uint8_t level = tft_getBacklight();
-		
-		if (encoders->encoder[0].positionChange > 0){
-			level = (level + 5) & 0xFF;
-			if (level < 5) level = 0;
-			tft_setBacklight(level);
+		if (log_runStatus()){
+			if (encoders->encoder[0].positionChange > 0)
+				log_runAdvance(25);
+			else
+				log_runAdvance(-25);
+			renderSignal = 1;			
 		}else{
-			level = (level - 5) & 0xFF;
-			if (level < 5) level = 0;
-			tft_setBacklight(level);
+			uint8_t level = tft_getBacklight();
+		
+			if (encoders->encoder[0].positionChange > 0){
+				level = (level + 5) & 0xFF;
+				if (level < 5) level = 0;
+				tft_setBacklight(level);
+			}else{
+				level = (level - 5) & 0xFF;
+				if (level < 5) level = 0;
+				tft_setBacklight(level);
+			}
 		}
 		//printf(CS("Backlight: %i"), (int)level);
 		return;
 	}
-
-	if (0 && encoders->encoder[0].buttonPress){
-		//printf(CS("GPS Passthrough %i"), (!gnssReceiver_PassthroughEnabled)&0x01);
-		cmdSendResponse("");
-		Serial.flush();
-
-		if (gnssReceiver_PassthroughEnabled == 0)
-			gnssReceiver_PassthroughEnabled = 1;
-		else
-			gnssReceiver_PassthroughEnabled = 0;
-		renderSignal = 1;
-	}
 }
 #endif
 
-void console_printCmdStats (runState_t *stats)
+FLASHMEM void console_printCmdStats (runState_t *stats)
 {
 	cmdSendResponse("");
 	printf(CS("zoom:%.0f, temp:%.1f, nothing:%lu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
@@ -1045,6 +1087,144 @@ void console_printCmdStats (runState_t *stats)
 	//printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
 	printf(CS("epoch:%i, rx:%i"), gpsData.rates.epochPerRead, receiver_getRx());
 	receiver_resetRxTx();
+}
+
+FLASHMEM uint8_t page_get ()
+{
+	return inst.rstats.page;
+}
+
+FLASHMEM void page_set (const uint8_t page)
+{
+	inst.rstats.page = page;
+	
+	if (inst.rstats.page > 3)
+		inst.rstats.page = 1;
+	
+	switch (inst.rstats.page){
+	case RENDER_PAGE_CLOCK:
+		drawPanel(4);
+		return;
+
+	case RENDER_PAGE_MAP:
+		drawPanel(1);
+		return;
+		
+	case RENDER_PAGE_SPECTRUM:
+		return;
+	}
+}
+
+void frameDrawSpectrum ()
+{
+	sat_stats_t *stats = getSats();
+	mon_span_block_t *block = &stats->spectrum.block;
+
+
+	// total bins
+	int tPoints = (float)block->span / (float)block->res;
+	if (tPoints > 256) tPoints = 256;
+	
+	// draw measure	
+	const int graphCol = COLOUR_PAL_LIGHTGREY;
+	const int labelCol = COLOUR_PAL_RED;
+	const int titleCol = COLOUR_PAL_BLACK;
+	const int specCol  = COLOUR_PAL_BLACK;
+	
+	// graph offset adjustment
+	const float posX = 50.0f;
+	const float posY = 30.0f;
+	
+	// scaling
+	const float vscale = 2.2f;
+	const float hscale = 3.0f;
+	const float dbScale = -(2^-2);	// (0.25) according to PDF
+
+	setGlyphScale(inst.vfont, 0.8);
+	setBrushSize(inst.vfont, 1.0);
+	setBrushColour(inst.vfont, titleCol);
+
+	// title
+	char buffer[96];
+	snprintf(buffer, sizeof(buffer), "Span: %i Mhz    Res: %i Khz   Center: %i Mhz   Gain: %i", (int)block->span/1000000, (int)block->res/1000, (int)block->center/1000000, (int)block->pga);
+	drawString(inst.vfont, buffer, 70, 20);
+	setBrushColour(inst.vfont, labelCol);
+
+	// draw dB level marks and labels
+	// draw -dB label above first point (-50db)
+	int x = posX - 30;
+	float y = posY + (float)VHEIGHT - ((50.0f*dbScale)*vscale);
+	drawString(inst.vfont, "dB", x-10, y-15);
+	
+	for (float db = 10.0f; db <= 50.0f; db += 10.0f){
+		y = posY + (float)VHEIGHT - ((db*dbScale)*vscale);
+		drawLine(x, y, x+((float)tPoints*hscale)+posX, y, graphCol);
+		
+		snprintf(buffer, sizeof(buffer), "%i", (int)db);
+		drawString(inst.vfont, buffer, x-5, y+15);
+	}
+
+	// freq bands
+	// draw a few freq bands with labels
+	float y1 = posY + (float)VHEIGHT - ((50.0f*dbScale)*vscale);
+	float y2 = posY + (float)VHEIGHT - ((10.0f*dbScale)*vscale);
+		
+	float x1 = posX-hscale;
+	drawLine(x1, y1-10, x1, y2+25, graphCol);
+	float bin = 0.0f;
+	float f = block->center + block->span * (bin-127.0f) / 256.0f;
+	snprintf(buffer, sizeof(buffer), "%.1f", f/1000000.0f);
+	drawString(inst.vfont, buffer, x1-10, y2+40);
+
+
+	x = posX + (((tPoints-1.0f) / 2.0f) * hscale);
+	drawLine(x, y1-10, x, y2+25, graphCol);
+	bin = 256.0f/2.0f;
+	f = block->center + block->span * (bin-127.0f) / 256.0f;
+	snprintf(buffer, sizeof(buffer), "%.1f Mhz", f/1000000.0f);
+	drawString(inst.vfont, buffer, x-50, y2+40);
+	
+		
+	float x2 = posX + ((256.0f)*hscale);
+	drawLine(x2, y1-10, x2, y2+25, graphCol);
+	bin = 255.0f;
+	f = block->center + block->span * (bin-127.0f) / 256.0f;
+	snprintf(buffer, sizeof(buffer), "%.1f", f/1000000.0f);
+	drawString(inst.vfont, buffer, x2-70, y2+40);
+
+	
+	// draw spectrum
+	for (int i = 0; i < tPoints-1; i++){
+		float x1 = posX + (i*hscale);
+		float y1 = posY + (float)VHEIGHT - (block->spectrum[i]*vscale);
+		
+		float x2 = posX + ((i+1)*hscale);
+		float y2 = posY + (float)VHEIGHT - (block->spectrum[i+1]*vscale);
+		
+		float a = RAD2DEG(atan2f(x2, y2) - atan2f(x1, y1));
+		drawPolyFilled(x1, y1, x2, y2, 2.0f, a, specCol);
+	}
+}
+
+FLASHMEM void render_frame ()
+{
+	switch (page_get()){
+	case RENDER_PAGE_MAP:
+		frameClear();
+		frameCompose();
+		frameSend();
+		return;
+
+	case RENDER_PAGE_CLOCK:
+		frameSendClock();
+		return;
+
+	case RENDER_PAGE_SPECTRUM:
+		frameClear();
+		frameDrawSpectrum();
+		frameSend();
+		return;
+	}
 }
 
 FASTRUN void loop ()
@@ -1097,11 +1277,10 @@ FASTRUN void loop ()
 #endif
 
 	if (renderSignal){
-		if (!inst.runLog.enabled || inst.runLog.pause)
+		if (!log_runStatus() || log_stateIsPaused())
 			renderSignal = 0;
-		frameClear();
-		frameCompose();
-		frameSend();
+
+		render_frame();
 		gps_task();
 
 		if (inst.rstats.rflags.console && serialConnected)
