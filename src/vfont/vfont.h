@@ -203,6 +203,7 @@ void drawPolyline (const float x1, const float y1, const float x2, const float y
 void drawPolyV3 (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour);
 void drawPolyV3Filled (vector2_t *v1, vector2_t *v2, vector2_t *v3, const uint16_t thickness, const uint8_t colour);
 void drawPolylineSolid (const float x1, const float y1, const float x2, const float y2, const float thickness, const uint8_t colour);
+void drawPolyFilled (float x1, float y1, float x2, float y2, const float thickness, float angle, const uint8_t colour);
 
 const inline float cosDegrees (const float angle)
 {

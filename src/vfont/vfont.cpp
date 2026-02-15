@@ -237,7 +237,7 @@ void drawPoly (const float x1, const float y1, const float x2, const float y2, c
 	}
 }
 
-static inline void drawPolyFilled (float x1, float y1, float x2, float y2, const float thickness, float angle, const uint8_t colour)
+void drawPolyFilled (float x1, float y1, float x2, float y2, const float thickness, float angle, const uint8_t colour)
 {
 	//if (!clipLinef(x1, y1, x2, y2, &x1, &y1, &x2, &y2))
 	//	return;
