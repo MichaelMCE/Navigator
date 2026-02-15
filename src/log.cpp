@@ -19,6 +19,16 @@ void log_runReset ()
 	inst.runLog.pause = 0;
 }
 
+int log_stateIsPaused ()
+{
+	return inst.runLog.pause;
+}
+
+int log_runStatus ()
+{
+	return inst.runLog.enabled;
+}
+
 void log_runStart ()
 {
 	inst.runLog.enabled = 1;
