@@ -315,6 +315,9 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "spot:", 5)){
 		inst.scheme.spotRadius = atoi(&msg[5])&0xFF;
+
+	}else if (!strncmp(msg, "page:", 5)){
+		page_set(atoi(&msg[5]));
 			
 	}else if (!strncmp(msg, "world:", 6)){
 		map_setDetail(MAP_RENDER_SWORLD, atoi(&msg[6])&0x01);
@@ -345,7 +348,6 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 
 	}else if (!strncmp(msg, "savailability:", 14)){
 		map_setDetail(MAP_RENDER_SAVAIL, atoi(&msg[14])&0x01);
-
 	}
 	
 	render_signalUpdate();
@@ -680,6 +682,7 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 		powersaveEnableForce();
 
 	}else if (!strncmp(msg, "powersave:off", 13)){
+		//drawPanel(1);
 		powersaveDisable();
 	}
 }
