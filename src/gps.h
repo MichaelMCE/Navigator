@@ -116,8 +116,8 @@ typedef struct {
 #define LOCATION_BINSIZE		(60)		// bin size of at least 2 seconds (functional rate * 2)
 
 typedef struct {
-	uint8_t numSvs;
-	sat_status_t sv[72];
+	int32_t numSvs;
+	sat_status_t sv[128];
 	
 	struct {
 		int writePos;
@@ -126,6 +126,8 @@ typedef struct {
 
 	uint32_t status_msSS[2];						// milliseconds since Startup / Reset
 	uint32_t resetCt[2];
+	
+	mon_spectrum_t spectrum;
 }sat_stats_t;
 
 

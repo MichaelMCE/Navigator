@@ -150,7 +150,7 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 		portA |= RECEIVER_CFG_POLL;
 		
 		if (RECEIVER_SINGLE)
-			portA |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_ODO|RECEIVER_CFG_Odo;
+			portA |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_ODO|RECEIVER_CFG_Odo | RECEIVER_CFG_MSG_SPECTRUM;
 		return portA;
 	}
 
@@ -161,7 +161,7 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 		portB |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5|RECEIVER_CFG_Odo;
 		portB |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_DISABLEALL;
 		portB |= RECEIVER_CFG_MSG_POSLLH|RECEIVER_CFG_MSG_ODO;
-		portB |= RECEIVER_CFG_MSG_STATUS;
+		portB |= RECEIVER_CFG_MSG_STATUS | RECEIVER_CFG_MSG_SPECTRUM;
 		
 		return portB;
 	}
@@ -550,7 +550,7 @@ static void serial_Event1 (ubx_device_t *dev)
     while (uart->available()){
         dev->buffer[1].port[dev->buffer[1].portLen++] = uart->read();
         
-        if (dev->buffer[1].portLen == 64 /*sizeof(dev->buffer[1].port)*/){
+        if (dev->buffer[1].portLen == RECEIVER_READBUFFER_LEN /*sizeof(dev->buffer[1].port)*/){
 			ubx_processBlock(dev->buffer[1].port, dev->buffer[1].portLen, dev->buffer[1].compose, &dev->buffer[1].ubx_index, &dev->buffer[1].ubx_fill);
 			dev->buffer[1].portLen = 0;
 		}
@@ -561,7 +561,7 @@ static void serial_Event1 (ubx_device_t *dev)
     while (uart->available()){
         dev->buffer[0].port[dev->buffer[0].portLen++] = uart->read();
         
-        if (dev->buffer[0].portLen == 64/*sizeof(dev->buffer[0].port)*/){
+        if (dev->buffer[0].portLen == RECEIVER_READBUFFER_LEN /*sizeof(dev->buffer[0].port)*/){
         	/*if (Serial.dtr()){
 				Serial.write(dev->bufferPort, dev->bufferPortLen);
        			Serial.flush();
