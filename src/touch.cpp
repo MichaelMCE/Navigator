@@ -66,11 +66,12 @@ static inline void opSendTouch (touchCtx_t *ctx, touch_t *touch, const uint32_t 
 
 		touchDebug = *touch;
 		//render_signalUpdate();
-		uiInput(touch->points[0].x, touch->points[0].y, TOUCH_UP);
+		uiInput(touch->x, touch->y, TOUCH_UP);
 		render_signalUpdate();
 		
 	}else if (state == TOUCH_DOWN){
 		//printf(CS("Touch down: %i %i"), touch->points[0].x, touch->points[0].y);
+		//uiInput(touch->x, touch->y, TOUCH_DOWN);
 		//render_signalUpdate();
 	
 	}else if (state == TOUCH_MOVE){	// drag

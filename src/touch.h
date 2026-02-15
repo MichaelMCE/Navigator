@@ -81,9 +81,9 @@ int touch_process (touch_t *touch, const uint32_t rotateDirection);
 void touch_task (touchCtx_t *ctx);
 
 
-#define TOUCH_UP		0
-#define TOUCH_DOWN		1
-#define TOUCH_MOVE		3
+#define TOUCH_UP		1
+#define TOUCH_DOWN		2
+#define TOUCH_MOVE		4
 
 
 
