@@ -25,6 +25,7 @@ int aid_aop (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int aid_alm (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int aid_eph (const uint8_t *payload, uint16_t msg_len, void *opaque);
 
+int mon_span (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int mon_ver (const uint8_t *payload, uint16_t msg_len, void *opaque);
 int mon_io (const uint8_t *payload, uint16_t msg_len, void *opaque);
 

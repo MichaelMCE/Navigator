@@ -50,6 +50,51 @@ static sat_stats_t stats;
 
 
 
+/*
+
+B5 62 0A 31 14 01 00 01 00 00 45 45 46 46 49 48 47 4B 4B 4C 4D 4E 50 50
+51 52 50 51 56 56 57 56 58 57 5A 5A 59 5C 5C 5C 5D 5C 5E 5D 5E 5D 60 61
+5E 60 5E 5F 5D 5E 5D 5E 5D 5E 5E 5A 5C 5D 5C 5C 5E 5A 5A 5A 5C 5C 5B 5A
+58 5A 59 5A 5A 5A 5A 5D 5D 5D 5E 5F 5E 62 61 63 62 64 65 66 69 66 68 69
+6A 6A 6B 6F 70 70 6F 73 71 74 73 75 75 78 78 79 79 7A 7D 7B 7C 7F 7D 7E
+7F 7F 80 83 80 83 84 83 84 87 84 86 86 87 87 88 87 83 86 88 89 8A 89 89
+89 89 89 8B 8A 87 8A 8D 8C 8A 8A 8B 8C 8D 8B 8A 8B 8B 8B 89 8A 88 8A 88
+89 88 89 89 88 86 87 87 87 84 86 87 86 85 87 86 85 83 87 85 86 85 86 85
+85 85 84 86 87 85 85 83 85 83 82 82 82 83 82 82 82 81 80 81 80 7D 7E 7D
+7B 79 78 79 78 75 76 75 72 72 70 6E 6D 6B 6A 69 66 64 62 61 60 60 5C 59
+57 58 56 55 53 52 51 52 4D 4C 4D 4A 47 47 48 45 44 46 44 44 43 43 44 44
+45 45 00 90 D0 03 90 D0 03 00 80 70 88 5E 03 00 00 00 01 3E
+
+
+typedef struct {
+	uint8_t version;				// Message version (0x00 for this version)
+	uint8_t numRfBlocks;			// Number of RF blocks included
+	uint8_t reserved0[2];
+}__attribute__((packed))mon_span_t;
+
+typedef struct {
+	uint8_t spectrum[256];			// Spectrum 2^-2 dB Spectrum data (number of points = span/res) [Uuu.ff]
+	uint32_t span;					// Hz Spectrum span
+	uint32_t res;					// Hz Resolution of the spectrum
+	uint32_t center;				// Hz Center of spectrum span
+	uint8_t pga;					// dB Programmable gain amplifier
+	uint8_t reserved1[3];
+}__attribute__((packed))mon_span_block_t;
+*/
+
+
+FLASHMEM int mon_span (const uint8_t *payload, uint16_t msg_len, void *opaque)
+{
+	//printf(CS("\nmon_span %i"), msg_len);
+	
+	const mon_span_t *span = (mon_span_t*)payload;
+	
+	if (msg_len > sizeof(mon_span_block_t) && span->numRfBlocks > 0)
+		memcpy(&stats.spectrum, span, sizeof(mon_spectrum_t));
+
+	return CBFREQ_NONE;
+}
+
 static inline void navLocationAddAndSum (gpsdata_t *gps, pos_rec_t *pos)
 {
 	if (pos->longitude == 0.000 && pos->latitude == 0.000)
