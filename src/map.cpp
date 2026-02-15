@@ -21,7 +21,8 @@ FLASHMEM void map_init (vfont_t *vfont)
 	sceneSetColourScheme(2);
 	inst.scheme.pathThickness = 11;
 	inst.scheme.spotRadius = 6;
-	
+	inst.rstats.page = RENDER_PAGE_MAP;
+		
 	log_runReset();	
 	poi_t *poi = &inst.poi;
 	poiInit(poi);
