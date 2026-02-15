@@ -196,6 +196,7 @@ UBX
 #define UBX_MON_GNSS			0x28
 //#define UBX_MON_				0x2B
 #define UBX_MON_SMGR			0x2E
+#define UBX_MON_SPAN			0x31
 #define UBX_MON_BATCH			0x32
 #define UBX_MON_HW3				0x37
 #define UBX_MON_RF				0x38
@@ -1454,6 +1455,26 @@ typedef struct {
 }__attribute__((packed))updsos_res_t;
 
 
+typedef struct {
+	uint8_t version;				// Message version (0x00 for this version)
+	uint8_t numRfBlocks;			// Number of RF blocks included
+	uint8_t reserved0[2];
+}__attribute__((packed))mon_span_t;
+
+typedef struct {
+	uint8_t spectrum[256];			// Spectrum 2^-2 dB Spectrum data (number of points = span/res) [Uuu.ff]
+	uint32_t span;					// Hz Spectrum span
+	uint32_t res;					// Hz Resolution of the spectrum
+	uint32_t center;				// Hz Center of spectrum span
+	uint8_t pga;					// dB Programmable gain amplifier
+	uint8_t reserved1[3];
+}__attribute__((packed))mon_span_block_t;
+
+
+typedef struct {
+	mon_span_t span;
+	mon_span_block_t block;
+}__attribute__((packed))mon_spectrum_t;
 
 
 #define RECEIVER_CFG_OPAQUE			0x000001
@@ -1479,13 +1500,14 @@ typedef struct {
 #define RECEIVER_CFG_MSG_POSECEF	0x0040000
 #define RECEIVER_CFG_MSG_SAT		0x0080000
 #define RECEIVER_CFG_MSG_STATUS		0x0100000
-#define RECEIVER_CFG_CLEAN			0x0200000
-#define RECEIVER_CFG_POLL			0x0400000
-#define RECEIVER_CFG_DEVPORTA		0x0800000
-#define RECEIVER_CFG_DEVPORTB		0x1000000
+#define RECEIVER_CFG_MSG_SPECTRUM	0x0200000
+#define RECEIVER_CFG_CLEAN			0x0400000
+#define RECEIVER_CFG_POLL			0x0800000
+#define RECEIVER_CFG_DEVPORTA		0x1000000
+#define RECEIVER_CFG_DEVPORTB		0x2000000
 
 
-#define MAX_REGMSG				64
+#define MAX_REGMSG				96
 #define MSG_STATUS_DISABLED		0x00
 #define MSG_STATUS_ENABLED		0x01
 
@@ -1524,6 +1546,7 @@ typedef struct {
 }ubx_msg_t;
 
 
+#define RECEIVER_READBUFFER_LEN		32
 
 typedef struct{
 	void *uart;	// active serial port
@@ -1532,7 +1555,7 @@ typedef struct{
 				
 	struct {
 		uint8_t compose[UBX_BUFFER_SIZE];
-		uint8_t port[64];
+		uint8_t port[RECEIVER_READBUFFER_LEN];
 		
 		uint16_t portLen;
 		uint16_t stub;

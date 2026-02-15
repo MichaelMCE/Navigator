@@ -1022,6 +1022,7 @@ FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const
 		payloadHandlerSet("aid_alm",      UBX_AID, UBX_AID_ALM,      aid_alm,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("aid_aop",      UBX_AID, UBX_AID_AOP,      aid_aop,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("aid_eph",      UBX_AID, UBX_AID_EPH,      aid_eph,      MSG_STATUS_ENABLED);
+		payloadHandlerSet("mon_span",     UBX_MON, UBX_MON_SPAN,     mon_span,     MSG_STATUS_ENABLED);
 		payloadHandlerSet("mon_ver",      UBX_MON, UBX_MON_VER,      mon_ver,      MSG_STATUS_ENABLED);
 		payloadHandlerSet("mon_io",       UBX_MON, UBX_MON_IO,       mon_io,       MSG_STATUS_ENABLED);
 		payloadHandlerSet("rxm_sfrbx",    UBX_RXM, UBX_RXM_SFRBX,    rxm_sfrbx,    MSG_STATUS_ENABLED);
@@ -1070,6 +1071,7 @@ FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const
 	if (flags&RECEIVER_CFG_MSG_POSECEF)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_POSECEF,17);
 	if (flags&RECEIVER_CFG_MSG_SAT)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT,    19);
 	if (flags&RECEIVER_CFG_MSG_STATUS)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 12);
+	if (flags&RECEIVER_CFG_MSG_SPECTRUM)	ubx_msgEnableEx(dev, UBX_MON, UBX_MON_SPAN,   1);
 
 
 	if (flags&RECEIVER_CFG_POLL){
