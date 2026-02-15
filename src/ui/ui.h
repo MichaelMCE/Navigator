@@ -28,11 +28,14 @@ enum _ui_ids {
 	
 	UI_ID_BUTTON_empty,
 	
+	UI_ID_BUTTON_PAGETOGGLE,
+	
 	UI_ID_BUTTON_AREAFILL,
 	UI_ID_BUTTON_AREAOUTLINR,
 	UI_ID_BUTTON_PATHFILL,
 	UI_ID_BUTTON_FATHLINE,
 	UI_ID_BUTTON_TITLEBOUND,
+	UI_ID_BUTTON_TITLECLEAN,
 	UI_ID_BUTTON_SCHEME,
 	
 	UI_ID_BUTTON_START,
@@ -234,7 +237,7 @@ int ui_setHighlight (const uint8_t child_id, const uint8_t state);
 int ui_getHighlight (const uint8_t child_id);
 int ui_isEnabled (void *opaque, const uint8_t child_id);
 void ui_draw (const uint32_t unused1, const uint32_t unused2);
-int ui_input (const int32_t x, const int32_t y, const uint32_t flags);
+int ui_input (const int32_t x, const int32_t y, const uint32_t inFlags);
 
 FLASHMEM void uiBuild ();
 
@@ -290,8 +293,13 @@ enum _opcodes {
 	OP_FUNC_RECEIVER_RATE,
 	OP_FUNC_RECEIVER_BAUD,
 	
+	OP_FUNC_TILES_RESTART,
+	
 	OP_FUNC_CONFIG,
 	OP_FUNC_OVERLAYDETAIL,
+	
+	OP_FUNC_PAGETOGGLE,
+	
 };
 
 #define OP_QUEUE_LENGTH		32

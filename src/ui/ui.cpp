@@ -35,14 +35,15 @@ static ui_button_t button_zoom[2];
 static ui_button_t button_updown[2];
 static ui_button_t button_logRefresh;
 static ui_button_t button_logLoad;
+static ui_button_t button_pageToggle;
 
 
-#define UI_WIDGETOBJS_TOTAL		23
+#define UI_WIDGETOBJS_TOTAL		24
 
 #if (TFT_LOWERPANEL)
-static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_overlayDetail), 0, WIDGET(&button_logCtrl), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), WIDGET(&button_logRefresh), WIDGET(&button_logLoad), 0, 0, 0, 0, 0, 0};
+static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_overlayDetail), 0, WIDGET(&button_logCtrl), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), WIDGET(&button_logRefresh), WIDGET(&button_logLoad), 0, 0, 0, 0, 0, 0, WIDGET(&button_pageToggle)};
 #else
-static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, NULL, 0, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0};
+static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, NULL, 0, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, WIDGET(&button_pageToggle)};
 #endif
 
 static uint32_t opFuncs[OP_QUEUE_LENGTH];	// FIFO
@@ -204,9 +205,9 @@ static void ui_render (ui_widget_t **widgets, const uint8_t total, const int32_t
 	}
 }
 
-static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x, const int32_t y, uint32_t *flags)
+static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x, const int32_t y, uint32_t *handledBy, const uint32_t inFlags)
 {
-	if (*flags) return 1;	// handler found
+	if (*handledBy) return 1;	// handler found
 	int ret = 0;
 	
 	for (int i = 0; i < total; i++){
@@ -227,7 +228,7 @@ static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x
 				if (childX >= obj->rect.x && childY >= obj->rect.y){
 					if (childX < obj->rect.x+obj->rect.width && childY < obj->rect.y+obj->rect.height){
 						ret++;
-						ret += obj->callback.func(widget, widget->id, *flags, UI_WIDGET_MSG_INPUT, x, y);
+						ret += obj->callback.func(widget, widget->id, *handledBy, UI_WIDGET_MSG_INPUT|(inFlags<<8), x, y);
 					}
 				}
 			}else if (widget->type == UI_WIDGET_BUTTON){
@@ -244,10 +245,10 @@ static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x
 								ui_button_t *button = (ui_button_t*)obj;
 								ui_activePanelId = button->child.id;
 								ui_enable(NULL, ui_activePanelId);
-								*flags = ui_activePanelId;
+								*handledBy = ui_activePanelId;
 
-							}else if (obj->callback.func(widget, widget->id, *flags, UI_WIDGET_MSG_INPUT, x, y)){
-								*flags = widget->id;
+							}else if (obj->callback.func(widget, widget->id, *handledBy, UI_WIDGET_MSG_INPUT|(inFlags<<8), x, y)){
+								*handledBy = widget->id;
 							}
 							return ++ret;
 						}
@@ -260,8 +261,8 @@ static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x
 				for (int j = 0; j < widget->children.total; j++)
 					objs[j] = CHILD_WIDGET_OBJ(widget,j);
 
-				ret += ui_input(objs, widget->children.total, childX-localX, childY-localY, flags);
-				if (*flags) return ret;
+				ret += ui_input(objs, widget->children.total, childX-localX, childY-localY, handledBy, inFlags);
+				if (*handledBy) return ret;
 			}
 		}
 	}
@@ -635,6 +636,11 @@ int32_t op_execute (const uint32_t opCode)
 		gps_setRate(opSetRate);
 		return 1;
 
+	case OP_FUNC_TILES_RESTART:
+		tilesUnloadAll(&inst);
+		render_signalTiles();
+		render_signalUpdate();
+		
 	case OP_FUNC_LOG_UP:
 		if (filelist.renderFrom > 0) filelist.renderFrom--;
 		filelist.total = 0;		
@@ -760,6 +766,10 @@ int32_t op_execute (const uint32_t opCode)
 		gps_printStatus();
 		return 1;
 
+	case OP_FUNC_PAGETOGGLE:
+		page_set(page_get()+1);
+		return 1;
+	
 	case OP_FUNC_REBOOT:
 		mpu_reboot();
 		return 0;
@@ -773,13 +783,17 @@ int32_t op_execute (const uint32_t opCode)
 
 int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2)
 {
-	if (msg == UI_WIDGET_MSG_RENDER){
+	if (msg&UI_WIDGET_MSG_RENDER){
 		ui_draw_button((ui_all_t*)widget, var1, var2);
 		return 1;
 
-	}else if (msg != UI_WIDGET_MSG_INPUT){
+	}else if (!(msg&UI_WIDGET_MSG_INPUT)){
 		return 0;
 	}
+	
+	uint32_t inFlags = (msg>>8)&0xFF;
+	if (!(inFlags|TOUCH_UP))
+		return 0;
 	
 	switch (id){
 	case UI_ID_BUTTON_AREAFILL:
@@ -801,10 +815,15 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		map_setDetail(MAP_RENDER_PATHS_LINE, !map_getDetail(MAP_RENDER_PATHS_LINE));
 		ui_setHighlight(id, !ui_getHighlight(id));
 		return 1;
-		
+
 	case UI_ID_BUTTON_TITLEBOUND:
 		map_setDetail(MAP_RENDER_TITLE_BOUNDARY, !map_getDetail(MAP_RENDER_TITLE_BOUNDARY));
 		ui_setHighlight(id, !ui_getHighlight(id));
+		return 1;
+				
+	case UI_ID_BUTTON_TITLECLEAN:
+		op_push(OP_FUNC_TILES_RESTART);
+		op_go();
 		return 1;
 		
 	case UI_ID_BUTTON_LOAD:
@@ -1033,6 +1052,17 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 		op_go();
 		return 1;
 
+	case UI_ID_BUTTON_PAGETOGGLE:
+		//op_push(OP_FUNC_PAGETOGGLE);
+		//op_go();
+		//powersaveEnableForce();
+		page_set(page_get()+1);
+		//if (page_get() == RENDER_PAGE_CLOCK)
+		//	mpu_setClockFreq(MPU_POWERSAVE_FREQ);
+		if (page_get() == RENDER_PAGE_MAP)
+			powersaveDisable();
+		return 1;
+		
 	case UI_ID_BUTTON_REBOOT:
 		op_push(OP_FUNC_REBOOT);
 		op_go();
@@ -1127,7 +1157,7 @@ static void ui_draw_about (ui_all_t *widget, const int32_t x, const int32_t y)
 
 int uiPanel_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2)
 {
-	if (msg == UI_WIDGET_MSG_RENDER){
+	if (msg&UI_WIDGET_MSG_RENDER){
 		ui_draw_panel((ui_all_t*)widget, var1, var2);
 		if (id == UI_ID_PANEL_MPU_ABOUT)
 			ui_draw_about((ui_all_t*)widget, var1, var2);	
@@ -1279,7 +1309,7 @@ static int uiLogs_collect (ui_all_t *widget, const uint8_t id, const int32_t x, 
 
 int uiLogs_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, const uint32_t msg, const int32_t var1, const int32_t var2)
 {
-	if (msg == UI_WIDGET_MSG_RENDER){
+	if (msg&UI_WIDGET_MSG_RENDER){
 		if (widget->type == UI_WIDGET_BUTTON){
 			ui_draw_button((ui_all_t*)widget, var1, var2);
 			
@@ -1293,7 +1323,7 @@ int uiLogs_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, cons
 		}
 		return 1;
 		
-	}else  if (msg == UI_WIDGET_MSG_INPUT){
+	}else  if (msg&UI_WIDGET_MSG_INPUT){
 		return uiLogs_input(widget, id, flags, var1, var2);
 	}
 	return 0;
@@ -1630,17 +1660,18 @@ FLASHMEM static void ui_panelBuild_display ()
 
 FLASHMEM static void ui_panelBuild_map ()
 {
-	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MAP, 6, uiPanel_cb, ui_menuColumn, (VHEIGHT-(6*60))-20, 340, 6*60);
+	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_MAP, 7, uiPanel_cb, ui_menuColumn, (VHEIGHT-(7*60))-20, 340, 7*60);
 	if (!panel) return;
 	
 	widgetObjs[18] = WIDGET(panel);
 		
-	ui_panel_addButton(panel, UI_ID_BUTTON_AREAFILL,    0, uiButtons_cb, "Area Fill",     1);
-	ui_panel_addButton(panel, UI_ID_BUTTON_AREAOUTLINR, 0, uiButtons_cb, "Area Outline",  2);
-	ui_panel_addButton(panel, UI_ID_BUTTON_PATHFILL,    0, uiButtons_cb, "Path Fill",     3);
-	ui_panel_addButton(panel, UI_ID_BUTTON_FATHLINE,    0, uiButtons_cb, "Path Line",     4);
-	ui_panel_addButton(panel, UI_ID_BUTTON_TITLEBOUND,  0, uiButtons_cb, "Tile Boundary", 5);
-	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_SCHEME, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Style", 6, UI_ID_PANEL_MAP_STYLE);
+	ui_panel_addButton(panel, UI_ID_BUTTON_AREAFILL,    0, uiButtons_cb, "Area Fill",        1);
+	ui_panel_addButton(panel, UI_ID_BUTTON_AREAOUTLINR, 0, uiButtons_cb, "Area Outline",     2);
+	ui_panel_addButton(panel, UI_ID_BUTTON_PATHFILL,    0, uiButtons_cb, "Path Fill",        3);
+	ui_panel_addButton(panel, UI_ID_BUTTON_FATHLINE,    0, uiButtons_cb, "Path Line",        4);
+	ui_panel_addButton(panel, UI_ID_BUTTON_TITLEBOUND,  0, uiButtons_cb, "Tile Boundary",    5);
+	ui_panel_addButton(panel, UI_ID_BUTTON_TITLECLEAN,  0, uiButtons_cb, "Clear Tile Cache", 6);
+	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_SCHEME, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Style", 7, UI_ID_PANEL_MAP_STYLE);
 	
 
 	ui_enable(0, UI_ID_BUTTON_AREAFILL);
@@ -1648,6 +1679,7 @@ FLASHMEM static void ui_panelBuild_map ()
 	ui_enable(0, UI_ID_BUTTON_PATHFILL);
 	ui_enable(0, UI_ID_BUTTON_FATHLINE);
 	ui_enable(0, UI_ID_BUTTON_TITLEBOUND);
+	ui_enable(0, UI_ID_BUTTON_TITLECLEAN);
 	ui_enable(0, UI_ID_BUTTON_SCHEME);
 	
 	ui_setHighlight(UI_ID_BUTTON_AREAFILL, 1);
@@ -1733,12 +1765,12 @@ FLASHMEM static void ui_panelBuild_menu ()
 	ui_enable(0, UI_ID_BUTTON_MPU);
 }
 
-int ui_input (const int32_t x, const int32_t y, const uint32_t flags)
+int ui_input (const int32_t x, const int32_t y, const uint32_t inFlags)
 {
 	uint32_t handledBy = 0;
 	
-	int ret = ui_input(widgetObjs, UI_WIDGETOBJS_TOTAL, x, y, &handledBy);
-	if (!ret){
+	int ret = ui_input(widgetObjs, UI_WIDGETOBJS_TOTAL, x, y, &handledBy, inFlags);
+	if (!ret && (inFlags|TOUCH_UP)){
 		if (ui_activePanelId){
 			ui_disable(NULL, ui_activePanelId);
 			ui_activePanelId = 0;
@@ -1816,10 +1848,34 @@ FLASHMEM void uiBuild ()
 		button->offset.x = 0;
 		button->offset.y = 0;
 	}
-
 	
 	button->callback.func = uiButtons_cb;
 	ui_enable(NULL, UI_ID_BUTTON_CONFIG);
+
+
+
+	// top right corner page toggle button
+	button = &button_pageToggle;
+	memset(button, 0, sizeof(*button));
+
+	button->widget.type = UI_WIDGET_BUTTON;
+	button->widget.id = UI_ID_BUTTON_PAGETOGGLE;
+	button->widget.children.total = 0;
+	button->widget.children.widgets = NULL;
+	button->widget.parent = NULL;
+	button->label.text = "   ";
+	button->label.colour = COLOUR_PAL_REDFUZZ;
+	button->label.scale = 13;
+	button->label.size = 4.0f;
+	button->label.quality = 2;
+	button->rect.width = 100;
+	button->rect.height = 80;
+	button->rect.x = VWIDTH-button->rect.width;
+	button->rect.y = 0;
+	
+	button->callback.func = uiButtons_cb;
+	ui_enable(NULL, UI_ID_BUTTON_PAGETOGGLE);
+	
 	
 	if (!TFT_LOWERPANEL)
 		return;
