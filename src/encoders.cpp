@@ -42,7 +42,7 @@ void enc2Update (const int value)
 		}
 	}
 }
-
+#if 0
 void enc3Update (const int value)
 {
 	if (!(value&0x03)){
@@ -52,6 +52,29 @@ void enc3Update (const int value)
 		}
 	}
 }
+
+static void enc3Reset ()
+{
+	dial3.posNew = 0;
+	dial3.swChange = 0;
+}
+
+void enc3SwCB ()
+{
+	static uint32_t lastPressTime;
+	
+	uint32_t currentPressTime = millis();
+	uint32_t t1 = currentPressTime - lastPressTime;
+
+	if (t1 > ENCODER_SW_DEBOUNCE){
+		lastPressTime = currentPressTime;
+		dial3.swChange++;
+	}
+	
+	//printf(CS("3: %i %i"), t1, dial3.swChange);
+}
+
+#endif
 
 static void enc1Reset ()
 {
@@ -63,12 +86,6 @@ static void enc2Reset ()
 {
 	dial2.posNew = 0;
 	dial2.swChange = 0;
-}
-
-static void enc3Reset ()
-{
-	dial3.posNew = 0;
-	dial3.swChange = 0;
 }
 
 void enc1SwCB ()
@@ -101,21 +118,6 @@ void enc2SwCB ()
 	//printf(CS("2: %i %i"), t1, dial2.swChange);
 }
 
-void enc3SwCB ()
-{
-	static uint32_t lastPressTime;
-	
-	uint32_t currentPressTime = millis();
-	uint32_t t1 = currentPressTime - lastPressTime;
-
-	if (t1 > ENCODER_SW_DEBOUNCE){
-		lastPressTime = currentPressTime;
-		dial3.swChange++;
-	}
-	
-	//printf(CS("3: %i %i"), t1, dial3.swChange);
-}
-
 int encoders_isReady ()
 {
 	int isReady = dial1.swChange || dial1.posNew!=0 ||
@@ -132,13 +134,15 @@ int encoders_read (encodersrd_t *encoders)
 	encoders->encoder[0].positionChange = dial1.posNew;
 	enc1Reset();
 	
-	encoders->encoder[1].buttonPress    = dial2.swChange;
-	encoders->encoder[1].positionChange = dial2.posNew;
+	encoders->encoder[2].buttonPress    = dial2.swChange;
+	encoders->encoder[2].positionChange = dial2.posNew;
 	enc2Reset();
 	
-	encoders->encoder[2].buttonPress    = dial3.swChange;
-	encoders->encoder[2].positionChange = dial3.posNew;
+#if 0
+	encoders->encoder[1].buttonPress    = dial3.swChange;
+	encoders->encoder[1].positionChange = dial3.posNew;
 	enc3Reset();
+#endif
 
 	uint16_t somethingHappenedSW = 0;
 	uint16_t somethingHappenedPS = 0;
@@ -164,11 +168,12 @@ void encoders_dials_init ()
 	dial2.posNew = 0;
 	dial2.swChange = 0;
 	dial2.enc = new Encoder(ENCODER2_PIN_CLK, ENCODER2_PIN_DT, enc2Update);
-	
+#if 0	
 	dial3.pos = -1;
 	dial3.posNew = 0;
 	dial3.swChange = 0;
 	dial3.enc = new Encoder(ENCODER3_PIN_CLK, ENCODER3_PIN_DT, enc3Update);
+#endif 
 }
 
 void encoders_pins_init ()
@@ -180,9 +185,10 @@ void encoders_pins_init ()
 
 	pinMode(ENCODER2_PIN_SW, INPUT_PULLDOWN);
 	attachInterrupt(ENCODER2_PIN_SW, enc2SwCB, RISING);
-	
+#if 0	
 	pinMode(ENCODER3_PIN_SW, INPUT_PULLDOWN);
 	attachInterrupt(ENCODER3_PIN_SW, enc3SwCB, RISING);
+#endif 
 }
 
 void encoders_init ()
