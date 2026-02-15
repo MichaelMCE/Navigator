@@ -111,6 +111,8 @@ typedef struct {
 		uint32_t time;
 	}powersave;
 	
+	int32_t page;
+	
 	struct {
 		uint32_t poi:1;
 		uint32_t compass:1;
