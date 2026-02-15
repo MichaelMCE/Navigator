@@ -15,5 +15,6 @@ int powersaveDisable ();
 int powersaveEnable ();
 int powersaveEnableForce ();		// do not check time period
 int powersaveIsEnabled ();
+void powersaveScreenBlank ();
 
 #endif
