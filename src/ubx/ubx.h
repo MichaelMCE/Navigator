@@ -17,7 +17,7 @@
 
 
 #define RECEIVER_M10			(1)				// UBlox receiver model. 1:M10, 0:M8
-#define RECEIVER_SINGLE			(1)
+#define RECEIVER_SINGLE			(0)
 
 
 #define COM_BAUD_9600			0
@@ -35,7 +35,7 @@
 #define BAUDRATE(n)				(baudRates[(n)])
 
 
-#define UBX_BUFFER_SIZE			2048
+#define UBX_BUFFER_SIZE			4096
 
 /*
 UBX
@@ -1546,7 +1546,7 @@ typedef struct {
 }ubx_msg_t;
 
 
-#define RECEIVER_READBUFFER_LEN		32
+#define RECEIVER_READBUFFER_LEN		16
 
 typedef struct{
 	void *uart;	// active serial port
@@ -1592,6 +1592,9 @@ void ubx_odo_stop (ubx_device_t *dev);
 void ubx_sos_poll (ubx_device_t *dev);
 void ubx_sos_clear (ubx_device_t *dev);
 void ubx_sos_backup (ubx_device_t *dev);
+
+void ubx_msgDisable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId);
+void ubx_msgEnable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId);
 
 void ubx_setRate (ubx_device_t *dev, const uint8_t rate);
 

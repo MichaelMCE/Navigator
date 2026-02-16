@@ -311,12 +311,12 @@ FLASHMEM void ubx_msgEnableEx (ubx_device_t *dev, const uint8_t clsId, const uin
 	ubx_send(dev, buffer, sizeof(buffer));
 }
 
-static void inline ubx_msgEnable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
+void ubx_msgEnable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
 {
 	ubx_msgEnableEx(dev, clsId, msgId, 1);
 }
 
-static inline void ubx_msgDisable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
+void ubx_msgDisable (ubx_device_t *dev, const uint8_t clsId, const uint8_t msgId)
 {
 	const uint8_t buffer[] = {UBX_CFG, UBX_CFG_MSG, 0x03, 0x00, clsId, msgId, 0x00};
 	ubx_send(dev, buffer, sizeof(buffer));
@@ -378,6 +378,7 @@ static int ubx_processMsg (uint8_t *buffer, const int32_t bufferSize)
 	const  uint8_t msg_class = buffer[0];
 	const  uint8_t msg_id = buffer[1];
 	const uint16_t msg_len = (buffer[3]<<8) | buffer[2];
+	//printf(CS("msg: %i %i, %i"), msg_class, msg_id, msg_len);
 
 	ubx_dispatchMsg(msg_class, msg_id, msg_len, &buffer[4]);
 	userData.rates.msgCt++;
@@ -425,8 +426,10 @@ int ubx_processBlock (const uint8_t *data, uint16_t length, uint8_t *ubx_buffer,
 {
 	userData.rates.rx += length;
 
-	if ((*ubx_fill + length) > UBX_BUFFER_SIZE)
+	if ((*ubx_fill + length) > UBX_BUFFER_SIZE){
+		printf(CS("payload buffer overrun: %i"), (int)(*ubx_fill + length));
 		return 0;
+	}
 
 	memcpy(&ubx_buffer[*ubx_fill], data, length);
 	*ubx_fill += length;
@@ -440,12 +443,13 @@ int ubx_processBlock (const uint8_t *data, uint16_t length, uint8_t *ubx_buffer,
 		if ((ubx_buffer[*ubx_index + 0] == MSG_UBX_B1) && (ubx_buffer[(*ubx_index) + 1] == MSG_UBX_B2)){
 			uint16_t msg_length = ((uint16_t)ubx_buffer[(*ubx_index)+4] << 0) + ((uint16_t)ubx_buffer[(*ubx_index)+5] << 8);
 
-			if ((msg_length+8) > UBX_BUFFER_SIZE)
+			if ((msg_length+8) > UBX_BUFFER_SIZE){
 				(*ubx_index)++;
-			else if ((msg_length+8) > length)
+			}else if ((msg_length+8) > length){
 				break;
-			else
+			}else{
 				(*ubx_index) += ubx_processPayload(&ubx_buffer[*ubx_index], msg_length);
+			}
 		}else{
 			(*ubx_index)++;
 		}
@@ -1072,7 +1076,6 @@ FLASHMEM void receiver_configure (ubx_device_t *dev, const uint32_t flags, const
 	if (flags&RECEIVER_CFG_MSG_SAT)			ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_SAT,    19);
 	if (flags&RECEIVER_CFG_MSG_STATUS)		ubx_msgEnableEx(dev, UBX_NAV, UBX_NAV_STATUS, 12);
 	if (flags&RECEIVER_CFG_MSG_SPECTRUM)	ubx_msgEnableEx(dev, UBX_MON, UBX_MON_SPAN,   1);
-
 
 	if (flags&RECEIVER_CFG_POLL){
 		ubx_msgPoll(dev, UBX_MON, UBX_MON_VER);
