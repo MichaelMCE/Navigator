@@ -49,10 +49,6 @@ int powersaveDisable ()
 	if (inst.rstats.powersave.enabled){
 		inst.rstats.powersave.enabled = 0;
 		inst.rstats.powersave.time = inst.rstats.oneSecondCounter;
-		//if (page_get() == RENDER_PAGE_CLOCK){
-		//	drawPanel(1);
-			page_set(RENDER_PAGE_MAP);
-		//}
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 
 		printf(CS("MPU freq set to %iMhz"), MPU_CLOCK_FREQ);
