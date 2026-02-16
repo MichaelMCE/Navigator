@@ -41,7 +41,7 @@ static ui_button_t button_pageToggle;
 #define UI_WIDGETOBJS_TOTAL		24
 
 #if (TFT_LOWERPANEL)
-static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_overlayDetail), 0, WIDGET(&button_logCtrl), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), WIDGET(&button_logRefresh), WIDGET(&button_logLoad), 0, 0, 0, 0, 0, 0, WIDGET(&button_pageToggle)};
+static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, WIDGET(&button_logRefresh), 0, WIDGET(&button_logLoad), 0, WIDGET(&button_updown[0]), WIDGET(&button_updown[1]), 0, WIDGET(&button_zoom[0]), WIDGET(&button_zoom[1]), WIDGET(&button_overlayDetail), WIDGET(&button_logCtrl), 0, 0, 0, 0, 0, 0, WIDGET(&button_pageToggle)};
 #else
 static ui_widget_t *widgetObjs[UI_WIDGETOBJS_TOTAL] = {WIDGET(&button_config), 0, 0, 0, 0, 0, NULL, 0, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, WIDGET(&button_pageToggle)};
 #endif
@@ -241,6 +241,8 @@ static int ui_input (ui_widget_t **widgets, const uint8_t total, const int32_t x
 					if (childX >= obj->rect.x && childY >= (obj->rect.y - offsetY)){
 						if (childX < obj->rect.x+obj->rect.width && childY < (obj->rect.y+obj->rect.height)-offsetY){
 							if (obj->widget.flags&UI_WIDGET_FLAG_HASPANEL || obj->widget.flags&UI_WIDGET_FLAG_HASPOPUP){
+								obj->callback.func(widget, widget->id, *handledBy, UI_WIDGET_MSG_INPUT|(inFlags<<8), x, y);
+								
 								ui_disable(NULL, ui_activePanelId);
 								ui_button_t *button = (ui_button_t*)obj;
 								ui_activePanelId = button->child.id;
@@ -1618,7 +1620,6 @@ FLASHMEM static void ui_panelBuild_logs ()
 	ui_panel_addButton(panel, UI_ID_BUTTON_empty, 0, uiButtons_cb, " ", 1);
 }
 
-
 FLASHMEM static void ui_panelBuild_display ()
 {
 	ui_panel_t *panel = ui_panel_create(UI_ID_PANEL_DISPLAY, 8, uiPanel_cb, ui_menuColumn, 2, 384, (8*59)-7);
@@ -1747,7 +1748,7 @@ FLASHMEM static void ui_panelBuild_menu ()
 	
 	widgetObjs[1] = WIDGET(panel);
 
-	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_LOGS,     UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Logs",     1, UI_ID_PANEL_LOGS);
+	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_LOGS,     UI_WIDGET_FLAG_HASPOPUP, uiButtons_cb, "Logs",     1, UI_ID_PANEL_LOGS);
 	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_DISPLAY,  UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Display",  2, UI_ID_PANEL_DISPLAY);
 	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_MAP,      UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Map",      3, UI_ID_PANEL_MAP);
 	ui_panel_addButtonMenu(panel, UI_ID_BUTTON_RECEIVER, UI_WIDGET_FLAG_HASPANEL, uiButtons_cb, "Receiver", 4, UI_ID_PANEL_RECEIVER);
@@ -1775,7 +1776,7 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t inFlags)
 			ui_disable(NULL, ui_activePanelId);
 			ui_activePanelId = 0;
 		}
-		ui_enable(NULL, UI_ID_BUTTON_CONFIG);
+		uiLogs_close();
 	}
 	return ret;
 }
