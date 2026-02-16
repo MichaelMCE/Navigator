@@ -170,6 +170,9 @@ void gps_stopOdo ();
 
 void gps_setRate (const uint32_t rate);
 
+void gps_msgEnable (const uint8_t clsId, const uint8_t msgId);
+void gps_msgDisable (const uint8_t clsId, const uint8_t msgId);
+
 void gps_sosCreateBackup ();
 void gps_sosClearFlash ();
 void gps_sosPoll ();
@@ -182,7 +185,7 @@ void gps_updateReceiverBaudMenu (const uint32_t baud);
 
 uint8_t gps_getPortActive ();
 
-
+void gps_setReceiver (const uint8_t port);
 
 
 

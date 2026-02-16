@@ -123,6 +123,15 @@ static inline HardwareSerialIMXRT *gps_setPort (const uint8_t port)
 	return (HardwareSerialIMXRT*)dev.uart;
 }
 
+void gps_setReceiver (const uint8_t port)
+{
+#if (RECEIVER_SINGLE)
+	gps_setPort(1);
+#else
+	gps_setPort(port);
+#endif
+}
+
 static inline void gps_setBuffers (const uint8_t port)
 {
 	if (port == 1){
@@ -150,7 +159,7 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 		portA |= RECEIVER_CFG_POLL;
 		
 		if (RECEIVER_SINGLE)
-			portA |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_ODO|RECEIVER_CFG_Odo | RECEIVER_CFG_MSG_SPECTRUM;
+			portA |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_ODO|RECEIVER_CFG_Odo;
 		return portA;
 	}
 
@@ -160,8 +169,8 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 		portB |= RECEIVER_CFG_Ports|RECEIVER_CFG_Inf|RECEIVER_CFG_Rate|RECEIVER_CFG_GNSS;
 		portB |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5|RECEIVER_CFG_Odo;
 		portB |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_DISABLEALL;
-		portB |= RECEIVER_CFG_MSG_POSLLH|RECEIVER_CFG_MSG_ODO;
-		portB |= RECEIVER_CFG_MSG_STATUS | RECEIVER_CFG_MSG_SPECTRUM;
+		portB |= RECEIVER_CFG_MSG_POSLLH|RECEIVER_CFG_MSG_ODO | RECEIVER_CFG_MSG_PVT;
+		portB |= RECEIVER_CFG_MSG_STATUS;
 		
 		return portB;
 	}
@@ -253,6 +262,18 @@ void gps_printStatus ()
 #endif
 	gps_setPort(1);
 	ubx_printStatus(&dev);
+}
+
+void gps_msgDisable (const uint8_t clsId, const uint8_t msgId)
+{
+	ubx_msgDisable(&dev, clsId, msgId);
+	gps_setPort(1);
+}
+
+void gps_msgEnable (const uint8_t clsId, const uint8_t msgId)
+{
+	ubx_msgEnable(&dev, clsId, msgId);
+	gps_setPort(1);
 }
 
 void gps_coldStart ()
