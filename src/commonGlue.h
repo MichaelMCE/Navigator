@@ -32,22 +32,26 @@
 #endif
 
 
+#define LOG_WRITE_PERIOD		60	// write data to log once per n seconds
 
-#define RENDER_PAGE_MAP			1
-#define RENDER_PAGE_CLOCK		2
-#define RENDER_PAGE_SPECTRUM	3
+
+enum _pages {
+	RENDER_PAGE_MAP = 1,
+	RENDER_PAGE_ALTITUDE,
+	RENDER_PAGE_SPECTRUM,
+	RENDER_PAGE_CLOCK,
+	
+	RENDER_PAGE_TOTAL = RENDER_PAGE_CLOCK
+};
 
 void page_set (const uint8_t page);
 uint8_t page_get ();
 
 
-
-#define LOG_WRITE_PERIOD		60	// write data to log once per n seconds
-
-
 void mpu_reboot ();
 void mpu_setClockFreq (const uint32_t freqMhz);
 void mpu_updateMPUFreqMenu (const uint32_t freqMhz);
+
 
 void log_setRecordState (const int state);
 void log_setAcquisitionState (const int state);

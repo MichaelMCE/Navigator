@@ -33,6 +33,9 @@ volatile static int32_t appendSignal = 0;
 volatile static int32_t tilesLoadSig = 0;
 volatile static int serialConnected = 0;
 
+static volatile int zoomMultiplier = 1;
+static volatile int spectrumXMarker = 56;
+
 
 #if (VWIDTH > 480)
 DMAMEM uint8_t renderBuffer[VWIDTH * VHEIGHT];
@@ -551,8 +554,6 @@ static inline void frameClear ()
 
 static inline void frameSend ()
 {
-	const uint32_t t0 = millis();
-
 #if USE_STRIP_RENDERER
 	uint8_t *pixels8 = renderBuffer;
 	uint16_t *stripAddress = (uint16_t*)tft_getBuffer();
@@ -584,15 +585,10 @@ static inline void frameSend ()
 
 	tft_update();
 #endif
-
-	const uint32_t t1 = millis();
-	inst.rstats.rtime.display = (t1 - t0);
 }
 
 FLASHMEM static inline void frameSendClock ()
 {
-	const uint32_t t0 = millis();
-	
 	memset(renderBuffer, COLOUR_PAL_BLACK, sizeof(renderBuffer));
 	
 	char buffer[2][8];
@@ -602,9 +598,6 @@ FLASHMEM static inline void frameSendClock ()
 	
 	clock_render(buffer[0], buffer[1]);
 	frameSend();	
-	
-	const uint32_t t1 = millis();
-	inst.rstats.rtime.display = (t1 - t0);
 }
 
 FLASHMEM static void setStartupImage ()
@@ -867,6 +860,7 @@ static inline void frameCompose ()
 	drawCompose(&gpsData);
 	uiDraw();
 	
+#if 0
 	const uint32_t total = touchCtx.touchDragTotal;
 	if (touchCtx.touchDragTotal){
 		for (uint32_t i = 0; i < total; i++)
@@ -875,8 +869,8 @@ static inline void frameCompose ()
 	
 	drawCircleFilled(touchCtx.touchCord[0].x, touchCtx.touchCord[0].y, 10.0f, COLOUR_PAL_GREEN);
 	drawCircleFilled(touchCtx.touchCord[total-1].x, touchCtx.touchCord[total-1].y, 10.0f, COLOUR_PAL_RED);
-	
 	//drawLine(touchCtx.touchCord[0].x, touchCtx.touchCord[0].y, touchCtx.touchCord[total-1].x, touchCtx.touchCord[total-1].y, COLOUR_PAL_ORANGE);
+#endif
 }
 
 FLASHMEM void init_debugStrings ()
@@ -893,7 +887,7 @@ FLASHMEM void init_record ()
 FLASHMEM void init_isrTimers ()
 {
 	// render update timer. Set to once per second
-	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);		// in microseconds
+	onceSecondTimer.begin(ISR_onceSecond_sig, 1*990*1000);	// in microseconds
 	onceSecondTimer.priority(180);
 
 	tilesLoadTimer.begin(ISR_tilesLoad_sig, 1*50*1000);		// in microseconds
@@ -962,8 +956,6 @@ FLASHMEM void setup ()
 	drawPanel(1);
 }
 
-static volatile int zoomMultiplier = 1;
-
 FLASHMEM void render_zoomIn ()
 {
 	float zoomlevel = sceneGetZoom(&inst);
@@ -998,26 +990,37 @@ FLASHMEM void render_zoomReset ()
 	sceneResetViewport(&inst);
 	sceneLoadTiles(&inst);
 }
-	
+
+
 #if ENABLE_ENCODERS
 FLASHMEM void doEncoders (encodersrd_t *encoders)
 {
 	if (encoders->encoder[2].positionChange != 0){
-		zoomMultiplier++;
-		//zoomMultiplier += abs(encoders->encoder[2].positionChange);
-		if (encoders->encoder[2].positionChange > 0){
-			if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
-				op_push(OP_FUNC_LOG_DOWN);
-			else
+		if (page_get() == RENDER_PAGE_MAP){
+			zoomMultiplier++;
+			if (encoders->encoder[2].positionChange > 0){
+				if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
+					op_push(OP_FUNC_LOG_DOWN);
+				else
 				op_push(OP_FUNC_ZOOMOUT);
-		}else{
-			if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
-				op_push(OP_FUNC_LOG_UP);
-			else
-				op_push(OP_FUNC_ZOOMIN);
-		}
+			}else{
+				if (ui_isEnabled(0, UI_ID_PANEL_LOGS))
+					op_push(OP_FUNC_LOG_UP);
+				else
+					op_push(OP_FUNC_ZOOMIN);
+			}
+			op_go();
 
-		op_go();
+		}else if (page_get() == RENDER_PAGE_SPECTRUM){
+			if (encoders->encoder[2].positionChange > 0){
+				spectrumXMarker++;
+				if (spectrumXMarker > 255) spectrumXMarker = 255;
+			}else{
+				spectrumXMarker--;
+				if (spectrumXMarker < 0) spectrumXMarker = 0;
+			}
+			render_signalUpdate();
+		}
 		return;
 	}
 
@@ -1082,9 +1085,7 @@ FLASHMEM void console_printCmdStats (runState_t *stats)
 {
 	cmdSendResponse("");
 	printf(CS("zoom:%.0f, temp:%.1f, nothing:%lu, update:%.1f"), sceneGetZoom(&inst), InternalTemperature.readTemperatureC(), stats->nothingCountSecond, inst.rstats.rtime.display);
-	//printf(CS("map:%.2f, strings:%i, poi:%.2f, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.poi, stats->rtime.trkpts);
 	printf(CS("map:%.2f, strings:%i, route:%.2f"), stats->rtime.map, stats->rtime.strings, stats->rtime.trkpts);
-	//printf(CS("trkpt total:%i, toWrite:%i, epoch:%i"), stats->trkptsTotal, stats->trkptsToWrite, gpsData.rates.epochPerRead);
 	printf(CS("epoch:%i, rx:%i"), gpsData.rates.epochPerRead, receiver_getRx());
 	receiver_resetRxTx();
 }
@@ -1098,24 +1099,33 @@ FLASHMEM void page_set (const uint8_t page)
 {
 	inst.rstats.page = page;
 	
-	if (inst.rstats.page > 3)
+	if (inst.rstats.page > RENDER_PAGE_TOTAL)
 		inst.rstats.page = 1;
 	
 	switch (inst.rstats.page){
-	case RENDER_PAGE_CLOCK:
-		drawPanel(4);
-		return;
-
 	case RENDER_PAGE_MAP:
 		drawPanel(1);
 		return;
-		
+
+	case RENDER_PAGE_ALTITUDE:
+		drawPanel(4);
+		gps_setReceiver(2);
+		gps_msgDisable(UBX_MON, UBX_MON_SPAN);
+		return;
+
 	case RENDER_PAGE_SPECTRUM:
+		drawPanel(4);
+		gps_setReceiver(2);
+		gps_msgEnable(UBX_MON, UBX_MON_SPAN);
+		return;
+
+	case RENDER_PAGE_CLOCK:
+		drawPanel(4);
 		return;
 	}
 }
 
-void frameDrawSpectrum ()
+FLASHMEM void frameDrawSpectrum ()
 {
 	sat_stats_t *stats = getSats();
 	mon_span_block_t *block = &stats->spectrum.block;
@@ -1126,43 +1136,39 @@ void frameDrawSpectrum ()
 	if (tPoints > 256) tPoints = 256;
 	
 	// draw measure	
-	const int graphCol = COLOUR_PAL_LIGHTGREY;
-	const int labelCol = COLOUR_PAL_RED;
-	const int titleCol = COLOUR_PAL_BLACK;
-	const int specCol  = COLOUR_PAL_BLACK;
+	const uint8_t graphCol = COLOUR_PAL_LIGHTGREY;
+	const uint8_t labelCol = COLOUR_PAL_RED;
+	const uint8_t titleCol = COLOUR_PAL_BLACK;
+	const uint8_t specCol  = COLOUR_PAL_BLACK;
+	const uint8_t markerCol = COLOUR_PAL_BLUE;
 	
 	// graph offset adjustment
 	const float posX = 50.0f;
 	const float posY = 30.0f;
 	
 	// scaling
-	const float vscale = 2.2f;
-	const float hscale = 3.0f;
 	const float dbScale = -(2^-2);	// (0.25) according to PDF
+	const float vscale = 2.2f;
+#if (TFT_WIDTH < 900)
+	const float hscale = 3.0f;
+	const float titleXScale = 0.8f;
+	const int titleXPos = 50;
+#else
+	const float hscale = 3.4f;
+	const float titleXScale = 1.0f;
+	const int titleXPos = 7;
+#endif
 
-	setGlyphScale(inst.vfont, 0.8);
-	setBrushSize(inst.vfont, 1.0);
+	setGlyphScale(inst.vfont, titleXScale);
+	setBrushSize(inst.vfont, 1.0f);
 	setBrushColour(inst.vfont, titleCol);
 
 	// title
 	char buffer[96];
 	snprintf(buffer, sizeof(buffer), "Span: %i Mhz    Res: %i Khz   Center: %i Mhz   Gain: %i", (int)block->span/1000000, (int)block->res/1000, (int)block->center/1000000, (int)block->pga);
-	drawString(inst.vfont, buffer, 70, 20);
+	drawString(inst.vfont, buffer, titleXPos, 20);
 	setBrushColour(inst.vfont, labelCol);
-
-	// draw dB level marks and labels
-	// draw -dB label above first point (-50db)
-	int x = posX - 30;
-	float y = posY + (float)VHEIGHT - ((50.0f*dbScale)*vscale);
-	drawString(inst.vfont, "dB", x-10, y-15);
-	
-	for (float db = 10.0f; db <= 50.0f; db += 10.0f){
-		y = posY + (float)VHEIGHT - ((db*dbScale)*vscale);
-		drawLine(x, y, x+((float)tPoints*hscale)+posX, y, graphCol);
-		
-		snprintf(buffer, sizeof(buffer), "%i", (int)db);
-		drawString(inst.vfont, buffer, x-5, y+15);
-	}
+	setGlyphScale(inst.vfont, 0.8f);
 
 	// freq bands
 	// draw a few freq bands with labels
@@ -1177,9 +1183,9 @@ void frameDrawSpectrum ()
 	drawString(inst.vfont, buffer, x1-10, y2+40);
 
 
-	x = posX + (((tPoints-1.0f) / 2.0f) * hscale);
+	int x = posX + (((tPoints-1.0f) / 2.0f) * hscale);
 	drawLine(x, y1-10, x, y2+25, graphCol);
-	bin = 256.0f/2.0f;
+	bin = tPoints/2.0f;
 	f = block->center + block->span * (bin-127.0f) / 256.0f;
 	snprintf(buffer, sizeof(buffer), "%.1f Mhz", f/1000000.0f);
 	drawString(inst.vfont, buffer, x-50, y2+40);
@@ -1192,7 +1198,33 @@ void frameDrawSpectrum ()
 	snprintf(buffer, sizeof(buffer), "%.1f", f/1000000.0f);
 	drawString(inst.vfont, buffer, x2-70, y2+40);
 
+	setBrushColour(inst.vfont, markerCol);
+	bin = spectrumXMarker;
+	x = posX + (bin * hscale);
+	drawLine(x, y1-10, x, y2+25, markerCol);
+	f = block->center + block->span * (bin-127.0f) / 256.0f;
+	snprintf(buffer, sizeof(buffer), "%.1f", f/1000000.0f);
+	drawString(inst.vfont, buffer, VWIDTH/4, y2+20);
 	
+	x = posX - 30;
+	float y = posY + (float)VHEIGHT - (block->spectrum[(int)bin]*vscale);
+	drawLine(x, y, x+((float)tPoints*hscale)+posX, y, markerCol);
+	
+
+	// draw dB level marks and labels
+	// draw -dB label above first point (-50db)
+	setBrushColour(inst.vfont, labelCol);
+	y = posY + (float)VHEIGHT - ((50.0f*dbScale)*vscale);
+	drawString(inst.vfont, "dB", x-10, y-15);
+	
+	for (float db = 10.0f; db <= 50.0f; db += 10.0f){
+		y = posY + (float)VHEIGHT - ((db*dbScale)*vscale);
+		drawLine(x, y, x+((float)tPoints*hscale)+posX, y, graphCol);
+		
+		snprintf(buffer, sizeof(buffer), "%i", (int)db);
+		drawString(inst.vfont, buffer, x-5, y+15);
+	}
+		
 	// draw spectrum
 	for (int i = 0; i < tPoints-1; i++){
 		float x1 = posX + (i*hscale);
@@ -1206,25 +1238,92 @@ void frameDrawSpectrum ()
 	}
 }
 
+FLASHMEM void frameDrawAltitude (trackRecord_t *track)
+{
+	
+	const uint8_t altCol  = COLOUR_PAL_BLACK;
+	const uint8_t labelCol = COLOUR_PAL_RED;
+	const uint8_t measureCol = COLOUR_PAL_DARKGREEN;
+	
+	setGlyphScale(inst.vfont, 1.0f);
+	setBrushSize(inst.vfont, 1.0f);
+	setBrushColour(inst.vfont, labelCol);
+		
+	if (track->marker < 5){
+		drawString(inst.vfont, "No Data", 20, 40);
+		//return;
+	}
+	
+	const int tPoints = track->marker;
+	const float vscale = 0.8f;
+	const float hscale = (float)(VWIDTH-100.0f) / (float)tPoints;
+	
+	// graph offset adjustment
+	const float posX = 50.0f;
+	const float posY = 30.0f;
+
+	
+	// 0 meters
+	float y = (float)VHEIGHT - (0.0f*vscale) - posY;
+	drawLine(posX-10, y, VWIDTH-(posX-10), y, measureCol);
+	drawString(inst.vfont, "0m", posX-10, y+15);
+
+	// 100 meters
+	y = (float)VHEIGHT - (100.0f*vscale) - posY;
+	drawLine(posX-10, y, VWIDTH-(posX-10), y, measureCol);
+	drawString(inst.vfont, "100m", posX-10, y+15);
+	
+	// 400 meters
+	y = (float)VHEIGHT - (400.0f*vscale) - posY;
+	drawLine(posX-10, y, VWIDTH-(posX-10), y, measureCol);
+	drawString(inst.vfont, "400m", posX-10, y+15);
+	
+	
+	for (int i = 0; i < tPoints-1; i++){
+		trackPoint_t *tpt = &track->trackPoints[i];
+		trackPoint_t *tptNext = &track->trackPoints[i+1];
+		
+		float x1 = posX + ((float)i*hscale);
+		float y1 = (float)VHEIGHT - (tpt->location.altitude*vscale) - posY;
+		
+		float x2 = posX + (((float)i+1.0f)*hscale);
+		float y2 = (float)VHEIGHT - (tptNext->location.altitude*vscale) - posY;
+		
+		float a = RAD2DEG(atan2f(x2, y2) - atan2f(x1, y1));
+		drawPolyFilled(x1, y1, x2, y2, 2.0f, a, altCol);
+	}
+}
+
 FLASHMEM void render_frame ()
 {
+	const uint32_t t0 = millis();
+		
 	switch (page_get()){
 	case RENDER_PAGE_MAP:
 		frameClear();
 		frameCompose();
 		frameSend();
-		return;
+		break;
 
 	case RENDER_PAGE_CLOCK:
 		frameSendClock();
-		return;
-
+		break;
+	
 	case RENDER_PAGE_SPECTRUM:
 		frameClear();
 		frameDrawSpectrum();
 		frameSend();
-		return;
+		break;
+
+	case RENDER_PAGE_ALTITUDE:
+		frameClear();
+		frameDrawAltitude(&trackRecord);
+		frameSend();
+		break;
 	}
+	
+	const uint32_t t1 = millis();
+	inst.rstats.rtime.display = (t1 - t0);
 }
 
 FASTRUN void loop ()
