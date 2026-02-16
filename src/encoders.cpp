@@ -181,10 +181,10 @@ void encoders_pins_init ()
 	pinMode(LED_BUILTIN, OUTPUT);
 	
 	pinMode(ENCODER1_PIN_SW, INPUT_PULLDOWN);
-	attachInterrupt(ENCODER1_PIN_SW, enc1SwCB, RISING);
+	attachInterrupt(ENCODER1_PIN_SW, enc1SwCB, RISING);		// release to activate
 
-	pinMode(ENCODER2_PIN_SW, INPUT_PULLDOWN);
-	attachInterrupt(ENCODER2_PIN_SW, enc2SwCB, RISING);
+	pinMode(ENCODER2_PIN_SW, INPUT_PULLUP);
+	attachInterrupt(ENCODER2_PIN_SW, enc2SwCB, FALLING);	// press to activate
 #if 0	
 	pinMode(ENCODER3_PIN_SW, INPUT_PULLDOWN);
 	attachInterrupt(ENCODER3_PIN_SW, enc3SwCB, RISING);
