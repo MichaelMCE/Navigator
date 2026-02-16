@@ -152,7 +152,7 @@
 #define TFT_WIDTH				960
 #define TFT_HEIGHT				480/*540*/
 #define CFG_STRING				"960x540*2 NT35516 IPS Display"
-#define TFT_SPEED				22
+#define TFT_SPEED				24
 #define TFT_INTENSITY			55		// PWM value from 0 to 127
 #define TFT_LOWERPANEL			1
 #define STRIP_RENDERER_HEIGHT	1		// Intended for use with the larger panels
