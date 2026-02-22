@@ -39,7 +39,7 @@ int powersaveEnable ()
 		inst.rstats.powersave.enabled = 1;
 		mpu_setClockFreq(POWERSAVE_FREQ);
 		
-		printf(CS("MPU freq set to %iMhz"), POWERSAVE_FREQ);
+		//printf(CS("MPU freq set to %iMhz"), POWERSAVE_FREQ);
 	}
 	return inst.rstats.powersave.enabled;
 }
@@ -51,7 +51,7 @@ int powersaveDisable ()
 		inst.rstats.powersave.time = inst.rstats.oneSecondCounter;
 		mpu_setClockFreq(MPU_CLOCK_FREQ);
 
-		printf(CS("MPU freq set to %iMhz"), MPU_CLOCK_FREQ);
+		//printf(CS("MPU freq set to %iMhz"), MPU_CLOCK_FREQ);
 	}
 	return inst.rstats.powersave.enabled;
 }
