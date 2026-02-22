@@ -276,7 +276,7 @@ HANDLE serialOpen (const int port, const int baud)
 	CommTimeouts.WriteTotalTimeoutConstant = 100;
 	CommTimeouts.WriteTotalTimeoutMultiplier = 0;
 	
-	CommTimeouts.ReadTotalTimeoutConstant = 100;
+	CommTimeouts.ReadTotalTimeoutConstant = 500;
 	CommTimeouts.ReadTotalTimeoutMultiplier = 0;
 	CommTimeouts.ReadIntervalTimeout = MAXWORD;
 	SetCommTimeouts(hSerial, &CommTimeouts);
@@ -295,7 +295,7 @@ static inline int serialWrite (HANDLE hserial, const void *buffer, const uint32_
 static inline int serialRead (HANDLE hserial, void *buffer, const uint32_t bufferSize, uint32_t *bytesRead)
 {
 	int ret = ReadFile(hserial, buffer, bufferSize, (unsigned long*)bytesRead, NULL);
-	//printf("serialRead %i %i, %X\n", ret, *bytesRead, (int)GetLastError());
+	//printf("ReadFile: %i %i, %X\n", ret, *bytesRead, (int)GetLastError());
 	return ret;
 }
 
@@ -308,6 +308,7 @@ static char *serialReadResponse (HANDLE hserial, char *buffer, size_t bufferSize
 
 	do{
 		bytesRead = 0;
+		//Sleep(100);
 		if (!serialRead(hserial, &buffer[bytesReadTotal], bufferSize-bytesReadTotal, &bytesRead))
 			break;
 			
@@ -316,7 +317,7 @@ static char *serialReadResponse (HANDLE hserial, char *buffer, size_t bufferSize
 			*len = bytesReadTotal;
 			return buffer;
 		}
-	}while(1);
+	}while(!exitSig);
 
 	return NULL;
 }
@@ -416,9 +417,9 @@ static inline int serialSendString (HANDLE hserial, const char *str, const int w
 	uint32_t len = strlen(str);
 	uint32_t bytesWritten = 0;
 
-	serialWrite(hserial, str, len, &bytesWritten);
-	//printf("serialWrite %i\n", ret);
-	if (waitMs)
+	int ret = serialWrite(hserial, str, len, &bytesWritten);
+	//printf("serialWrite #%s# %i\n", str, ret);
+	if (ret == 1 && waitMs)
 		Sleep(waitMs);
 	return (bytesWritten == len);
 }
@@ -429,6 +430,14 @@ static inline int serialSendCmd (HANDLE hserial, const char *cmd, const char *ms
 	snprintf(str, sizeof(str), "%s%s%s\n", cmd, msg, CMD_END);
 	
 	return serialSendString(hserial, str, 20);
+}
+
+static inline int serialSendCmdNew (HANDLE hserial, const char *cmd, const char *msg)
+{
+	char str[strlen(cmd)+strlen(msg)+8];
+	snprintf(str, sizeof(str), "%s %s\n", cmd, msg);
+	
+	return serialSendString(hserial, str, 1);
 }
 
 static inline int serialSendCmdEx (HANDLE hserial, const char *cmd, const char *msg, const int waitMs)
@@ -454,6 +463,12 @@ void setReadResponseState (HANDLE hserial, const int kb_Wait, int report_Mode)
 	}
 }
 
+void cmd_list (const char *cmdStr)
+{
+	setReadResponseState(hSerial, 1, 0);
+	serialSendString(hSerial, "/list\n", 100);
+}
+
 unsigned int __stdcall readThreadEx (void *ptr)
 {
 	size_t bufferSize = 8*1024*1024;
@@ -466,6 +481,11 @@ unsigned int __stdcall readThreadEx (void *ptr)
 		uint32_t bytesRead = 0;
 
 		char *response = serialReadResponse(hserial, buffer, bufferSize, &bytesRead);
+		
+		//printf("serialReadResponse: %i\n", bytesRead);
+		//if (response)
+		//	printf("@%s@\n", response);
+		
 		if (exitSig) break;
 		
 		if (response == NULL){
@@ -476,7 +496,8 @@ unsigned int __stdcall readThreadEx (void *ptr)
 		
 		if (!reportMode){
 			if (bytesRead){
-				printf("%i\n%s", bytesRead, response);
+				//printf("%i\n%s", bytesRead, response);
+				printf("%s\n", response);
 				memset(buffer, 0, bytesRead);
 			}
 		}else if (reportMode == 1){
@@ -484,7 +505,6 @@ unsigned int __stdcall readThreadEx (void *ptr)
 				char *end = serialProcessResponse(response, bytesRead);
 				if (end == NULL) continue;
 				if (end - response >= bufferSize) continue;
-
 				if ((response+bytesRead) - end > 0){
 					while (end[0] == '<'){
 						char *last = serialProcessResponse(end, bytesRead);
@@ -530,8 +550,8 @@ void sendFile (HANDLE hSerial, const char *filename)
 					char buffer[64];
 					printf("Sending %i bytes..\n", (int)length);
 										
-					snprintf(buffer, sizeof(buffer), "start:%i", (int)length);
-					serialSendCmdEx(hSerial, CMD_FDATA, buffer, 5);
+					snprintf(buffer, sizeof(buffer), " start:%i", (int)length);
+					serialSendCmdEx(hSerial, CMD_SENDFILE, buffer, 5);
 					FlushFileBuffers(hSerial);
 
 					uint32_t bytesWritten = 0;
@@ -540,7 +560,7 @@ void sendFile (HANDLE hSerial, const char *filename)
 					
 					FlushFileBuffers(hSerial);
 					printf("complete\n");
-					serialSendCmd(hSerial, CMD_FDATA "end:", filename);
+					serialSendCmd(hSerial, CMD_SENDFILE " end:", filename);
 				}
 				free(data);
 			}
@@ -558,7 +578,7 @@ void cmd_hello (const char *cmdStr)
 void cmd_log (const char *cmdStr)
 {
 	if (!strncmp("reset", cmdStr, 5) || !strncmp("load:", cmdStr, 5) || !strncmp("state:", cmdStr, 6)){
-		serialSendCmd(hSerial, CMD_LOGCFG, cmdStr);
+		serialSendCmd(hSerial, CMD_ROUTE, cmdStr);
 		setReadResponseState(hSerial, 0, 1);
 	}
 }
@@ -609,7 +629,7 @@ void cmd_fsend (const char *cmdStr)
 void cmd_fget (const char *cmdStr)
 {
 	if (strlen(cmdStr) && !strchr(cmdStr, '*')){
-		serialSendCmd(hSerial, CMD_GETFILE, cmdStr);
+		serialSendCmdNew(hSerial, CMD_GETFILE, cmdStr);
 		setReadResponseState(hSerial, 0, 1);
 	}
 }
@@ -651,15 +671,9 @@ void cmd_frename (const char *cmdStr)
 void cmd_fmeta (const char *cmdStr)
 {
 	if (strlen(cmdStr) >= 1 && !strchr(cmdStr, '*')){
-		serialSendCmd(hSerial, CMD_GETFILELEN, cmdStr);
+		serialSendCmd(hSerial, CMD_GETMETA, cmdStr);
 		setReadResponseState(hSerial, 0, 1);
 	}
-}
-
-void cmd_list (const char *cmdStr)
-{
-	serialSendCmd(hSerial, CMD_LIST, "");
-	setReadResponseState(hSerial, 0, 1);
 }
 
 void cmd_disable (const char *cmdStr)
@@ -974,10 +988,10 @@ int main (const int argc, const char *argv[])
 
 	hSerial = serialOpen(port, BAUDRATE(COM_BAUD));
 	if (hSerial){
-		serialSendCmd(hSerial, CMD_DETAIL, "console:0");
+		//serialSendCmdNew(hSerial, CMD_DEBUG, "console:0");
 		unsigned int tid = 0;
 		HANDLE hReadThread = (HANDLE)_beginthreadex(NULL, 0, readThreadEx, NULL, 0, &tid);
-		serialSendCmd(hSerial, CMD_DETAIL, "console:0");
+		//serialSendCmdNew(hSerial, CMD_DEBUG, "console:0");
 		Sleep(10);
 		printf("Port %i:%i\n\n", port, BAUDRATE(COM_BAUD));
 
@@ -1001,6 +1015,8 @@ int main (const int argc, const char *argv[])
 			}
 		}
 
+		exitSig = 1;
+		printf("waiting..\n");
 		WaitForSingleObject(hReadThread, INFINITE);
 		CloseHandle(hReadThread);
 
