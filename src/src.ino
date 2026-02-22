@@ -1109,8 +1109,10 @@ FLASHMEM void page_set (const uint8_t page)
 
 	case RENDER_PAGE_ALTITUDE:
 		drawPanel(4);
-		gps_setReceiver(2);
-		gps_msgDisable(UBX_MON, UBX_MON_SPAN);
+		return;
+
+	case RENDER_PAGE_ROUTE:
+		drawPanel(4);
 		return;
 
 	case RENDER_PAGE_SPECTRUM:
@@ -1121,6 +1123,8 @@ FLASHMEM void page_set (const uint8_t page)
 
 	case RENDER_PAGE_CLOCK:
 		drawPanel(4);
+		gps_setReceiver(2);
+		gps_msgDisable(UBX_MON, UBX_MON_SPAN);
 		return;
 	}
 }
@@ -1294,6 +1298,83 @@ FLASHMEM void frameDrawAltitude (trackRecord_t *track)
 	}
 }
 
+FLASHMEM void frameDrawRoute (trackRecord_t *track)
+{
+	//find min max values
+	
+	const double width = VWIDTH-5;
+	const double height = VHEIGHT-5;
+	
+	double minLat = 3600.0;
+	double maxLat = -3600.0;
+
+	double minLon = 3600.0;
+	double maxLon = -3600.0;
+
+	const int tPoints = track->marker;	
+	for (int i = 10; i < tPoints-11; i+=4){
+		trackPoint_t *tpt = &track->trackPoints[i];
+		
+		if (maxLat < tpt->location.latitude)
+			maxLat = tpt->location.latitude;
+		if (minLat > tpt->location.latitude)
+			minLat = tpt->location.latitude;
+		if (maxLon < tpt->location.longitude)
+			maxLon = tpt->location.longitude;
+		if (minLon > tpt->location.longitude)
+			minLon = tpt->location.longitude;
+	}
+
+	const double spanLon = (maxLon - minLon);
+	const double spanLat = (maxLat - minLat);
+
+	double zoomFactor = 1.0;
+	double aspect = spanLon / spanLat;
+	double daspect = width / height;
+	
+	// 3.04 is the Strava.com map aspect/scale
+	// 2.35 is my display aspect for a best fit (4/3 * 480/272)
+	// scaleFactor = 3.04;
+	double scaleFactor = 3.04;//1.71 * daspect;
+
+	const double scaleX = (width / spanLon) / scaleFactor;
+	const double scaleY = (height / spanLat);
+
+	double offsetX, offsetY;
+	double scale = ((daspect * aspect) / scaleFactor);
+
+	// center route
+	if (aspect <= scaleFactor){
+		scale *= zoomFactor;
+		offsetX = (width - (height * scale)) / 2.0;
+		offsetY = (height - (height * zoomFactor))/2.0;
+	}else{
+		scale /= zoomFactor;
+		offsetY = (height - (width / scale)) / 2.0;
+		offsetX = (width - (width * zoomFactor))/2.0;
+	}
+	
+	printf(CS("offset: %f %f, %f, %f %f"), offsetX, offsetY, scale, scaleX, scaleY);
+	
+	for (int i = 10; i < tPoints-11; i+=4){
+		trackPoint_t *tpt = &track->trackPoints[i];
+		double lon1 = tpt->location.longitude - minLon;
+		double lat1 = tpt->location.latitude - minLat;
+
+		tpt = &track->trackPoints[i+4];
+		double lon2 = tpt->location.longitude - minLon;
+		double lat2 = tpt->location.latitude - minLat;
+		
+		double x1 = offsetX + (scaleX * lon1);
+		double y1 = height - (scaleY * lat1);
+		
+		double x2 = offsetX + (scaleX * lon2);
+		double y2 = height - (scaleY * lat2);
+		
+		drawLine(x1, y1, x2, y2, COLOUR_PAL_BLACK);
+	}
+}
+
 FLASHMEM void render_frame ()
 {
 	const uint32_t t0 = millis();
@@ -1305,20 +1386,26 @@ FLASHMEM void render_frame ()
 		frameSend();
 		break;
 
-	case RENDER_PAGE_CLOCK:
-		frameSendClock();
+	case RENDER_PAGE_ALTITUDE:
+		frameClear();
+		frameDrawAltitude(&trackRecord);
+		frameSend();
 		break;
-	
+
+	case RENDER_PAGE_ROUTE:
+		frameClear();
+		frameDrawRoute(&trackRecord);
+		frameSend();
+		break;
+
 	case RENDER_PAGE_SPECTRUM:
 		frameClear();
 		frameDrawSpectrum();
 		frameSend();
 		break;
-
-	case RENDER_PAGE_ALTITUDE:
-		frameClear();
-		frameDrawAltitude(&trackRecord);
-		frameSend();
+		
+	case RENDER_PAGE_CLOCK:
+		frameSendClock();
 		break;
 	}
 	
