@@ -3,35 +3,44 @@
 #define _CMD_H_
 
 
-#define CMD_LIST			"<cmd:list>"
-#define CMD_DELETE			"<cmd:delete>"
-#define CMD_TOUCH			"<cmd:touch>"
-#define CMD_RENAME			"<cmd:rename>"
-#define CMD_GETFILE			"<cmd:getfiledata>"
-#define CMD_GETFILELEN		"<cmd:getfilelength>"
-#define CMD_EXIT			"<cmd:exit>"			// shutdown <this> engine
-#define CMD_HELLO			"<cmd:hello>"
-#define CMD_END				"<cmd:end>"				// tag end
-#define CMD_REBOOT			"<cmd:reboot>"
-#define CMD_LOGCFG			"<cmd:logcfg>"
-#define CMD_ZOOM			"<cmd:viewport>"
-#define CMD_DETAIL			"<cmd:renderdetail>"
-#define CMD_BRIGHTNESS		"<cmd:backlight>"
-#define CMD_LOAD			"<cmd:load>"
-#define CMD_FDATA			"<cmd:fdata>"
-#define CMD_MAPSCHEME		"<cmd:scheme>"
-#define CMD_DEBUG			"<cmd:debug>"
-#define CMD_RECEIVER		"<cmd:receiver>"
-#define CMD_ODO				"<cmd:odo>"
-#define CMD_ULOAD			"<cmd:uload>"
-#define CMD_SOS			    "<cmd:sos>"
-#define CMD_RUNLOG		    "<cmd:runlog>"
-#define CMD_MPU			    "<cmd:mpu>"
+#define CMD_LIST			"/list"
+#define CMD_DELETE			"/delete"
+#define CMD_TOUCH			"/touch"
+#define CMD_RENAME			"/rename"
+#define CMD_GETMETA			"/getmeta"
+#define CMD_GETMETABIN		"/getmetabin"
+#define CMD_EXIT			"/exit"			// shutdown <this> engine
+#define CMD_HELLO			"/hello"
+#define CMD_REBOOT			"/reboot"
+#define CMD_ROUTE			"/route"
+#define CMD_ZOOM			"/zoom"
+#define CMD_DETAIL			"/detail"
+#define CMD_PAGE			"/page"
+#define CMD_BRIGHTNESS		"/backlight"
+#define CMD_LOAD			"/load"
+#define CMD_MAPSCHEME		"/style"
+#define CMD_DEBUG			"/debug"
+#define CMD_RECEIVER		"/receiver"
+#define CMD_ODO				"/odo"
+#define CMD_ULOAD		    "/uload"
+#define CMD_MPU			    "/mpu"
+#define CMD_SOS			    "/sos"
+#define CMD_SENDFILE	    "/sendfile"		// send file from client to navigator
+#define CMD_GETFILE			"/getfile"		// retrieve file from navigator
+#define CMD_RUNLOG		    "/runlog"
+#define CMD_END			  "<cmd:end>"		// tag end
 
-
+#if 0
 #define CL "<response:msg>"
 #define CR "<response:end>\n"
+#else
+#define CL ""
+#define CR "\n"
+#endif
+
 #define CS(a)	CL a CR
+
+
 
 
 
@@ -64,6 +73,22 @@ int cmdLoadUbx (const char *filename);
 #ifdef __cplusplus
 }
 #endif
+
+
+
+typedef struct {
+	uint8_t sec;   // 0-59
+	uint8_t min;   // 0-59
+	uint8_t hour;  // 0-23
+	uint8_t wday;  // 0-6, 0=sunday
+	
+	uint8_t mday;  // 1-31
+	uint8_t mon;   // 0-11
+	uint16_t year;  // 70-206, 70=1970, 206=2106
+	
+	uint32_t length;	// file length
+}__attribute__((packed))cmd_fileMeta_t;
+
 
 
 
