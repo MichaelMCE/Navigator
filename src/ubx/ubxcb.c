@@ -381,7 +381,7 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 		gps->timeConfirmed = (pvt->valid&PVT_VALID_VALIDTIME) != 0;
 	}
 
-#if 0
+#if 1
 	if (pvt->iTow > gps->iTow){
 		gps->iTow = pvt->iTow;	
 		gps->time.hour = pvt->hour;
@@ -593,7 +593,7 @@ FLASHMEM int nav_posllh (const uint8_t *payload, uint16_t msg_len, void *opaque)
     gps->fix.vAcc = posllh->vAcc/10.0f;
     
     
-#if 1
+#if 0
     if (posllh->iTow > gps->iTow){
     	gps->iTow = posllh->iTow;
 		gps->time.hour = (((posllh->iTow/1000)/60)/60)%24;
