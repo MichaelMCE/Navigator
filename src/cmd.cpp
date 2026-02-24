@@ -179,6 +179,7 @@ FLASHMEM static void cmd_sendfile (char *msg, const int cmdlen)
 			memset(&fileTrans, 0, sizeof(fileTrans));
 		}
 	}
+	uiLogs_clear();
 }
 
 FLASHMEM static void cmd_style (char *msg, const int cmdlen)
@@ -804,7 +805,7 @@ static const cmdstr_t cmdstrs[] = {
 	{"/map",      cmd_map,       "zoom:15-1800, colour:0/1"},
 	{"/reboot",   cmd_reset,     "Reboot device"},
 	{"/getfile",  cmd_getfile,   "send file to client"},
-	{"/sendfile", cmd_sendfile,  "<a filename.tpts>. Send local file (trackPoints) to device"},
+	{"/sendfile", cmd_sendfile,  "<a filename.tpts>. Send a local .tpts file to device"},
 	{"/load",     cmd_load,      "<a filename.tpts>. Load trackPts of this file"},
 	{"/delete",   cmd_delete,    "<a filename.tpts>. Delete this file."},
 	{"/rename",   cmd_rename,    "filenameFrom.tpts:filenameTo.tpts"},
