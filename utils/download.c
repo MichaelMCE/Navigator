@@ -64,7 +64,7 @@ static struct tm *getTimeReal (double *nanos)
     return _localtime64(&t);
 }
 
-int write_file (const char *path, char *buffer, long len)
+static int write_file (const char *path, char *buffer, long len)
 {
 	FILE *file = fopen(path,"wb");
 	if (file){
@@ -162,7 +162,7 @@ int scanForPorts ()
 }
 
 
-HANDLE serialOpen (const int port, const int baud)
+static HANDLE serialOpen (const int port, const int baud)
 {
  
 	HANDLE hSerial = INVALID_HANDLE_VALUE;
@@ -260,7 +260,9 @@ void cmd_download (const char *str)
 		serialRead(hSerial, &fileMeta, sizeof(fileMeta), &bytesRead);
 
 		if (fileMeta.length > 12 && fileMeta.length < 10*1024*1024){
-			char filedata[fileMeta.length];
+			char *filedata = calloc(1, fileMeta.length);
+			if (!filedata) abort();
+
 			serialRead(hSerial, filedata, fileMeta.length, &bytesRead);
 			
 			if (bytesRead == fileMeta.length){
@@ -268,10 +270,15 @@ void cmd_download (const char *str)
 					printf("Complete\n%i bytes written to %s\n", fileMeta.length, str);
 				else
 					printf("Write file failed: %s\n", str);
-				return;
+			}else{
+				printf("File length mismatch\nExpected: %i, but received: %i bytes\n", fileMeta.length, bytesRead);
 			}
+			
+			free(filedata);
+			return;
+		}else{
+			printf("Invalid file length received\n");
 		}
-		printf("file length expected: %i, but read: %i\n", fileMeta.length, bytesRead);
 	}
 }
 
