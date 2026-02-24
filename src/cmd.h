@@ -9,7 +9,7 @@
 #define CMD_RENAME			"/rename"
 #define CMD_GETMETA			"/getmeta"
 #define CMD_GETMETABIN		"/getmetabin"
-#define CMD_EXIT			"/exit"			// shutdown <this> engine
+//#define CMD_EXIT			"/exit"			// shutdown <this> engine
 #define CMD_HELLO			"/hello"
 #define CMD_REBOOT			"/reboot"
 #define CMD_ROUTE			"/route"
@@ -89,7 +89,11 @@ typedef struct {
 	uint32_t length;	// file length
 }__attribute__((packed))cmd_fileMeta_t;
 
-
+typedef struct {
+	const char *cmd;
+	void (*func)(char *msg, const int msgLen);
+	const char *helpStr;
+}cmdstr_t;
 
 
 #endif
