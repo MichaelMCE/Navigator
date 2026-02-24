@@ -64,18 +64,6 @@ static struct tm *getTimeReal (double *nanos)
     return _localtime64(&t);
 }
 
-static int write_file (const char *path, char *buffer, long len)
-{
-	FILE *file = fopen(path,"wb");
-	if (file){
-		fwrite(buffer, 1, len, file);
-		fclose(file);
-		return 1;
-	}else{
-		return 0;
-	}
-}
-
 static inline char *memstr (const char *block, const int bsize, const char *pattern)
 {
     char *where;
@@ -193,8 +181,8 @@ static HANDLE serialOpen (const int port, const int baud)
 
 	COMMTIMEOUTS CommTimeouts;
  	GetCommTimeouts(hSerial, &CommTimeouts);
-	CommTimeouts.WriteTotalTimeoutConstant = 100;
-	CommTimeouts.WriteTotalTimeoutMultiplier = 0;
+	CommTimeouts.WriteTotalTimeoutConstant = 1500;
+	CommTimeouts.WriteTotalTimeoutMultiplier = 1;
 	
 	CommTimeouts.ReadTotalTimeoutConstant = 1500;
 	CommTimeouts.ReadTotalTimeoutMultiplier = 1;
@@ -236,41 +224,47 @@ int formatTimeFilename (char *buffer, const int bufferLen)
 	return snprintf(buffer, bufferLen, "%.2i%.2i%.4i_%.2i%.2i%.2i.ubx", date->tm_mday, date->tm_mon, date->tm_year+1900, date->tm_hour, date->tm_min, date->tm_sec);
 }
 
-void cmd_download (const char *str)
+static size_t fio_length (FILE *fp)
 {
-	printf("Downloading: %s...\n", str);
+	fpos_t pos;
 	
-	cmd_fileMeta_t fileMeta;
-	memset(&fileMeta, 0, sizeof(cmd_fileMeta_t));
+	fgetpos(fp, &pos);
+	fseek(fp, 0, SEEK_END);
+	size_t fl = ftell(fp);
+	fsetpos(fp, &pos);
 	
-	char buffer[1024];
-	memset(buffer, 0, sizeof(buffer));
-	snprintf(buffer, sizeof(buffer), "%s %s\n", CMD_GETMETABIN, str);
+	return fl;
+}
 
-	if (serialSendString(hSerial, buffer, 20)){
-		uint32_t bytesRead = 0;
-		serialRead(hSerial, &fileMeta, sizeof(fileMeta), &bytesRead);
+void cmd_upload (const char *filename)
+{
+	FILE *file = fopen(filename, "rb");
+	if (file){
+		size_t length = fio_length(file);
+		if (length){
+			void *data = calloc(1, length);
+			if (data){
+				if (fread(data, 1, length, file)){
+					char buffer[256];
+					printf("Sending %s (%i bytes)...\n", filename, (int)length);
+	
+					snprintf(buffer, sizeof(buffer), "%s start:%i\n", CMD_SENDFILE, (int)length);
+					serialSendString(hSerial, buffer, 1500);
+					FlushFileBuffers(hSerial);
 
-		if (fileMeta.length > 12 && fileMeta.length < 10*1024*1024){
-			char *filedata = calloc(1, fileMeta.length);
-			if (!filedata) abort();
-
-			serialRead(hSerial, filedata, fileMeta.length, &bytesRead);
-			
-			if (bytesRead == fileMeta.length){
-				if (write_file(str, filedata, fileMeta.length))
-					printf("Complete\n%i bytes written to %s\n", fileMeta.length, str);
-				else
-					printf("Write file failed: %s\n", str);
-			}else{
-				printf("File length mismatch\nExpected: %i, but received: %i bytes\n", fileMeta.length, bytesRead);
+					uint32_t bytesWritten = 0;
+					serialWrite(hSerial, data, length, &bytesWritten);
+					printf("BytesWritten: %i\n", (int)bytesWritten);
+					
+					FlushFileBuffers(hSerial);
+					printf("File sent\n");
+					snprintf(buffer, sizeof(buffer), "%s end:%s\n", CMD_SENDFILE, filename);
+					serialSendString(hSerial, buffer, 100);
+				}
+				free(data);
 			}
-			
-			free(filedata);
-			return;
-		}else{
-			printf("Invalid file length received\n");
 		}
+		fclose(file);
 	}
 }
 
@@ -302,7 +296,7 @@ int main (const int argc, const char *argv[])
 	if (hSerial){
 		printf("Port %i:%i\n\n", port, BAUDRATE(COM_BAUD));
 
-		cmd_download(argv[2]);
+		cmd_upload(argv[2]);
 		serialClose(hSerial);
 	}
 
