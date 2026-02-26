@@ -52,18 +52,6 @@ void cmd_help (const char *str)
 {
 }
 
-static struct tm *getTimeReal (double *nanos)
-{
-	if (nanos){
-		struct timespec tp;
-		clock_gettime(0, &tp);	// for nanoseconds only
-		*nanos = tp.tv_nsec/1000000000.0;
-	}
-
-	const __time64_t t = _time64(0);
-    return _localtime64(&t);
-}
-
 static int write_file (const char *path, char *buffer, long len)
 {
 	FILE *file = fopen(path,"wb");
@@ -74,25 +62,6 @@ static int write_file (const char *path, char *buffer, long len)
 	}else{
 		return 0;
 	}
-}
-
-static inline char *memstr (const char *block, const int bsize, const char *pattern)
-{
-    char *where;
-    char *start = (char*)block;
-    int found = 0;
-    
-    while (!found) {
-        where = (char*)memchr(start, (int)pattern[0], (size_t)bsize - (size_t)(start - block));
-        if (where==NULL){
-            found++;
-        }else{
-			if (!memcmp(where, pattern, strlen(pattern)))
-				found++;
-        }
-        start = where+1;
-    }
-    return where;
 }
 
 static inline void serialClean (HANDLE hserial)
@@ -228,12 +197,6 @@ static uint32_t serialSendString (HANDLE hserial, const char *str, const int wai
 	if (waitMs)
 		Sleep(waitMs);
 	return (bytesWritten == len);
-}
-
-int formatTimeFilename (char *buffer, const int bufferLen)
-{
-	const struct tm *date = getTimeReal(NULL);
-	return snprintf(buffer, bufferLen, "%.2i%.2i%.4i_%.2i%.2i%.2i.ubx", date->tm_mday, date->tm_mon, date->tm_year+1900, date->tm_hour, date->tm_min, date->tm_sec);
 }
 
 void cmd_download (const char *str)
