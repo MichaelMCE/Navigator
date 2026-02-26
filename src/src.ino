@@ -783,7 +783,7 @@ void ISR_onceSecond_sig ()
 	recordSignal++;
 
 	serialConnected = Serial.dtr();
-	inst.heartbeatPulse = 1 && serialConnected;
+	//inst.heartbeatPulse = 1 && serialConnected;
 
 	receiverUpdateSignal = 0xFF;
 }
@@ -1506,10 +1506,11 @@ FASTRUN void loop ()
 		op_go();
 	}
 
-	if (inst.cmdTaskRunMode){
+	/*if (inst.cmdTaskRunMode){
 		inst.cmdTaskRunMode = cmd_task(inst.heartbeatPulse);
 		inst.heartbeatPulse = 0;
-	}
+	}*/
+	cmd_task(0);
 
 #if (0 && ENABLE_TOUCH_FT5216)
 	if (touchCtx.tready){
