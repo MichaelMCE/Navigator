@@ -76,6 +76,15 @@ int cmdLoadUbx (const char *filename);
 
 
 
+
+typedef struct {
+	struct {
+		uint32_t read;
+		uint32_t expected;
+	}length;
+	char *pending;
+}file_trans_t;
+
 typedef struct {
 	uint8_t sec;   // 0-59
 	uint8_t min;   // 0-59

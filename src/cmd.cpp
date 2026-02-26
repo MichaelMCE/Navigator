@@ -1,33 +1,12 @@
 
 
 
-
-
 #include "commonGlue.h"
 
-
-typedef struct {
-	struct {
-		uint32_t read;
-		uint32_t expected;
-	}length;
-	char *pending;
-}file_trans_t;
 
 static file_trans_t fileTrans;
 
 
-
-
-
-// <cmd:list><cmd:end>											// list everything in data/
-// <cmd:delete>a filename.ext<cmd:end>							// remove file within data/
-// <cmd:delete>*<cmd:end>										// delete all files within data/
-// <cmd:rename>a filename from.ext:a filename to.ext<cmd:end>	// rename a file from:to
-// <cmd:getfiledata>a filename.ext<cmd:end>						// restrive file. respond with: <response:data>bin data<response:end>
-// <cmd:getfilelength>a filename.ext<cmd:end>					// restrive length of file. respond with: <response:filename,length>This is a filename.ext:123456<response:end>
-// error: <response:error>an error message<response:end>
-// msg: <response:msg><response:end>
 
 extern int gnssReceiver_PassthroughEnabled;
 extern application_t inst;
@@ -51,21 +30,18 @@ static inline int validateFilename (const char *filename)
 
 FLASHMEM void cmdSendError (const char *err)
 {
-	//printf("<response:error>%s<response:end>\n", err);
 	printf(CS("%s"), err);
 	serialFlush();
 }
 
 FLASHMEM void cmdSendMsg (const char *msg)
 {
-	//printf("<response:msg>%s<response:end>\n", msg);
 	printf(CS("%s"), msg);
 	serialFlush();
 }
 
 FLASHMEM void cmdSendResponse (const char *msg)
 {
-	//printf("<response:msg>%s<response:end>\n", msg);
 	printf(CS("%s"), msg);
 	serialFlush();
 }
@@ -357,9 +333,6 @@ FLASHMEM static void cmd_detail (char *msg, const int cmdlen)
 	}else if (!strncmp(msg, "slevels:", 8)){
 		map_setDetail(MAP_RENDER_SLEVELS, atoi(&msg[8])&0x01);
 
-	//}else if (!strncmp(msg, "console:", 8)){
-		//map_setDetail(MAP_RENDER_CONSOLE, atoi(&msg[8])&0x01);
-
 	}else if (!strncmp(msg, "tilesClean", 10)){
 		tilesUnloadAll(&inst);
 		render_signalTiles();
@@ -434,8 +407,7 @@ FLASHMEM static void cmd_log (char *msg, const int cmdlen)
 
 FLASHMEM static void cmd_reset (char *msg, const int cmdlen)
 {
-	//if (!strncmp(msg, "reset", 5))
-		mpu_reboot();
+	mpu_reboot();
 }
 
 FLASHMEM static void cmd_hello (char *msg, const int cmdlen)
@@ -859,120 +831,6 @@ FLASHMEM static int cmdExtractCmd (char *cmd, const int cmdlen)
 	}
 	return 1;
 }
-
-#if 0
-FLASHMEM static int cmdExtract (char *buffer, const int cmdlen)
-{
-	if (buffer[0] != '/') return 1;
-	
-	char *cmdend = strstr(buffer, "\n");
-	if (cmdend) *cmdend = 0;
-
-	if (!strncmp(buffer, CMD_ULOAD, strlen(CMD_ULOAD))){
-		char *filename = &buffer[strlen(CMD_ULOAD)];
-		cmd_uload(filename, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_MPU, strlen(CMD_MPU))){
-		char *msg = &buffer[strlen(CMD_MPU)];
-		cmd_mpu(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_PAGE, strlen(CMD_PAGE))){
-		char *msg = &buffer[strlen(CMD_PAGE)];
-		cmd_page(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_RUNLOG, strlen(CMD_RUNLOG))){
-		char *msg = &buffer[strlen(CMD_RUNLOG)];
-		cmd_runlog(msg, cmdlen);
-				
-	}else if (!strncmp(buffer, CMD_SOS, strlen(CMD_SOS))){
-		char *msg = &buffer[strlen(CMD_SOS)];
-		cmd_sos(msg, cmdlen);
-		
-	}else if (!strncmp(buffer, CMD_SENDFILE, strlen(CMD_SENDFILE))){
-		char *msg = &buffer[strlen(CMD_SENDFILE)];
-		cmd_sendfile(msg, cmdlen);
-		uiLogs_clear();
-		
-	//}else if (!strncmp(buffer, CMD_EXIT, strlen(CMD_EXIT))){
-	//	return 0;
-
-	}else if (!strncmp(buffer, CMD_MAPSCHEME, strlen(CMD_MAPSCHEME))){
-		char *msg = &buffer[strlen(CMD_MAPSCHEME)];
-		cmd_style(msg, cmdlen);
-	
-	}else if (!strncmp(buffer, CMD_ODO, strlen(CMD_ODO))){
-		char *msg = &buffer[strlen(CMD_ODO)];
-		cmd_odo(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_GETMETABIN, strlen(CMD_GETMETABIN))){
-		char *filename = &buffer[strlen(CMD_GETMETABIN)];
-		cmd_getfile(filename, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_GETMETA, strlen(CMD_GETMETA))){
-		char *filename = &buffer[strlen(CMD_GETMETA)];
-		cmd_getmeta(filename, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_RECEIVER, strlen(CMD_RECEIVER))){
-		char *msg = &buffer[strlen(CMD_RECEIVER)];
-		cmd_receiver(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_DEBUG, strlen(CMD_DEBUG))){
-		char *msg = &buffer[strlen(CMD_DEBUG)];
-		cmd_debug(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_BRIGHTNESS, strlen(CMD_BRIGHTNESS))){
-		char *msg = &buffer[strlen(CMD_BRIGHTNESS)];
-		cmd_backlight(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_DETAIL, strlen(CMD_DETAIL))){
-		char *msg = &buffer[strlen(CMD_DETAIL)];
-		cmd_detail(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_ZOOM, strlen(CMD_ZOOM))){
-		char *msg = &buffer[strlen(CMD_ZOOM)];
-		cmd_zoom(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_ROUTE, strlen(CMD_ROUTE))){
-		char *msg = &buffer[strlen(CMD_ROUTE)];
-		cmd_log(msg, cmdlen);
-		
-	}else if (!strncmp(buffer, CMD_REBOOT, strlen(CMD_REBOOT))){
-		char *msg = &buffer[strlen(CMD_REBOOT)];
-		cmd_reset(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_HELLO, strlen(CMD_HELLO))){
-		char *msg = &buffer[strlen(CMD_HELLO)];
-		cmd_hello(msg, cmdlen);
-		
-	}else if (!strncmp(buffer, CMD_LIST, strlen(CMD_LIST))){
-		char *msg = &buffer[strlen(CMD_LIST)];
-		cmd_list(msg, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_LOAD, strlen(CMD_LOAD))){
-		char *filename = &buffer[strlen(CMD_LOAD)];
-		cmd_load(filename, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_DELETE, strlen(CMD_DELETE))){
-		char *filename = &buffer[strlen(CMD_DELETE)];
-		cmd_delete(filename, cmdlen);
-
-	}else if (!strncmp(buffer, CMD_TOUCH, strlen(CMD_TOUCH))){
-		char *filename = &buffer[strlen(CMD_TOUCH)];
-		cmd_touch(filename, cmdlen);
-		
-	}else if (!strncmp(buffer, CMD_RENAME, strlen(CMD_RENAME))){
-		char *msg = &buffer[strlen(CMD_RENAME)];
-		cmd_rename(msg, cmdlen);
-
-	/*}else if (!strncmp(buffer, CMD_GETFILE, strlen(CMD_GETFILE))){
-		char *filename = &buffer[strlen(CMD_GETFILE)];
-		cmd_getfile(filename, cmdlen);*/
-	}
-	serialFlush();
-	
-	return 1;
-}
-#endif
 
 int cmdLoadUbx (const char *filename)
 {
