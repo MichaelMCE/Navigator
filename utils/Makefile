@@ -19,23 +19,22 @@ CFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -
 CPPFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=c++23 -Wall -march=i686 -mtune=generic
 LIBS = $(BITMODE) -D _GNU_SOURCE -Llibmylcd/libs/x32 -L"lib" -lm -lmylcddll -lole32 -luuid -lwininet
 
-EXAMPLES=serial1_console.exe download.exe upload.exe
+EXAMPLES=download.exe upload.exe ubxfetch.exe
 
 
 # -static-libgcc -static-libstdc++
 
 all : $(EXAMPLES)
 
+ubxfetch.exe: ubxfetch.o
+	$(CC) -static-libgcc -o $@ $^ $(LIBS)
+	strip.exe $@
 
 upload.exe: upload.o
 	$(CC) -static-libgcc -o $@ $^ $(LIBS)
 	strip.exe $@
 
 download.exe: download.o
-	$(CC) -static-libgcc -o $@ $^ $(LIBS)
-	strip.exe $@
-
-serial1_console.exe: serial1_console.o
 	$(CC) -static-libgcc -o $@ $^ $(LIBS)
 	strip.exe $@
 
