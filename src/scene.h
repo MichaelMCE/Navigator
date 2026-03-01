@@ -112,6 +112,7 @@ typedef struct {
 	}powersave;
 	
 	int32_t page;
+	uint32_t renderPassCt;
 	
 	struct {
 		uint32_t poi:1;
@@ -169,10 +170,7 @@ typedef struct {
 	vectorPt2_t	tileLoadLoc;	// tiles for loading were last checked at this location
 	float distance;				// dstance traveled, in meters, since last tile update
 	
-	uint32_t renderPassCt;
-	uint32_t cmdTaskRunMode;
-	uint32_t heartbeatPulse;
-	
+
 	runState_t rstats;
 	
 	struct {

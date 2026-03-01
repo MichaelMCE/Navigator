@@ -508,7 +508,7 @@ void drawTiles_Fills (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 			for (int j = bx; j < bx+blocksAcross; j++){
 				block_t *block = tilesBlock8Get(j, i);
 				if (!block) continue;
-				//block->lastRendered = inst->renderPassCt;
+				//block->lastRendered = inst->rstats.renderPassCt;
 	
 				blockDrawFills(inst, block, center, spanMeters, 0);
 				if (zoom < 2500.0f)
@@ -922,7 +922,7 @@ void drawTiles_Paths (application_t *inst, vectorPt2_t *loc, const vectorPt2_t *
 			block_t *block = tilesBlock8Get(j, i);
 			if (!block) continue;
 
-			block->lastRendered = inst->renderPassCt;
+			block->lastRendered = inst->rstats.renderPassCt;
 
 			if (zoom <= 1750.0f)
 				blockDrawPaths(inst, block, center, spanMeters, 0x16, drawPolyLine);
@@ -1008,7 +1008,7 @@ void drawTiles_Outlines (application_t *inst, vectorPt2_t *loc, const vectorPt2_
 			block_t *block = tilesBlock8Get(j, i);
 			if (!block) continue;
 
-			block->lastRendered = inst->renderPassCt;
+			block->lastRendered = inst->rstats.renderPassCt;
 			blockDrawFillOutline(inst, block, center, spanMeters);		
 		}
 	}
@@ -1269,7 +1269,7 @@ static inline void renderFrame (application_t *inst, const vectorPt2_t *center)
 
 static inline void sceneRender (application_t *inst)
 {
-	inst->renderPassCt++;
+	inst->rstats.renderPassCt++;
 	renderFrame(inst, &inst->viewport.location);
 }
 
