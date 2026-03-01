@@ -962,6 +962,27 @@ FLASHMEM void ubx_sos_clear (ubx_device_t *dev)
 	ubx_sendEx(dev, 10, UBX_UPD, UBX_UPD_SOS, &upd, sizeof(upd));
 }
 
+FLASHMEM void ubx_mga_ini_time_utc (ubx_device_t *dev, const uint16_t year, const uint8_t month, const uint8_t day, const uint8_t hour, const uint8_t minute, const uint8_t second)
+{
+	mga_ini_time_utc_t utc;
+	memset(&utc, 0, sizeof(utc));
+
+	utc.type = 0x10;
+	utc.version = 0;
+	utc.ref = 0;
+	utc.leapSecs = -128;
+	
+	utc.year = year;
+	utc.month = month;
+	utc.day = day;
+	
+	utc.hour = hour;
+	utc.minute = minute;
+	utc.second = second;
+
+	ubx_sendEx(dev, 10, UBX_MGA, UBX_MGA_INI_TIME_UTC, &utc, sizeof(utc));
+}
+
 FLASHMEM void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
 {
 	mga_ini_posllh_t posllh;

@@ -100,6 +100,7 @@ UBX
 //#define UBX_LOG_BATCH				
 #define UBX_LOG_RETRIEVEBATCH	0x10
 
+#define UBX_MGA_INI_TIME_UTC	0x40
 #define UBX_MGA_INI_POSLLH		0x40
 
 #define UBX_INF_ERROR			0x00
@@ -1430,6 +1431,30 @@ typedef struct {
 }__attribute__((packed))mga_ini_posllh_t;
 
 
+typedef struct {
+	uint8_t type;
+	uint8_t version;
+	uint8_t ref;
+	int8_t leapSecs;
+	
+	uint16_t year;
+	uint8_t month;
+	uint8_t day;
+	
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t second;
+	uint8_t bitfield0;
+	
+	uint32_t ns;
+	
+	uint16_t tAccS;
+	uint8_t reserved0[2];
+	
+	uint32_t tAccNs;
+}__attribute__((packed))mga_ini_time_utc_t;
+
+
 #define UPDSOS_CMD_CREATE			0		// create backup in flash. with updsos_cmd_t
 #define UPDSOS_CMD_CLEAR			1		// clear flash, with updsos_cmd_t
 #define UPDSOS_CMD_CREATE_ACK		2		// backup create, with updsos_ack_t
@@ -1607,7 +1632,10 @@ void receiver_configurePorts (ubx_device_t *dev);
 void reciever_baudRateDiscover (ubx_device_t *dev);
 void receiver_cfgSave (ubx_device_t *dev);
 
+void ubx_mga_ini_time_utc (ubx_device_t *dev, const uint16_t year, const uint8_t month, const uint8_t day, const uint8_t hour, const uint8_t minute, const uint8_t second);
 void ubx_mga_ini_posllh (ubx_device_t *dev, const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
+
+
 int ubx_msgPollName (ubx_device_t *dev, const char *name);
 void ubx_msgInfPoll (ubx_device_t *dev, const uint8_t protocolID);
 int ubx_write (ubx_device_t *dev, uint8_t *buffer, const uint32_t bufferSize);
