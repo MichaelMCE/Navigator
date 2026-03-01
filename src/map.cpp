@@ -14,7 +14,6 @@ FLASHMEM void map_init (vfont_t *vfont)
 	memset(&inst, 0, sizeof(inst));
 
 	inst.vfont = vfont;
-	inst.cmdTaskRunMode = 1;
 	inst.runLog.step = 4;
 	inst.loadTiles = 1;
 
