@@ -53,7 +53,15 @@
 #define TFT_HEIGHT				240
 #define CFG_STRING				"240x240*2 GC9A01A IPS Display"
 #define TFT_SPEED				100			// Mhz
+#define TFT_INTENSITY			30		// PWM value from 0 to 255
+#define TFT_LOWERPANEL			0
+#define ENABLE_TOUCH_FT5216		0		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+#define MPU_CLOCK_FREQ			600
+#define MPU_POWERSAVE_FREQ		100
+#define ENABLE_ENCODERS			0
+#define EXTMEM_SIZE				8
+#define SDCARD_SIZE				32
 
 #elif USE_SPI_GC9A01A2
 #define TFT_WIDTH				240
@@ -67,7 +75,16 @@
 #define TFT_HEIGHT				240
 #define CFG_STRING				"432x240*2 S6D04D1 IPS Display"
 #define TFT_SPEED				20			// Mhz
+#define TFT_INTENSITY			30		// PWM value from 0 to 255
+#define TFT_LOWERPANEL			0
+#define ENABLE_TOUCH_FT5216		0		// enable i2c touch controller and reports
 #define TOUCH_ROTATION			TOUCH_DIR_NONE
+#define MPU_CLOCK_FREQ			600
+#define MPU_POWERSAVE_FREQ		100
+#define ENABLE_ENCODERS			0
+#define EXTMEM_SIZE				8
+#define SDCARD_SIZE				32
+
 
 #elif USE_FLEXTFT_R61529
 #define TFT_WIDTH				480
