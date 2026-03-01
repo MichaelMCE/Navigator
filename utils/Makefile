@@ -15,11 +15,11 @@ endif
 
 
 
-CFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=gnu23 -Wall -march=i686 -mtune=generic
-CPPFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=c++23 -Wall -march=i686 -mtune=generic
-LIBS = $(BITMODE) -D _GNU_SOURCE -Llibmylcd/libs/x32 -L"lib" -lm -lmylcddll -lole32 -luuid -lwininet
+CFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=gnu23 -Wall -mtune=generic
+CPPFLAGS = $(BITMODE) -D_GNU_SOURCE -Ilibmylcd/include -O2 -D_WIN32_WINNT=0x0601 -DWINVER=0x0601 -D__WIN32__=1 -std=c++23 -Wall -mtune=generic
+LIBS = $(BITMODE) -D _GNU_SOURCE -Llibmylcd/libs/$(MDIR) -L"lib" -lm -lmylcddll -lole32 -luuid -lwininet
 
-EXAMPLES=download.exe upload.exe ubxfetch.exe
+EXAMPLES=download.exe upload.exe ubxfetch.exe split.exe pack.exe poigen.exe
 
 
 # -static-libgcc -static-libstdc++
@@ -57,7 +57,7 @@ poigen.exe: poigen.o libmylcd/fileal.o
 	$(CP) -c -o $@ $< $(CPPFLAGS)
 
 clean :
-	rm -f *.exe *.o *.bak
+	del -f $(EXAMPLES) *.o *.bak
 
 
 ### PHONY define
