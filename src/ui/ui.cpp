@@ -794,9 +794,11 @@ int uiButtons_cb (ui_widget_t *widget, const uint8_t id, const uint32_t flags, c
 	}
 	
 	uint32_t inFlags = (msg>>8)&0xFF;
+#if (ENABLE_TOUCH_FT5216)
 	if (!(inFlags|TOUCH_UP))
 		return 0;
-	
+#endif
+
 	switch (id){
 	case UI_ID_BUTTON_AREAFILL:
 		map_setDetail(MAP_RENDER_AREAS, !map_getDetail(MAP_RENDER_AREAS));
@@ -1132,10 +1134,10 @@ static void ui_draw_about (ui_all_t *widget, const int32_t x, const int32_t y)
 	sprintf(buffer, "Clock frequency: %uMhz", (unsigned int)F_CPU_ACTUAL/1000/1000);
 	drawString(inst.vfont, buffer, btX, btY += pitchY);
 
-	sprintf(buffer, "ExtMem: %uMB", external_psram_size);
+	sprintf(buffer, "CPU temp: %.2fc", InternalTemperature.readTemperatureC());
 	drawString(inst.vfont, buffer, btX, btY += pitchY);
 	
-	sprintf(buffer, "CPU temp: %.2fc", InternalTemperature.readTemperatureC());
+	sprintf(buffer, "ExtMem: %uMB", external_psram_size);
 	drawString(inst.vfont, buffer, btX, btY += pitchY);
 	
 	sprintf(buffer, "Tiles: %i", tilesCount());
@@ -1771,6 +1773,7 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t inFlags)
 	uint32_t handledBy = 0;
 	
 	int ret = ui_input(widgetObjs, UI_WIDGETOBJS_TOTAL, x, y, &handledBy, inFlags);
+#if (ENABLE_TOUCH_FT5216)
 	if (!ret && (inFlags|TOUCH_UP)){
 		if (ui_activePanelId){
 			ui_disable(NULL, ui_activePanelId);
@@ -1778,6 +1781,7 @@ int ui_input (const int32_t x, const int32_t y, const uint32_t inFlags)
 		}
 		uiLogs_close();
 	}
+#endif
 	return ret;
 }
 
