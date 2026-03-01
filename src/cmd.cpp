@@ -4,12 +4,15 @@
 #include "commonGlue.h"
 
 
+//extern volatile int serialConnected;
+extern int gnssReceiver_PassthroughEnabled;
+extern application_t inst;
+extern uint8_t external_psram_size;
+
+
 static file_trans_t fileTrans;
 
 
-
-extern int gnssReceiver_PassthroughEnabled;
-extern application_t inst;
 
 
 static inline void serialFlush ()
@@ -180,6 +183,84 @@ FLASHMEM static void cmd_odo (char *msg, const int cmdlen)
 		gps_resetOdo();
 }
 
+FLASHMEM static void setDateTime (char *msg)
+{
+	uint16_t year = 0;
+	uint8_t month = 0;
+	uint8_t day = 0;
+	
+	uint8_t hour = 0;
+	uint8_t minute = 0;
+	uint8_t second = 0;
+	
+	
+	//  :2026:02:28:14:23:00
+	cmdSendResponse("Setting date:");
+		
+	char *txt = strchr(msg, ':');
+	if (!txt) return;
+
+	for (int i = 0; i < 6; i++){
+		txt++;		// skip delim comma
+		
+		switch (i){
+		case 0: year = atoi(txt);
+		case 1: month = atoi(txt);
+		case 2: day = atoi(txt);
+		case 3: hour = atoi(txt);
+		case 4: minute = atoi(txt);
+		case 5: second = atoi(txt);
+		}
+		
+		txt = strchr(txt, ':');
+		if (!txt) break;
+	}
+
+
+	printf(CS(" Year: %i"), year);
+	printf(CS(" Month: %i"), month);
+	printf(CS(" Day: %i"), day);
+	printf(CS(" Hour: %i"), hour);
+	printf(CS(" Minute: %i"), minute);
+	printf(CS(" Second: %i"), second);
+
+	gps_setDateTimeUTC(year, month, day, hour, minute, second);
+	cmdSendResponse("Done");
+}
+
+FLASHMEM static void setlocation (char *msg, const int cmdlen)
+{
+	pos_rec_t pos = {0.0, 0.0, 0.0f};
+	uint32_t posAcc = 200;
+
+	cmdSendResponse("Setting location: <lat:long:alt:acc>");
+	
+	char *txt = strchr(msg, ':');
+	if (!txt) return;
+	
+	for (int i = 0; i < 4; i++){
+		txt++;		// skip delim comma
+		
+		switch (i){
+		case 0: pos.latitude = atof(txt);
+		case 1: pos.longitude = atof(txt);
+		case 2: pos.altitude = atof(txt);
+		case 3: posAcc = atoi(txt);
+		}
+		
+		txt = strchr(txt, ':');
+		if (!txt) break;
+	}
+	
+	printf(CS(" Latitude: %f"), pos.latitude);
+	printf(CS(" Longitude: %f"), pos.longitude);
+	printf(CS(" Altitude: %f"), pos.altitude);
+	printf(CS(" Accuracy: %i"), (int)posAcc);
+	
+	gps_setLocation(pos.latitude, pos.longitude, pos.altitude, posAcc);
+	cmdSendResponse("Done");
+}
+
 FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 {
 	if (cmdlen < 2) return;
@@ -202,10 +283,10 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 			gps_pollInf(INF_PROTO_USER2);
 		else if (!strcmp(proto, "user3"))
 			gps_pollInf(INF_PROTO_USER3);
-	
-	}else if (!strncmp(msg, "savecfg", 7)){
-		gps_saveConfig();
 
+	}else if (!strncmp(msg, "date:", 5)){
+		setDateTime(&msg[4]);
+		
 	}else if (!strncmp(msg, "rate:", 5)){
 		uint8_t rate = atoi(&msg[5]);
 		gps_setRate(rate);
@@ -214,7 +295,10 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 	}else if (!strncmp(msg, "baud:", 5)){
 		uint32_t baud = atoi(&msg[5]);
 		gps_setBaud(baud);
-
+		
+	}else if (!strncmp(msg, "savecfg", 7)){
+		gps_saveConfig();
+		
 	}else if (!strncmp(msg, "discover", 8)){
 		gps_baudDiscover();
 
@@ -233,6 +317,13 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 		if (!gps_pollMsg(pollMsg))
 			printf(CS("ubx message '%s' not available"), pollMsg);
 	
+	}else if (!strncmp(msg, "setdefaultlocation", 18)){
+		gps_setDefaultLocation();
+	
+	}else if (!strncmp(msg, "setlocation", 11)){
+		char *pos = &msg[11];
+		setlocation(pos, strlen(pos));
+		
 	}else if (!strncmp(msg, "location", 8)){
 		gps_printPositionAlt();
 
@@ -261,6 +352,7 @@ FLASHMEM static void cmd_receiver (char *msg, const int cmdlen)
 	}else if (!strncmp(msg, "coldstart", 9)){
 		cmdSendResponse("Resetting: coldstart");
 		gps_coldStart();
+		
 	}else if (!strncmp(msg, "passthrough:", 12)){
 		uint8_t which = atoi(&msg[12]);
 		if (which == 1){
@@ -387,21 +479,86 @@ FLASHMEM static void cmd_load (char *filename, const int cmdlen)
 
 FLASHMEM static void cmd_log (char *msg, const int cmdlen)
 {
-	if (cmdlen < 2) return;
+	if (cmdlen < 4) return;
 	
-	if (!strncmp(msg, "reset", 5)){
-		log_reset();
-		cmdSendResponse("Log reset");
-	
-	}else if (!strncmp(msg, "load:", 5)){
-		char *filename = &msg[5];
-		loadRoute(filename);
+	if (!strncmp(msg, "load:", 5)){
+		loadRoute(&msg[5]);
 
-	}else if (!strncmp(msg, "state:", 6)){
-		int state = (atoi(&msg[6]))&0x03;
-		log_setAcquisitionState(state&0x01);
-		log_setRecordState(state&0x02);
-		cmdSendResponse("");
+	}else if (!strcmp(msg, "start")){
+		if (!log_isActive()){
+			cmdSendResponse("Log started");
+			op_push(OP_FUNC_LOG_START);
+			op_go();
+		}else{
+			cmdSendResponse("Log is started");
+		}
+		
+	}else if (!strcmp(msg, "stop")){
+		if (log_isActive()){
+			cmdSendResponse("Log stopped");
+			op_push(OP_FUNC_LOG_WRITE);
+			op_push(OP_FUNC_LOG_STOP);
+			op_push(OP_FUNC_GPS_TASK);
+			op_go();
+		}else{
+			cmdSendResponse("Log not started");	
+		}
+		
+	}else if (!strcmp(msg, "reset")){
+		cmdSendResponse("Log reset");
+		op_push(OP_FUNC_LOG_RESET);
+		op_go();
+		
+	}else if (!strcmp(msg, "pause")){
+		if (log_isActive()){
+			cmdSendResponse("Log paused");
+			op_push(OP_FUNC_LOG_PAUSE);
+			op_go();
+		}
+	}else if (!strcmp(msg, "enableWrite")){	
+		cmdSendResponse("Writes to SD enabled");
+		log_setRecordState(1);
+	
+	}else if (!strcmp(msg, "disableWrite")){	
+		cmdSendResponse("Writes to SD disabled");
+		log_setRecordState(0);
+		
+	}else if (!strcmp(msg, "status")){
+		if (log_isDateConfirmed())
+			cmdSendResponse("Date is valid");
+		else
+			cmdSendResponse("Date may not be valid");
+
+		if (log_isTimeConfirmed())
+			cmdSendResponse("Time is valid");
+		else
+			cmdSendResponse("Time may not be valid");
+					
+		if (log_hasFirstFix())
+			cmdSendResponse("Initial fix acquired");
+		else
+			cmdSendResponse("Initial fix not acquired");
+
+		if (log_isActive())
+			cmdSendResponse("Log is active");
+		else
+			cmdSendResponse("Log not active");
+		
+		if (log_getAcquisitionState())
+			cmdSendResponse("Acquisitions are enabled");
+		else
+			cmdSendResponse("Acquisitions are disabled");
+			
+		if (log_getRecordState())
+			cmdSendResponse("Writes to SD are enabled");
+		else
+			cmdSendResponse("Writes to SD are disabled");
+		
+		const char *filename = log_getFilename();
+		if (filename && *filename)
+			printf(CS("Filename: %s"), filename);
+		else
+			cmdSendResponse("Filename not set");
 	}
 }
 
@@ -412,7 +569,7 @@ FLASHMEM static void cmd_reset (char *msg, const int cmdlen)
 
 FLASHMEM static void cmd_hello (char *msg, const int cmdlen)
 {
-	cmdSendResponse(msg);
+	cmdSendResponse("Greatings");
 }
 
 FLASHMEM static void cmd_delete (char *filename, const int cmdlen)
@@ -703,8 +860,6 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 		printf(CS("Clock frequency: %u"), (unsigned int)F_CPU_ACTUAL);
 
 	}else if (!strncmp(msg, "status", 6)){
-		extern uint8_t external_psram_size;
-		
 		cmdSendResponse(CFG_STRING);
 		printf(CS("SDCard size: %iGB"), SDCARD_SIZE);
 		printf(CS("Clock frequency: %uMhz"), (unsigned int)F_CPU_ACTUAL/1000/1000);
@@ -734,11 +889,11 @@ FLASHMEM static void cmd_mpu (char *msg, const int cmdlen)
 	}
 }
 
-FLASHMEM static void cmd_map (char *msg, const int cmdlen)
+/*FLASHMEM static void cmd_map (char *msg, const int cmdlen)
 {
 	cmdSendResponse("map: add me");
 }
-
+*/
 FLASHMEM static void cmd_debug (char *msg, const int cmdlen)
 {
 	if (strlen(msg) < 3) return;
@@ -764,20 +919,72 @@ FLASHMEM static void cmd_tiles (char *msg, const int cmdlen)
 	}
 }
 
+FLASHMEM static void cmd_about (char *msg, const int cmdlen)
+{
+	char buffer[128];
+
+
+	cmdSendMsg(CFG_STRING);
+	
+	sprintf(buffer, "GNSS Receiver:");
+	if (RECEIVER_SINGLE == 1)
+		strcat(buffer, " Single");
+	else
+		strcat(buffer, " Dual");
+
+	if (RECEIVER_M10 == 1)
+		strcat(buffer, " UBlox M10");
+	else
+		strcat(buffer, " UBlox M8");
+	cmdSendMsg(buffer);
+
+	sprintf(buffer, "SDCard size: %iGB", SDCARD_SIZE);
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "Clock frequency: %uMhz", (unsigned int)F_CPU_ACTUAL/1000/1000);
+	cmdSendMsg(buffer);
+
+	sprintf(buffer, "CPU temp: %.2fc", InternalTemperature.readTemperatureC());
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "ExtMem: %uMB", external_psram_size);
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "Tiles: %i", tilesCount());
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "Blocks: %i", blocksCount());
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "Tile memory used: %u", tileMemoryUsage());
+	cmdSendMsg(buffer);
+
+	sprintf(buffer, "Receiver Baud: %i", (int)gps_getBaud());
+	cmdSendMsg(buffer);
+	
+	sprintf(buffer, "Rx: %i   Tx: %i", receiver_getRx(), receiver_getTx());
+	receiver_resetRxTx();
+	cmdSendMsg(buffer);
+}
+
 FLASHMEM static void cmd_help (char *msg, const int cmdlen);
 
 static const cmdstr_t cmdstrs[] = {
+	{"/about",    cmd_about,     "General About information"},
 	{"/hello",    cmd_hello,     "Greatings"},
 	{"/help",     cmd_help,      "This"},
 	{"/debug",    cmd_debug,     "console:0/1/2"},
-	{"/receiver", cmd_receiver,  "version, hotstart, warmstart, coldstart, poll:ubx_msg"},
-	{"/log",      cmd_log,       "state:0-3, reset"},
-	{"/detail",   cmd_detail,    "poi:0/1, world:0/1, slevels:0/1, savailability:0/1, compass:0/1, route:0/1, map:0/1, locgraphic:0/1"},
+	{"/receiver", cmd_receiver,  "version, hotstart, warmstart, coldstart, rate:, location, date:, poll:ubx_msg\n"
+								 "\t\treconnect, configure, setlocation:, date, time, itow, status, passthrough\n"
+								 "\t\tdiscover, savecfg, baud:, poll:inf:"},
+	{"/log",      cmd_log,       "status, start, stop, pause, reset, load:filename, enableWrite, disableWrite"},
+	{"/detail",   cmd_detail,    "poi:, world:, slevels:, savailability:, compass:, route:, map:, locgraphic:\n"
+								 "\t\tpath:, splot:, page:, tilesClean, loadTilesAll"},
 	{"/backlight",cmd_backlight, "level:1-255"},
-	{"/map",      cmd_map,       "zoom:15-1800, colour:0/1"},
+	//{"/map",      cmd_map,       " "},
 	{"/reboot",   cmd_reset,     "Reboot device"},
-	{"/getfile",  cmd_getfile,   "send file to client"},
-	{"/sendfile", cmd_sendfile,  "<a filename.tpts>. Send a local .tpts file to device"},
+	{"/getfile",  cmd_getfile,   "Get file from device to client through download.c"},
+	{"/sendfile", cmd_sendfile,  "Send a file from client to device through upload.c"},
 	{"/load",     cmd_load,      "<a filename.tpts>. Load trackPts of this file"},
 	{"/delete",   cmd_delete,    "<a filename.tpts>. Delete this file."},
 	{"/rename",   cmd_rename,    "filenameFrom.tpts:filenameTo.tpts"},
@@ -785,13 +992,14 @@ static const cmdstr_t cmdstrs[] = {
 	{"/touch",    cmd_touch,     "<a filename.tpts>. Set modify time to current time"},
 	{"/list",     cmd_list,      "Display saved data files from /data/"},
 	{"/odo",      cmd_odo,       "start, stop, reset"},
-	{"/ubxload",  cmd_uload,     "filename.ubx. import a .ubx data file from SDcard to receiver"},
+	{"/ubxload",  cmd_uload,     "<filename.ubx>. Import a .ubx binary file from SD to receiver modules.\n"
+								 "\t\tUpload .ubx to device through upload.c"},
 	{"/sos",      cmd_sos,       "create, clear, poll"},
 	{"/tiles",    cmd_tiles,     "flush, load"},
 	{"/runlog",   cmd_runlog,    "start, stop, pause, reset, trpt:n, step:n"},
-	{"/mpu",      cmd_mpu,       "reboot, freq:mhz, powersave:on/off. Set microcontroller frequency"},
+	{"/mpu",      cmd_mpu,       "status, freq:mhz, powersave:on/off"},
 	{"/page",     cmd_page,      "Switch page (1, 2, etc..)"},
-	{"/zoom",     cmd_zoom,      "Set mp zoom level"},
+	{"/zoom",     cmd_zoom,      "Set zoom level of map view"},
 	{"/style",    cmd_style,     "Set map rendering style (profile)"},
 	
 	{"", NULL, ""}
@@ -809,7 +1017,7 @@ FLASHMEM static void cmd_help (char *msg, const int cmdlen)
 	
 	for (int i = 0; cmdstrs[i].func; i++){
 		if (cmdstrs[i].helpStr[0])
-			printf(CS(" %s - %s"), cmdstrs[i].cmd, cmdstrs[i].helpStr);
+			printf(CS(" %-10s - %s"), cmdstrs[i].cmd, cmdstrs[i].helpStr);
 	}
 }
 
@@ -852,7 +1060,7 @@ int cmd_task (const int pulse)
 	static int pos = 0;
 	
 
-	if (Serial.dtr() && Serial.available()){
+	if (/*serialConnected*/Serial.dtr() && Serial.available()){
 		if (pos >= (int)sizeof(cmdbuffer)) pos = 0;
 		
 		int len = Serial.readBytes(cmdbuffer+pos, sizeof(cmdbuffer)-pos);
