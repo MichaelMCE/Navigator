@@ -56,6 +56,10 @@ void mpu_updateMPUFreqMenu (const uint32_t freqMhz);
 
 void log_setRecordState (const int state);
 void log_setAcquisitionState (const int state);
+int log_getAcquisitionState ();
+int log_getRecordState ();
+int log_hasFirstFix ();
+const char *log_getFilename ();
 void log_reset ();
 int log_isActive ();
 void log_pause ();
@@ -74,10 +78,13 @@ void log_runPause ();
 void log_runAdvance (const int32_t advanceBy);
 void log_write ();
 
+int log_isTimeConfirmed ();
+int log_isDateConfirmed ();
 pos_rec_t log_getLastPosition ();
 timegps_t log_getLastTime ();
 dategps_t log_getLastDate ();
 uint32_t log_getLastiTow ();
+
 
 void render_signalUpdate ();
 void render_signalTiles ();

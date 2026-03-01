@@ -26,21 +26,22 @@
 
 
 
+volatile int serialConnected = 0;
+
 volatile static int32_t recordSignal = 0;
 volatile static int32_t renderSignal = 0xFF;
 volatile static int32_t receiverUpdateSignal = 0;
 volatile static int32_t appendSignal = 0;
 volatile static int32_t tilesLoadSig = 0;
-volatile static int serialConnected = 0;
-
-static volatile int zoomMultiplier = 1;
-static volatile int spectrumXMarker = 56;
+//volatile static int serialConnectedNew = 0;
+volatile static int zoomMultiplier = 1;
+volatile static int spectrumXMarker = 56;
 
 
 #if (VWIDTH > 480)
 DMAMEM uint8_t renderBuffer[VWIDTH * VHEIGHT];
 #else
-uint8_t renderBuffer[VWIDTH * VHEIGHT];
+DMAMEM uint8_t renderBuffer[VWIDTH * VHEIGHT];
 #endif
 
 uint16_t colourTable[PALETTE_TOTAL];
@@ -51,6 +52,7 @@ static encodersrd_t encoders;
 
 #if (ENABLE_TOUCH_FT5216)
 extern touchCtx_t touchCtx;
+extern touch_t touchDebug;
 #endif
 
 static IntervalTimer onceSecondTimer;
@@ -62,10 +64,16 @@ static gpsdata_t gpsData;
 extern trackRecord_t trackRecord;
 extern application_t inst;
 extern int gnssReceiver_PassthroughEnabled;
-extern touch_t touchDebug;
-extern touchCtx_t touchCtx;
 
 
+
+
+
+
+gpsdata_t *gps_getReceiverState ()
+{
+	return &gpsData;
+}
 
 uint32_t log_getLastiTow ()
 {
@@ -87,24 +95,14 @@ timegps_t log_getLastTime ()
 	return gpsData.time;
 }
 
-void date_getAdjustedTime (gpsdata_t *data, dategps_t *date, timegps_t *time)
+int log_isDateConfirmed ()
 {
-	if (data == NULL) data = &gpsData;
-
-	date_adjustTime4BST(data);
-	
-	time->hour = data->time.hour;
-	time->min = data->time.min;
-	time->sec = data->time.sec;
-	
-	date->day = data->date.day;
-	date->month = data->date.month;
-	date->year = data->date.year;
+	return gpsData.dateConfirmed;
 }
 
-static inline uint16_t paletteGet16 (const uint8_t idx)
+int log_isTimeConfirmed ()
 {
-	return colourTable[idx];
+	return gpsData.timeConfirmed;
 }
 
 static inline double trkPt_calcDistMetersPosition (double lat1, double lon1, double lat2, double lon2)
@@ -552,6 +550,11 @@ static inline void frameClear ()
 	memset(renderBuffer, COLOUR_PAL_CREAM, sizeof(renderBuffer));
 }
 
+static inline uint16_t paletteGet16 (const uint8_t idx)
+{
+	return colourTable[idx];
+}
+
 static inline void frameSend ()
 {
 #if USE_STRIP_RENDERER
@@ -708,8 +711,11 @@ static inline void trkPt_trackRecordAppend (trackRecord_t *trackRecord, const gp
 
 static void trkPt_trackRecordCreatePathname (trackRecord_t *trackRecord, gpsdata_t *gps)
 {
+	char filename[LOG_FILENAME_LEN];
+
 	date_formatDateTime(gps, trackRecord->date, sizeof(trackRecord->date));
-	snprintf(trackRecord->filename, sizeof(trackRecord->filename), TRACKPTS_DIR"%s.tpts", trackRecord->date);
+	snprintf(filename, LOG_FILENAME_LEN-1, TRACKPTS_DIR"%s.tpts", trackRecord->date);
+	fpRecord_setFilename(trackRecord, filename);
 }
 
 void receiver_cb (const gpsdata_t *const opaque, const intptr_t unused)
@@ -781,9 +787,21 @@ void ISR_onceSecond_sig ()
 		
 	renderSignal = 0xFF;
 	recordSignal++;
+	if (recordSignal > LOG_WRITE_PERIOD){
+		recordSignal = 0;
+		op_push(OP_FUNC_LOG_WRITE);
+		op_push(OP_FUNC_GPS_TASK);
+		op_go();
+	}
 
-	serialConnected = Serial.dtr();
-	//inst.heartbeatPulse = 1 && serialConnected;
+	int connection = Serial.dtr();
+	if (connection && serialConnected != 1){
+		//serialConnectedNew = 1;
+		op_push(OP_FUNC_STATUS);
+		op_push(OP_FUNC_VERSION);
+		op_go();
+	}
+	serialConnected = connection;
 
 	receiverUpdateSignal = 0xFF;
 }
@@ -1431,17 +1449,8 @@ FASTRUN void loop ()
 
 	gps_task();
 
-	if (gnssReceiver_PassthroughEnabled){
-		gps_task();
-		
-#if (0 && ENABLE_TOUCH_FT5216)
-		if (touchCtx.tready){		// touch panel to disengage passthrough
-			touch_task(&touchCtx);
-			touchCtx.tready = 0;
-		}
-#endif
+	if (gnssReceiver_PassthroughEnabled)
 		return;
-	}
 
 	if (receiverUpdateSignal){
 		receiverUpdateSignal = 0;
@@ -1454,13 +1463,6 @@ FASTRUN void loop ()
 	}
 
 	gps_task();
-
-#if (0 && ENABLE_TOUCH_FT5216)
-	if (touchCtx.tready){
-		touch_task(&touchCtx);
-		touchCtx.tready = 0;
-	}
-#endif
 
 	if (renderSignal){
 		if (!log_runStatus() || log_stateIsPaused())
@@ -1483,13 +1485,6 @@ FASTRUN void loop ()
 #endif
 	}
 
-#if (0 && ENABLE_TOUCH_FT5216)
-	if (touchCtx.tready){
-		touch_task(&touchCtx);
-		touchCtx.tready = 0;
-	}
-#endif
-
 	if (tilesLoadSig){
 		tilesLoadSig = 0;
 		if (inst.loadTiles){
@@ -1499,26 +1494,25 @@ FASTRUN void loop ()
 		}
 	}
 
+#if 0
 	if (recordSignal > LOG_WRITE_PERIOD){
 		recordSignal = 0;
 		op_push(OP_FUNC_LOG_WRITE);
 		op_push(OP_FUNC_GPS_TASK);
 		op_go();
 	}
+#endif
 
-	/*if (inst.cmdTaskRunMode){
-		inst.cmdTaskRunMode = cmd_task(inst.heartbeatPulse);
-		inst.heartbeatPulse = 0;
-	}*/
-	cmd_task(0);
-
-#if (0 && ENABLE_TOUCH_FT5216)
-	if (touchCtx.tready){
-		touch_task(&touchCtx);
-		touchCtx.tready = 0;
+#if 0
+	if (serialConnectedNew == 1){
+		serialConnectedNew = 2;
+		op_push(OP_FUNC_STATUS);
+		op_push(OP_FUNC_VERSION);
+		op_go();
 	}
 #endif
 
+	cmd_task(0);
 
 	if (op_state() == OP_READY){
 		if (op_execute(op_pop()))
