@@ -259,7 +259,8 @@ int main (const int argc, const char *argv[])
 	hSerial = serialOpen(port, BAUDRATE(COM_BAUD));
 	if (hSerial){
 		printf("Port %i:%i\n\n", port, BAUDRATE(COM_BAUD));
-
+		Sleep(120);
+		serialClean(hSerial);
 		cmd_upload(argv[2]);
 		serialClose(hSerial);
 	}
