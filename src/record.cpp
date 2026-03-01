@@ -28,13 +28,19 @@ FLASHMEM int fpRecord_init (trackRecord_t *trackRecord)
 	return 1;
 }
 
-int fpRecord_open (trackRecord_t *trackRecord, const uint8_t *filename, const uint32_t flags)
+FLASHMEM void fpRecord_free (trackRecord_t *trackRecord)
+{
+	extmem_free(trackRecord->trackPoints);
+	trackRecord->trackPoints = NULL;
+}
+
+FLASHMEM int fpRecord_open (trackRecord_t *trackRecord, const uint8_t *filename, const uint32_t flags)
 {
 	trackRecord->fp = fio_open(filename, flags);
 	return (trackRecord->fp != 0);
 }
 
-int fpRecord_read (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
+FLASHMEM int fpRecord_read (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
 {
 	void *buffer = &trackRecord->trackPoints[tpFrom];
 	int total = (tpTo - tpFrom) + 1;
@@ -46,7 +52,7 @@ int fpRecord_read (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
 	return ret;
 }
 
-int fpRecord_write (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
+FLASHMEM int fpRecord_write (trackRecord_t *trackRecord, const int tpFrom, const int tpTo)
 {
 	void *buffer = &trackRecord->trackPoints[tpFrom];
 	int total = (tpTo - tpFrom) + 1;
@@ -58,12 +64,12 @@ int fpRecord_write (trackRecord_t *trackRecord, const int tpFrom, const int tpTo
 	return ret;
 }
 
-void fpRecord_close (trackRecord_t *trackRecord)
+FLASHMEM void fpRecord_close (trackRecord_t *trackRecord)
 {
 	fio_close(trackRecord->fp);
 }
 
-void fpRecord_appendLog (trackRecord_t *trackRecord)
+FLASHMEM void fpRecord_appendLog (trackRecord_t *trackRecord)
 {
 	int recFrom = trackRecord->lastFrom;
 	int recTo = trackRecord->marker-1;
@@ -77,7 +83,18 @@ void fpRecord_appendLog (trackRecord_t *trackRecord)
 	}
 }
 
-int fpRecord_import (trackRecord_t *trackRecord, const char *filename)
+FLASHMEM void fpRecord_setFilename (trackRecord_t *trackRecord, const char *filename)
+{
+	if (strlen(filename) < LOG_FILENAME_LEN)
+		strcpy(trackRecord->filename, filename);
+}
+
+FLASHMEM const char *fpRecord_getFilename (trackRecord_t *trackRecord)
+{
+	return trackRecord->filename;
+}
+
+FLASHMEM int fpRecord_import (trackRecord_t *trackRecord, const char *filename)
 {
 	int ct = 0;
 	if (fpRecord_open(trackRecord, (uint8_t*)filename, FIO_READ)){
@@ -86,7 +103,7 @@ int fpRecord_import (trackRecord_t *trackRecord, const char *filename)
 			uint32_t totalPts = length / sizeof(trackPoint_t);
 			if (totalPts <= TRACKPTS_MAX){
 				if (fpRecord_read(trackRecord, 0, totalPts-1)){
-					strcpy(trackRecord->filename, filename);
+					fpRecord_setFilename(trackRecord, filename);
 					trackRecord->lastFrom = totalPts;
 					trackRecord->marker = totalPts;
 					trackRecord->firstFix = 1;

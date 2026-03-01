@@ -6,6 +6,8 @@
 #define TRACKPTS_DIR	"/data/"		// save track points here
 #define TRACKPTS_MAX	(60*60*16)		// 1 day
 
+#define LOG_FILENAME_LEN	64
+
 
 typedef struct {
 	uint32_t iTow;		// UTC time as supplied by module
@@ -14,8 +16,10 @@ typedef struct {
 	uint16_t speed;		// speed*10 km/h
 }trackPoint_t;
 
+
+
+
 typedef struct {
-	//trackPoint_t trackPoints[TRACKPTS_MAX];
 	trackPoint_t *trackPoints;
 	uint32_t marker;
 	uint32_t lastFrom;
@@ -27,13 +31,14 @@ typedef struct {
 	uint32_t acquDisabled:1;		// 1 if trpPt acquisition s disabled
 	uint32_t stub:28;
 	
-	char filename[32];
+	char filename[LOG_FILENAME_LEN];
 	char date[16];
 }trackRecord_t;
 
 
 
 int fpRecord_init (trackRecord_t *trackRecord);
+void fpRecord_free (trackRecord_t *trackRecord);
 int fpRecord_open (trackRecord_t *trackRecord, const uint8_t *filename, const uint32_t flags);
 int fpRecord_write (trackRecord_t *trackRecord, const int tpFrom, const int tpTo);
 void fpRecord_close (trackRecord_t *trackRecord);
@@ -41,6 +46,8 @@ void fpRecord_appendLog (trackRecord_t *trackRecord);
 int fpRecord_read (trackRecord_t *trackRecord, const int tpFrom, const int tpTo);
 int fpRecord_import (trackRecord_t *trackRecord, const char *filename);
 
+void fpRecord_setFilename (trackRecord_t *trackRecord, const char *filename);
+const char *fpRecord_getFilename (trackRecord_t *trackRecord);
 
 
 #endif
