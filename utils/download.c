@@ -208,11 +208,13 @@ void cmd_download (const char *str)
 	
 	char buffer[1024];
 	memset(buffer, 0, sizeof(buffer));
-	snprintf(buffer, sizeof(buffer), "%s %s\n", CMD_GETMETABIN, str);
+	snprintf(buffer, sizeof(buffer), "%s %s\n", CMD_GETFILE, str);
 
 	if (serialSendString(hSerial, buffer, 20)){
 		uint32_t bytesRead = 0;
 		serialRead(hSerial, &fileMeta, sizeof(fileMeta), &bytesRead);
+
+		printf("fileMeta.length %i\n", fileMeta.length);
 
 		if (fileMeta.length > 12 && fileMeta.length < 10*1024*1024){
 			char *filedata = calloc(1, fileMeta.length);
@@ -264,7 +266,9 @@ int main (const int argc, const char *argv[])
 	hSerial = serialOpen(port, BAUDRATE(COM_BAUD));
 	if (hSerial){
 		printf("Port %i:%i\n\n", port, BAUDRATE(COM_BAUD));
-
+		Sleep(120);
+		serialClean(hSerial);
+		
 		cmd_download(argv[2]);
 		serialClose(hSerial);
 	}
