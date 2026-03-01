@@ -10,7 +10,10 @@ trackRecord_t trackRecord;
 extern application_t inst;
 
 
-
+const char *log_getFilename ()
+{
+	return fpRecord_getFilename(&trackRecord);
+}
 
 void log_runReset ()
 {
@@ -97,10 +100,19 @@ void log_setAcquisitionState (const int state)
 		trackRecord.acquDisabled = 1;		// disable it
 }
 
+int log_getAcquisitionState ()
+{
+	return !trackRecord.acquDisabled;
+}
+
+int log_getRecordState ()
+{
+	return !trackRecord.writeDisabled;
+}
+
 void log_reset ()
 {
-	extmem_free(trackRecord.trackPoints);
-	
+	fpRecord_free(&trackRecord);
 	fpRecord_init(&trackRecord);
 	
 	log_setAcquisitionState(1);
@@ -122,6 +134,11 @@ void log_stop ()
 	trackRecord.recordActive = 0;
 	trackRecord.acquDisabled = 1;
 	trackRecord.firstFix = 0;
+}
+
+int log_hasFirstFix ()
+{
+	return trackRecord.firstFix;
 }
 
 void log_pause ()
