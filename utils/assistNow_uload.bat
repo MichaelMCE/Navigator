@@ -2,5 +2,5 @@
 
 @echo off
 
-serial1_console.exe auto uload auto.ubx
+rem !incomplete auto ubxload auto.ubx
 
