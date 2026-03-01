@@ -4,8 +4,9 @@
 
 
 
-#define MY_LAT	54.609333767992936
-#define MY_LON	-5.929224426174398
+#define MY_LAT	<your lat here>
+#define MY_LON	<your lon here>
 #define MY_ALT	90.0f
 
 #endif
+
