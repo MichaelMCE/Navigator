@@ -150,10 +150,10 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 	if (port == 1){
 		uint32_t portA = RECEIVER_CFG_DEVPORTA;
 
+		portA |= RECEIVER_CFG_MSG_DISABLEALL;
 		portA |= RECEIVER_CFG_CLEAN|RECEIVER_CFG_OPAQUE|RECEIVER_CFG_CALLBACK|RECEIVER_CFG_HANDLER;
 		portA |= RECEIVER_CFG_Ports|RECEIVER_CFG_Inf|RECEIVER_CFG_Rate|RECEIVER_CFG_GNSS;
 		portA |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5;
-		portA |= RECEIVER_CFG_MSG_DISABLEALL;
 		portA |= RECEIVER_CFG_MSG_POSLLH|RECEIVER_CFG_MSG_PVT|RECEIVER_CFG_MSG_DOP;
 		portA |= RECEIVER_CFG_MSG_POSECEF|RECEIVER_CFG_MSG_SAT|RECEIVER_CFG_MSG_STATUS;
 		portA |= RECEIVER_CFG_POLL;
@@ -166,11 +166,11 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 	if (port == 2){
 		uint32_t portB = RECEIVER_CFG_DEVPORTB;
 
+		portB |= RECEIVER_CFG_MSG_DISABLEALL;
 		portB |= RECEIVER_CFG_Ports|RECEIVER_CFG_Inf|RECEIVER_CFG_Rate|RECEIVER_CFG_GNSS;
-		portB |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5|RECEIVER_CFG_Odo;
-		portB |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_MSG_DISABLEALL;
-		portB |= RECEIVER_CFG_MSG_POSLLH|RECEIVER_CFG_MSG_ODO | RECEIVER_CFG_MSG_PVT;
-		portB |= RECEIVER_CFG_MSG_STATUS;
+		portB |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5 | RECEIVER_CFG_MSG_STATUS;
+		portB |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_Odo|RECEIVER_CFG_MSG_ODO;
+		portB |= RECEIVER_CFG_MSG_POSLLH | RECEIVER_CFG_MSG_PVT;
 		
 		return portB;
 	}
@@ -512,15 +512,29 @@ FLASHMEM static void gps_setup (ubx_device_t *dev, const uint8_t port, const uin
 	receiver_configure(dev, gps_getDefaultConfig(port), 0);
 }
 
-static void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
+FLASHMEM static void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
 {
 	ubx_mga_ini_posllh(&dev, lat, lon, alt_meters, posAcc_cm);
 }
 
-void gps_loadOfflineAssist (const int printInfo)
+FLASHMEM void gps_setLocation (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm)
+{
+	gps_setIntialPosition(lat, lon, alt_meters, posAcc_cm);
+}
+
+FLASHMEM void gps_setDefaultLocation ()
 {
 	gps_setIntialPosition(MY_LAT, MY_LON, MY_ALT, 200);
+}
 
+FLASHMEM void gps_setDateTimeUTC (const uint16_t year, const uint8_t month, const uint8_t day, const uint8_t hour, const uint8_t minute, const uint8_t second)
+{
+	ubx_mga_ini_time_utc(&dev, year, month, day, hour, minute, second);
+}
+
+void gps_loadOfflineAssist (const int printInfo)
+{
+	gps_setDefaultLocation();
 	return;
 
 	if (cmdLoadUbx(ASSISTNOW_FILENAME)){

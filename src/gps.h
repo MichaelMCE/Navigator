@@ -187,9 +187,9 @@ uint8_t gps_getPortActive ();
 
 void gps_setReceiver (const uint8_t port);
 
-
-
-//void gps_setIntialPosition (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
+void gps_setDateTimeUTC (const uint16_t year, const uint8_t month, const uint8_t day, const uint8_t hour, const uint8_t minute, const uint8_t second);
+void gps_setLocation (const double lat, const double lon, const float alt_meters, const uint32_t posAcc_cm);
+void gps_setDefaultLocation ();
 void gps_loadOfflineAssist (const int printInfo);
 
 int gps_writeUbx (void *buffer, const uint32_t bufferSize);
@@ -202,6 +202,9 @@ const char *getFixName (const uint8_t type);
 void ms_delay (const uint32_t timeMs);
 
 void getDateTime (dategps_t *date, timegps_t *time);
+
+
+gpsdata_t *gps_getReceiverState ();
 
 int isSerialConsoleConnected ();
 
