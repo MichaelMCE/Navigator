@@ -12,6 +12,22 @@
 
 
 
+void date_getAdjustedTime (gpsdata_t *data, dategps_t *date, timegps_t *time)
+{
+	if (data == NULL)
+		data = gps_getReceiverState();
+
+	date_adjustTime4BST(data);
+	
+	time->hour = data->time.hour;
+	time->min = data->time.min;
+	time->sec = data->time.sec;
+	
+	date->day = data->date.day;
+	date->month = data->date.month;
+	date->year = data->date.year;
+}
+
 
 void date_formatDateTime (gpsdata_t *gps, char *buffer, const uint32_t len)
 {
