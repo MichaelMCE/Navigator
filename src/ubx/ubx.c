@@ -523,12 +523,12 @@ static void configureGNSS_M10 (ubx_device_t *dev)
 #else
 		CFG_SIGNAL_BDS_ENA,       0x01,
 #endif
-		CFG_SIGNAL_QZSS_ENA,      0x00,
+		CFG_SIGNAL_QZSS_ENA,      0x01,
 		CFG_SIGNAL_GLO_ENA,       0x01,
 		CFG_SIGNAL_BDS_B1C_ENA,   0x01
 	};
 
-	ubx_sendEx(dev, 500, UBX_CFG, UBX_CFG_VALSET, M10GNSS, sizeof(M10GNSS));
+	ubx_sendEx(dev, 600, UBX_CFG, UBX_CFG_VALSET, M10GNSS, sizeof(M10GNSS));
 }
 
 static void configureGNSS_M8 (ubx_device_t *dev)
@@ -661,17 +661,17 @@ static void configureNav5 (ubx_device_t *dev)
 	nav.fixMode = NAV5_FIXMODE_AUTO;
 	nav.fixedAlt = 37.0f * 100;				// meters, when using NAV5_FIXMODE_2D
 	nav.fixedAltVar = 0.5f * 10000;			// deviation,  ^^^ 
-	nav.minElv = 6;
+	nav.minElv = 5;
 	nav.drLimit = 0;
 	nav.pDop = 25.0f * 10;
 	nav.tDop = 25.0f * 10;
 	nav.pAcc = 100;
-	nav.tAcc = 350;
+	nav.tAcc = 300;
 	nav.pAccADR = 0;						// also known as reserved1;
 	nav.dynssTimeout = 60;
 	nav.cnoThreshNumSVs = 0;
 	nav.cnoThresh = 0;
-	nav.staticHoldThresh = 50;				// 50 cm/s 
+	nav.staticHoldThresh = 100;				// 50 cm/s 
 	nav.staticHoldMaxDist = 2;				// 2 meters
 	nav.utcStandard = NAV5_UTCSTD_AUTO;
 	
@@ -698,7 +698,7 @@ static void configureNavX5 (ubx_device_t *dev)
 	nav.iniFix3D = 0;
 	nav.ackAiding = 0;
 #if (RECEIVER_M10)
-	nav.wknRollover = 2148;// m8:1867, m10:2148;						// 0 = firmware default.
+	nav.wknRollover = 0; //2148;// m8:1867, m10:2148;						// 0 = firmware default.
 #else
 	nav.wknRollover = 0;// m8:1867, m10:2148;						// 0 = firmware default.
 #endif
