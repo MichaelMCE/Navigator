@@ -382,14 +382,14 @@ FLASHMEM int nav_pvt (const uint8_t *payload, uint16_t msg_len, void *opaque)
 	}
 
 #if 1
-	if (pvt->iTow > gps->iTow){
+	//if (pvt->iTow > gps->iTow){
 		gps->iTow = pvt->iTow;	
 		gps->time.hour = pvt->hour;
 		gps->time.min = pvt->min;
 		gps->time.sec = pvt->sec;
 		gps->time.ms = dec32flt7(pvt->nano);
 		gps->timeAdjusted = 0;
-	}
+	//}
 #endif
 	
 	gps->misc.speed = dec32flt3(pvt->gSpeed)*3.60f;
