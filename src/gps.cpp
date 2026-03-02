@@ -170,7 +170,7 @@ static const inline uint32_t gps_getDefaultConfig (const uint8_t port)
 		portB |= RECEIVER_CFG_Ports|RECEIVER_CFG_Inf|RECEIVER_CFG_Rate|RECEIVER_CFG_GNSS;
 		portB |= RECEIVER_CFG_Nav5|RECEIVER_CFG_NavX5 | RECEIVER_CFG_MSG_STATUS;
 		portB |= RECEIVER_CFG_ODO_RESET|RECEIVER_CFG_Odo|RECEIVER_CFG_MSG_ODO;
-		portB |= RECEIVER_CFG_MSG_POSLLH | RECEIVER_CFG_MSG_PVT;
+		portB |= RECEIVER_CFG_MSG_POSLLH;
 		
 		return portB;
 	}
