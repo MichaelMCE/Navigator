@@ -4,7 +4,6 @@
 #include "commonGlue.h"
 
 
-//extern volatile int serialConnected;
 extern int gnssReceiver_PassthroughEnabled;
 extern application_t inst;
 extern uint8_t external_psram_size;
@@ -1050,7 +1049,7 @@ FLASHMEM void cmd_init ()
 	memset(&fileTrans, 0, sizeof(fileTrans));
 	
 	serialFlush();
-	cmdSendResponse("cmd_init");
+	cmdSendResponse("\n######################\ncmd_init\n######################\n");
 	fio_setDir(TRACKPTS_DIR);
 }
 
@@ -1060,7 +1059,7 @@ int cmd_task (const int pulse)
 	static int pos = 0;
 	
 
-	if (/*serialConnected*/Serial.dtr() && Serial.available()){
+	if (Serial.dtr() && Serial.available()){
 		if (pos >= (int)sizeof(cmdbuffer)) pos = 0;
 		
 		int len = Serial.readBytes(cmdbuffer+pos, sizeof(cmdbuffer)-pos);
